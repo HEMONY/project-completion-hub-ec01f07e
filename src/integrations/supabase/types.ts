@@ -14,16 +14,492 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_fees: {
+        Row: {
+          agreed: boolean | null
+          calculated_fee: number
+          created_at: string
+          entity_id: string
+          id: string
+          turnover: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agreed?: boolean | null
+          calculated_fee: number
+          created_at?: string
+          entity_id: string
+          id?: string
+          turnover: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agreed?: boolean | null
+          calculated_fee?: number
+          created_at?: string
+          entity_id?: string
+          id?: string
+          turnover?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_fees_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engagement_letters: {
+        Row: {
+          accepted: boolean | null
+          accepted_at: string | null
+          created_at: string
+          engagement_number: string | null
+          entity_id: string
+          id: string
+          letter_content: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted?: boolean | null
+          accepted_at?: string | null
+          created_at?: string
+          engagement_number?: string | null
+          entity_id: string
+          id?: string
+          letter_content?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted?: boolean | null
+          accepted_at?: string | null
+          created_at?: string
+          engagement_number?: string | null
+          entity_id?: string
+          id?: string
+          letter_content?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_letters_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entities: {
+        Row: {
+          address: string | null
+          application_status: string
+          application_type: string
+          cdd_completed: boolean | null
+          created_at: string
+          current_step: number
+          emirate: string | null
+          engagement_number: string | null
+          entity_name: string
+          id: string
+          ind_completed: boolean | null
+          license_expiry_date: string | null
+          license_issue_date: string | null
+          license_number: string | null
+          main_activity: string | null
+          mainland_company_type: string | null
+          management_control: Json | null
+          registration_status: string | null
+          screening_completed: boolean | null
+          shareholders: Json | null
+          submitted_at: string | null
+          total_turnover: number | null
+          ubos: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          application_status?: string
+          application_type?: string
+          cdd_completed?: boolean | null
+          created_at?: string
+          current_step?: number
+          emirate?: string | null
+          engagement_number?: string | null
+          entity_name: string
+          id?: string
+          ind_completed?: boolean | null
+          license_expiry_date?: string | null
+          license_issue_date?: string | null
+          license_number?: string | null
+          main_activity?: string | null
+          mainland_company_type?: string | null
+          management_control?: Json | null
+          registration_status?: string | null
+          screening_completed?: boolean | null
+          shareholders?: Json | null
+          submitted_at?: string | null
+          total_turnover?: number | null
+          ubos?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          application_status?: string
+          application_type?: string
+          cdd_completed?: boolean | null
+          created_at?: string
+          current_step?: number
+          emirate?: string | null
+          engagement_number?: string | null
+          entity_name?: string
+          id?: string
+          ind_completed?: boolean | null
+          license_expiry_date?: string | null
+          license_issue_date?: string | null
+          license_number?: string | null
+          main_activity?: string | null
+          mainland_company_type?: string | null
+          management_control?: Json | null
+          registration_status?: string | null
+          screening_completed?: boolean | null
+          shareholders?: Json | null
+          submitted_at?: string | null
+          total_turnover?: number | null
+          ubos?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_years: {
+        Row: {
+          created_at: string
+          current_end_date: string | null
+          current_start_date: string | null
+          entity_id: string
+          first_end_date: string | null
+          first_start_date: string | null
+          id: string
+          is_first_year: boolean | null
+          previous_audited: string | null
+          previous_end_date: string | null
+          previous_start_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_end_date?: string | null
+          current_start_date?: string | null
+          entity_id: string
+          first_end_date?: string | null
+          first_start_date?: string | null
+          id?: string
+          is_first_year?: boolean | null
+          previous_audited?: string | null
+          previous_end_date?: string | null
+          previous_start_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_end_date?: string | null
+          current_start_date?: string | null
+          entity_id?: string
+          first_end_date?: string | null
+          first_start_date?: string | null
+          id?: string
+          is_first_year?: boolean | null
+          previous_audited?: string | null
+          previous_end_date?: string | null
+          previous_start_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_years_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kyc_documents: {
+        Row: {
+          document_type: string
+          entity_id: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          document_type: string
+          entity_id: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          document_type?: string
+          entity_id?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kyc_documents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sanctions_list: {
+        Row: {
+          arabic_name: string | null
+          country: string | null
+          created_at: string
+          english_name: string
+          expiry_date: string | null
+          id: string
+          list_reference: string | null
+          source: string | null
+          status: string
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          arabic_name?: string | null
+          country?: string | null
+          created_at?: string
+          english_name: string
+          expiry_date?: string | null
+          id?: string
+          list_reference?: string | null
+          source?: string | null
+          status?: string
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arabic_name?: string | null
+          country?: string | null
+          created_at?: string
+          english_name?: string
+          expiry_date?: string | null
+          id?: string
+          list_reference?: string | null
+          source?: string | null
+          status?: string
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      screening_results: {
+        Row: {
+          admin_result: string | null
+          ai_result: string
+          created_at: string
+          entity_id: string
+          id: string
+          name_to_screen: string
+          name_type: string | null
+          notes: string | null
+          screened_at: string
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          admin_result?: string | null
+          ai_result?: string
+          created_at?: string
+          entity_id: string
+          id?: string
+          name_to_screen: string
+          name_type?: string | null
+          notes?: string | null
+          screened_at?: string
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          admin_result?: string | null
+          ai_result?: string
+          created_at?: string
+          entity_id?: string
+          id?: string
+          name_to_screen?: string
+          name_type?: string | null
+          notes?: string | null
+          screened_at?: string
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screening_results_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_status: {
+        Row: {
+          corporate_tax_registration_number: string | null
+          corporate_tax_status: string | null
+          corporate_tax_treatment: string | null
+          created_at: string
+          entity_id: string
+          excise_tax_status: string | null
+          id: string
+          not_registered_reason: string | null
+          other_reason_details: string | null
+          previous_data: Json | null
+          small_business_relief: string | null
+          updated_at: string
+          user_id: string
+          vat_registration_number: string | null
+          vat_status: string | null
+        }
+        Insert: {
+          corporate_tax_registration_number?: string | null
+          corporate_tax_status?: string | null
+          corporate_tax_treatment?: string | null
+          created_at?: string
+          entity_id: string
+          excise_tax_status?: string | null
+          id?: string
+          not_registered_reason?: string | null
+          other_reason_details?: string | null
+          previous_data?: Json | null
+          small_business_relief?: string | null
+          updated_at?: string
+          user_id: string
+          vat_registration_number?: string | null
+          vat_status?: string | null
+        }
+        Update: {
+          corporate_tax_registration_number?: string | null
+          corporate_tax_status?: string | null
+          corporate_tax_treatment?: string | null
+          created_at?: string
+          entity_id?: string
+          excise_tax_status?: string | null
+          id?: string
+          not_registered_reason?: string | null
+          other_reason_details?: string | null
+          previous_data?: Json | null
+          small_business_relief?: string | null
+          updated_at?: string
+          user_id?: string
+          vat_registration_number?: string | null
+          vat_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_status_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +626,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
