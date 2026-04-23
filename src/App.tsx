@@ -3,23 +3,42 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { I18nProvider } from "@/lib/i18n";
+import { AuthProvider } from "@/lib/auth";
+import Index from "./pages/Index";
+import Auth from "./pages/Auth";
+import Entities from "./pages/Entities";
+import KycStart from "./pages/KycStart";
+import KycStep from "./pages/KycStep";
+import Screening from "./pages/Screening";
+import Sanctions from "./pages/Sanctions";
+import Audits from "./pages/Audits";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <I18nProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner richColors position="top-center" />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/entities" element={<Entities />} />
+              <Route path="/kyc/start" element={<KycStart />} />
+              <Route path="/kyc/:entityId/:step" element={<KycStep />} />
+              <Route path="/screening" element={<Screening />} />
+              <Route path="/sanctions" element={<Sanctions />} />
+              <Route path="/audits" element={<Audits />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </I18nProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
