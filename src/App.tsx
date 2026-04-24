@@ -45,6 +45,6 @@ const App = () => (
       </I18nProvider>
     </TooltipProvider>
   </QueryClientProvider>
-);
+); 
 
 export default App;
