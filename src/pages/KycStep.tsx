@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, X } from "lucide-react";
 
 const validSteps: KycStepKey[] = ["kyc", "audit-fee", "financial-year", "tax-status", "engagement"];
 
@@ -82,7 +82,9 @@ export default function KycStep() {
 }
 
 // STEP 1
+// STEP 1
 function KycForm({ entity, onSaved, t }: any) {
+  const { user } = useAuth();
   const [form, setForm] = useState({
     entity_name: entity.entity_name === "Untitled Entity" ? "" : entity.entity_name,
     registration_status: entity.registration_status ?? "",
@@ -93,10 +95,40 @@ function KycForm({ entity, onSaved, t }: any) {
     emirate: entity.emirate ?? "",
     address: entity.address ?? "",
     total_turnover: entity.total_turnover ?? 0,
+    mainland_company_type: entity.mainland_company_type ?? "",
   });
   const [shareholders, setShareholders] = useState<any[]>(entity.shareholders ?? []);
   const [ubos, setUbos] = useState<any[]>(entity.ubos ?? []);
+  const [hasUbo, setHasUbo] = useState<string>(
+    (entity.ubos ?? []).length > 0 ? "Yes" : ""
+  );
+  const [managementControl, setManagementControl] = useState<string>(
+    entity.management_control ?? ""
+  );
+  const [eidFiles, setEidFiles] = useState<File[]>([]);
+  const [tradeFiles, setTradeFiles] = useState<File[]>([]);
+  const [authFiles, setAuthFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+
+  // خيارات Management Control تُبنى ديناميكياً من المساهمين + UBOs
+  const mgmtOptions = [
+    ...shareholders.map((s) => s.name).filter(Boolean),
+    ...( hasUbo === "Yes" ? ubos.map((u) => u.name).filter(Boolean) : []),
+    "Other",
+  ];
+
+  const uploadFilesToStorage = async (files: File[], folder: string) => {
+    const paths: string[] = [];
+    for (const file of files) {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${user!.id}/${entity.id}/${folder}/${Date.now()}_${file.name}`;
+      const { error } = await supabase.storage
+        .from("kyc-documents")
+        .upload(path, file, { upsert: true });
+      if (!error) paths.push(path);
+    }
+    return paths;
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +136,73 @@ function KycForm({ entity, onSaved, t }: any) {
       return toast.error(t("kyc_turnover_max"));
     }
     setBusy(true);
-    const { data, error } = await supabase.from("entities").update({ ...form, shareholders, ubos, current_step: 2 }).eq("id", entity.id).select().single();
+
+    // رفع الملفات
+    const eidPaths = eidFiles.length > 0
+      ? await uploadFilesToStorage(eidFiles, "eid")
+      : [];
+    const tradePaths = tradeFiles.length > 0
+      ? await uploadFilesToStorage(tradeFiles, "trade")
+      : [];
+    const authPaths = authFiles.length > 0
+      ? await uploadFilesToStorage(authFiles, "auth")
+      : [];
+
+    // حفظ بيانات الكيان
+    const { data, error } = await supabase
+      .from("entities")
+      .update({
+        ...form,
+        shareholders,
+        ubos: hasUbo === "Yes" ? ubos : [],
+        management_control: managementControl,
+        current_step: 2,
+      })
+      .eq("id", entity.id)
+      .select()
+      .single();
+
+    // حفظ الملفات في kyc_documents
+    if (user && (eidPaths.length || tradePaths.length || authPaths.length)) {
+      const docRecords: any[] = [];
+      eidFiles.forEach((f, i) => {
+        if (eidPaths[i]) docRecords.push({
+          entity_id: entity.id,
+          user_id: user.id,
+          document_type: "eid_passport",
+          file_name: f.name,
+          storage_path: eidPaths[i],
+          mime_type: f.type,
+          size_bytes: f.size,
+        });
+      });
+      tradeFiles.forEach((f, i) => {
+        if (tradePaths[i]) docRecords.push({
+          entity_id: entity.id,
+          user_id: user.id,
+          document_type: "trade_license",
+          file_name: f.name,
+          storage_path: tradePaths[i],
+          mime_type: f.type,
+          size_bytes: f.size,
+        });
+      });
+      authFiles.forEach((f, i) => {
+        if (authPaths[i]) docRecords.push({
+          entity_id: entity.id,
+          user_id: user.id,
+          document_type: "authorization_letter",
+          file_name: f.name,
+          storage_path: authPaths[i],
+          mime_type: f.type,
+          size_bytes: f.size,
+        });
+      });
+      if (docRecords.length > 0) {
+        await supabase.from("kyc_documents").insert(docRecords);
+      }
+    }
+
     setBusy(false);
     if (error) {
       const msg = /turnover/i.test(error.message) ? t("kyc_turnover_max") : error.message;
@@ -120,37 +218,188 @@ function KycForm({ entity, onSaved, t }: any) {
       <CardContent>
         <form onSubmit={submit} className="space-y-6">
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label={t("kyc_owner_name") + " *"}><Input required value={form.entity_name} onChange={(e) => setForm({ ...form, entity_name: e.target.value })} /></Field>
+            <Field label={t("kyc_owner_name") + " *"}>
+              <Input required value={form.entity_name} onChange={(e) => setForm({ ...form, entity_name: e.target.value })} />
+            </Field>
             <Field label={t("kyc_business_registration") + " *"}>
-              <NativeSelect required value={form.registration_status} onChange={(e) => setForm({ ...form, registration_status: e.target.value })}>
+              <NativeSelect
+                required
+                value={form.registration_status}
+                onChange={(e) => {
+                  setForm({ ...form, registration_status: e.target.value, mainland_company_type: "" });
+                }}
+              >
                 <option value="">—</option>
-                <option>Mainland Licensed-Single Owner</option>
-                <option>Mainland Licensed-Multiple Owners</option>
-                <option>Free Zone Licensed</option>
-                <option>Offshore</option>
+                <option value="Unlicensed Natural Person(s)">Unlicensed Natural Person(s)</option>
+                <option value="Free Zone Licensed">Free Zone Licensed</option>
+                <option value="Mainland Licensed-Multiple Owners">Mainland Licensed-Multiple Owners</option>
+                <option value="Mainland Licensed-Sole Owner">Mainland Licensed-Sole Owner</option>
               </NativeSelect>
             </Field>
-            <Field label={t("kyc_license_number")}><Input value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })} /></Field>
-            <Field label={t("kyc_main_activity")}><Input value={form.main_activity} onChange={(e) => setForm({ ...form, main_activity: e.target.value })} /></Field>
-            <Field label={t("kyc_issue_date")}><Input type="date" value={form.license_issue_date ?? ""} onChange={(e) => setForm({ ...form, license_issue_date: e.target.value })} /></Field>
-            <Field label={t("kyc_expiry_date")}><Input type="date" value={form.license_expiry_date ?? ""} onChange={(e) => setForm({ ...form, license_expiry_date: e.target.value })} /></Field>
+
+            {/* حقل نوع الشركة — يظهر فقط للشركات الـ Mainland */}
+            {form.registration_status === "Mainland Licensed-Multiple Owners" && (
+              <Field label="Mainland Company Type *">
+                <NativeSelect
+                  required
+                  value={form.mainland_company_type}
+                  onChange={(e) => setForm({ ...form, mainland_company_type: e.target.value })}
+                >
+                  <option value="">—</option>
+                  <option value="Civil Company">Civil Company</option>
+                  <option value="Limited Liability Company">Limited Liability Company</option>
+                  <option value="General Partnership Company">General Partnership Company</option>
+                  <option value="Limited Partnership Company">Limited Partnership Company</option>
+                  <option value="Branch of Local Company">Branch of Local Company</option>
+                  <option value="Branch of Foreign Company">Branch of Foreign Company</option>
+                </NativeSelect>
+              </Field>
+            )}
+
+            <Field label={t("kyc_license_number")}>
+              <Input value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })} />
+            </Field>
+            <Field label={t("kyc_main_activity")}>
+              <Input value={form.main_activity} onChange={(e) => setForm({ ...form, main_activity: e.target.value })} />
+            </Field>
+            <Field label={t("kyc_issue_date")}>
+              <Input type="date" value={form.license_issue_date ?? ""} onChange={(e) => setForm({ ...form, license_issue_date: e.target.value })} />
+            </Field>
+            <Field label={t("kyc_expiry_date")}>
+              <Input type="date" value={form.license_expiry_date ?? ""} onChange={(e) => setForm({ ...form, license_expiry_date: e.target.value })} />
+            </Field>
             <Field label={t("kyc_emirate")}>
               <NativeSelect value={form.emirate} onChange={(e) => setForm({ ...form, emirate: e.target.value })}>
                 <option value="">—</option>
                 {["Abu Dhabi","Dubai","Sharjah","Ajman","Umm Al Quwain","Ras Al Khaimah","Fujairah"].map(x => <option key={x}>{x}</option>)}
               </NativeSelect>
             </Field>
-            <Field label={t("kyc_turnover") + " *"}><Input required type="number" min={0} max={50000000} step="0.01" value={form.total_turnover} onChange={(e) => setForm({ ...form, total_turnover: parseFloat(e.target.value || "0") })} /></Field>
+            <Field label={t("kyc_turnover") + " *"}>
+              <Input required type="number" min={0} max={50000000} step="0.01" value={form.total_turnover}
+                onChange={(e) => setForm({ ...form, total_turnover: parseFloat(e.target.value || "0") })} />
+            </Field>
           </div>
-          <Field label={t("kyc_address") + " *"}><Textarea required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
+
+          <Field label={t("kyc_address") + " *"}>
+            <Textarea required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          </Field>
+
+          {/* المساهمون */}
           <PeopleTable title={t("kyc_shareholders")} rows={shareholders} setRows={setShareholders} t={t} />
-          <PeopleTable title={t("kyc_ubos")} rows={ubos} setRows={setUbos} t={t} />
+
+          {/* سؤال UBO */}
+          <div className="space-y-3">
+            <Field label="هل يوجد مستفيد فعلي (UBO) يملك 25% أو أكثر بشكل غير مباشر؟ *">
+              <NativeSelect
+                required
+                value={hasUbo}
+                onChange={(e) => {
+                  setHasUbo(e.target.value);
+                  if (e.target.value === "No") setUbos([]);
+                }}
+              >
+                <option value="">—</option>
+                <option value="Yes">نعم</option>
+                <option value="No">لا</option>
+              </NativeSelect>
+            </Field>
+            {hasUbo === "Yes" && (
+              <PeopleTable title="المستفيدون الفعليون (UBOs)" rows={ubos} setRows={setUbos} t={t} />
+            )}
+          </div>
+
+          {/* المسؤول عن الإدارة */}
+          <Field label="من المسؤول عن الإدارة والسيطرة الفعلية؟ *">
+            <NativeSelect
+              required
+              value={managementControl}
+              onChange={(e) => setManagementControl(e.target.value)}
+            >
+              <option value="">—</option>
+              {mgmtOptions.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </NativeSelect>
+          </Field>
+
+          {/* رفع الملفات */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-base border-t border-border pt-4">المستندات المطلوبة</h3>
+            <div className="grid md:grid-cols-3 gap-3">
+              <FileUploadZone
+                label="هوية / جواز السفر"
+                files={eidFiles}
+                onChange={setEidFiles}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              <FileUploadZone
+                label="الرخصة التجارية"
+                files={tradeFiles}
+                onChange={setTradeFiles}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              <FileUploadZone
+                label="خطاب التفويض"
+                files={authFiles}
+                onChange={setAuthFiles}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+            </div>
+          </div>
+
           <div className="flex justify-end pt-4 border-t border-border">
-            <Button type="submit" variant="premium" disabled={busy}>{busy ? t("saving") : t("btn_next")}</Button>
+            <Button type="submit" variant="premium" disabled={busy}>
+              {busy ? t("saving") : t("btn_next")}
+            </Button>
           </div>
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+// مكوّن رفع الملفات
+function FileUploadZone({ label, files, onChange, accept }: {
+  label: string;
+  files: File[];
+  onChange: (files: File[]) => void;
+  accept: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || []);
+    onChange([...files, ...newFiles]);
+    e.target.value = "";
+  };
+
+  const remove = (i: number) => onChange(files.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-2">
+      <label
+        className="group rounded-lg border-2 border-dashed border-border hover:border-primary hover:bg-accent/20 transition-colors p-4 cursor-pointer flex flex-col items-center justify-center text-center min-h-24"
+        onClick={() => ref.current?.click()}
+      >
+        <Upload className="size-5 text-muted-foreground group-hover:text-primary mb-1.5" />
+        <span className="text-xs font-medium text-muted-foreground group-hover:text-primary">{label}</span>
+        <span className="text-[10px] text-muted-foreground mt-0.5">PDF, JPG, PNG (max 5MB)</span>
+        <input ref={ref} type="file" multiple accept={accept} className="hidden" onChange={handleChange} />
+      </label>
+      {files.length > 0 && (
+        <ul className="space-y-1">
+          {files.map((f, i) => (
+            <li key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+              <FileText className="size-3 shrink-0 text-muted-foreground" />
+              <span className="truncate flex-1">{f.name}</span>
+              <button type="button" onClick={() => remove(i)} className="text-destructive shrink-0">
+                <X className="size-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -223,13 +472,22 @@ function calculateAuditFee(turnover: number) {
 function AuditFeeForm({ entity, onSaved, onBack, t }: any) {
   const fee = calculateAuditFee(Number(entity.total_turnover) || 0);
   const [agreed, setAgreed] = useState(false);
+  const [signerName, setSignerName] = useState("");
   const [busy, setBusy] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) return toast.error(t("required"));
     setBusy(true);
     const { error } = await supabase.from("audit_fees").upsert(
-      { entity_id: entity.id, user_id: entity.user_id, turnover: entity.total_turnover, calculated_fee: fee, agreed: true },
+      {
+        entity_id: entity.id,
+        user_id: entity.user_id,
+        turnover: entity.total_turnover,
+        calculated_fee: fee,
+        agreed: true,
+        digital_signature_name: signerName,
+        digital_signature_date: new Date().toISOString(),
+      },
       { onConflict: "entity_id" }
     );
     await supabase.from("entities").update({ current_step: 3 }).eq("id", entity.id);
@@ -250,6 +508,14 @@ function AuditFeeForm({ entity, onSaved, onBack, t }: any) {
               {fee.toLocaleString()} <span className="text-base text-muted-foreground font-normal">{t("audit_fee_aed")}</span>
             </div>
           </div>
+          <Field label="اسم الموقِّع الرقمي *">
+            <Input
+              required
+              placeholder="الاسم الكامل"
+              value={signerName}
+              onChange={(e) => setSignerName(e.target.value)}
+            />
+          </Field>
           <label className="flex items-start gap-3 text-sm cursor-pointer">
             <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1" />
             <span>{t("audit_fee_agree")}</span>
