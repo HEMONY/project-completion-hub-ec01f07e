@@ -106,7 +106,10 @@ function KycForm({ entity, onSaved, t }: any) {
     setBusy(true);
     const { data, error } = await supabase.from("entities").update({ ...form, shareholders, ubos, current_step: 2 }).eq("id", entity.id).select().single();
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      const msg = /turnover/i.test(error.message) ? t("kyc_turnover_max") : error.message;
+      return toast.error(msg);
+    }
     toast.success(t("saved"));
     onSaved(data);
   };
