@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,13 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "./Index";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+const STATUS_FILTERS = ["all", "draft", "submitted", "under_review", "approved", "rejected"] as const;
+type StatusFilter = typeof STATUS_FILTERS[number];
 
 export default function Entities() {
   const { user, loading } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState<any[]>([]);
   const [q, setQ] = useState("");
+
+  const status = (params.get("status") as StatusFilter) || "all";
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -26,9 +33,19 @@ export default function Entities() {
     supabase.from("entities").select("*").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
   }, [user]);
 
-  const filtered = rows.filter(
-    (r) => !q || r.entity_name?.toLowerCase().includes(q.toLowerCase()) || r.engagement_number?.toLowerCase().includes(q.toLowerCase())
-  );
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: rows.length };
+    rows.forEach((r) => {
+      c[r.application_status] = (c[r.application_status] || 0) + 1;
+    });
+    return c;
+  }, [rows]);
+
+  const filtered = rows.filter((r) => {
+    if (status !== "all" && r.application_status !== status) return false;
+    if (q && !r.entity_name?.toLowerCase().includes(q.toLowerCase()) && !r.engagement_number?.toLowerCase().includes(q.toLowerCase())) return false;
+    return true;
+  });
 
   if (!user) return null;
 
@@ -44,6 +61,35 @@ export default function Entities() {
             <Link to="/kyc/start">{t("start_new_kyc")}</Link>
           </Button>
         </div>
+
+        {/* Status filter chips */}
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map((s) => {
+            const active = status === s;
+            const count = counts[s] ?? 0;
+            return (
+              <button
+                key={s}
+                onClick={() => {
+                  if (s === "all") setParams({});
+                  else setParams({ status: s });
+                }}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-full text-sm border transition-all flex items-center gap-2",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-card hover:bg-accent border-border text-foreground"
+                )}
+              >
+                <span>{t(`filter_${s}` as any)}</span>
+                <span className={cn("text-xs rounded-full px-1.5 py-0.5", active ? "bg-primary-foreground/20" : "bg-muted")}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         <Card className="shadow-card">
           <CardHeader>
             <Input placeholder={t("sanctions_search")} value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
@@ -57,11 +103,11 @@ export default function Entities() {
                   <thead className="text-start text-muted-foreground border-b border-border">
                     <tr>
                       <th className="py-3 text-start ps-3">{t("kyc_owner_name")}</th>
-                      <th className="py-3 text-start">Engagement #</th>
-                      <th className="py-3 text-start">Type</th>
-                      <th className="py-3 text-start">Status</th>
-                      <th className="py-3 text-start">Created</th>
-                      <th className="py-3 text-end pe-3">Actions</th>
+                      <th className="py-3 text-start">{t("entities_engagement")}</th>
+                      <th className="py-3 text-start">{t("entities_type")}</th>
+                      <th className="py-3 text-start">{t("entities_status")}</th>
+                      <th className="py-3 text-start">{t("entities_created")}</th>
+                      <th className="py-3 text-end pe-3">{t("entities_actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
