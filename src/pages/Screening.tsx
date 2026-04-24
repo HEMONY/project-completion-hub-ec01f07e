@@ -59,7 +59,87 @@ export default function Screening() {
       supabase.from("screening_results").select("*").eq("entity_id", entityId).order("screened_at", { ascending: false }).then(({ data }) => setResults(data ?? []));
     }
   };
+  // فحص تلقائي لكل الأسماء المرتبطة بكيان
+  const runBulkScreen = async () => {
+    if (!entityId || !user) return;
 
+    // جلب بيانات الكيان
+    const { data: entityData } = await supabase
+      .from("entities")
+      .select("entity_name, shareholders, ubos, management_control")
+      .eq("id", entityId)
+      .single();
+
+    if (!entityData) return;
+
+    const namesToScreen: { name: string; type: string }[] = [];
+
+    // اسم الكيان نفسه
+    if (entityData.entity_name) {
+      namesToScreen.push({ name: entityData.entity_name, type: "Owner" });
+    }
+
+    // المساهمون
+    const shareholders: any[] = entityData.shareholders ?? [];
+    shareholders.forEach((s) => {
+      if (s.name) namesToScreen.push({ name: s.name, type: "Shareholder" });
+    });
+
+    // UBOs
+    const ubos: any[] = entityData.ubos ?? [];
+    ubos.forEach((u) => {
+      if (u.name) namesToScreen.push({ name: u.name, type: "UBO" });
+    });
+
+    if (namesToScreen.length === 0) {
+      toast.error("لا توجد أسماء لفحصها في هذا الكيان");
+      return;
+    }
+
+    setBusy(true);
+    let screened = 0;
+
+    for (const item of namesToScreen) {
+      const { data: hits } = await supabase
+        .from("sanctions_list")
+        .select("english_name, arabic_name")
+        .or(`english_name.ilike.%${item.name}%,arabic_name.ilike.%${item.name}%`)
+        .limit(5);
+
+      const ai_result = hits && hits.length > 0
+        ? (hits.some((h) => h.english_name?.toLowerCase() === item.name.toLowerCase()) ? "confirmed" : "partial")
+        : "no-match";
+
+      await supabase.from("screening_results").insert({
+        user_id: user.id,
+        entity_id: entityId,
+        name_to_screen: item.name,
+        name_type: item.type,
+        ai_result,
+        notes: hits && hits.length > 0
+          ? `Matched: ${hits.map((h) => h.english_name).join(", ")}`
+          : null,
+      });
+      screened++;
+    }
+
+    // تحديث حالة الفحص في entities
+    await supabase
+      .from("entities")
+      .update({ screening_completed: true })
+      .eq("id", entityId);
+
+    setBusy(false);
+    toast.success(`تم فحص ${screened} اسم بنجاح`);
+
+    // تحديث النتائج
+    supabase
+      .from("screening_results")
+      .select("*")
+      .eq("entity_id", entityId)
+      .order("screened_at", { ascending: false })
+      .then(({ data }) => setResults(data ?? []));
+  };
   return (
     <AppShell>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -86,9 +166,14 @@ export default function Screening() {
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="premium" onClick={runScreen} disabled={busy || !entityId || !name.trim()}>
-              <Search className="size-4" /> {busy ? t("loading") : "Run screening"}
-            </Button>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="premium" onClick={runScreen} disabled={!!busy || !entityId || !name.trim()}>
+                <Search className="size-4" /> {busy ? t("loading") : "فحص اسم محدد"}
+              </Button>
+              <Button variant="outline" onClick={runBulkScreen} disabled={!!busy || !entityId}>
+                <ShieldCheck className="size-4" /> {busy ? "جاري الفحص..." : "فحص كل الأسماء تلقائياً"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
