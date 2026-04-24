@@ -11,7 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, ShieldCheck, AlertCircle, Clock } from "lucide-react";
+import { ArrowLeft, ShieldCheck, AlertCircle, Clock, Upload, FileText, Trash2, ExternalLink } from "lucide-react";
+
+const CDD_DOC_TYPES = [
+  { type: "cdd_identity", labelKey: "cdd_doc_identity", uploadKey: "cdd_upload_identity" },
+  { type: "cdd_eligibility", labelKey: "cdd_doc_eligibility", uploadKey: "cdd_upload_eligibility" },
+  { type: "cdd_auditor", labelKey: "cdd_doc_auditor", uploadKey: "cdd_upload_auditor" },
+] as const;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -52,6 +59,8 @@ export default function CddVerification() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [docs, setDocs] = useState<any[]>([]);
+  const [uploadingType, setUploadingType] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     identity_verification: "",
@@ -66,6 +75,16 @@ export default function CddVerification() {
     if (!loading && !user) navigate("/auth");
   }, [user, loading, navigate]);
 
+  const loadDocs = async () => {
+    const { data } = await supabase
+      .from("kyc_documents")
+      .select("*")
+      .eq("entity_id", entityId)
+      .in("document_type", CDD_DOC_TYPES.map((d) => d.type))
+      .order("uploaded_at", { ascending: false });
+    setDocs(data ?? []);
+  };
+
   useEffect(() => {
     if (!user || !entityId) return;
     setLoadingData(true);
@@ -73,7 +92,13 @@ export default function CddVerification() {
       supabase.from("entities").select("*").eq("id", entityId).maybeSingle(),
       supabase.from("cdd_verifications").select("*").eq("entity_id", entityId).maybeSingle(),
       supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
-    ]).then(([eRes, cRes, rRes]) => {
+      supabase
+        .from("kyc_documents")
+        .select("*")
+        .eq("entity_id", entityId)
+        .in("document_type", CDD_DOC_TYPES.map((d) => d.type))
+        .order("uploaded_at", { ascending: false }),
+    ]).then(([eRes, cRes, rRes, dRes]) => {
       if (eRes.error) toast.error(eRes.error.message);
       setEntity(eRes.data);
       if (cRes.data) {
@@ -88,9 +113,55 @@ export default function CddVerification() {
         });
       }
       setIsAdmin(Boolean(rRes.data));
+      setDocs(dRes.data ?? []);
       setLoadingData(false);
     });
   }, [user, entityId]);
+
+  const handleUpload = async (file: File, docType: string) => {
+    if (!user) return;
+    if (file.size > MAX_FILE_BYTES) return toast.error(t("cdd_file_too_large"));
+    setUploadingType(docType);
+    const ext = file.name.split(".").pop() || "bin";
+    const path = `${user.id}/${entityId}/${docType}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("kyc-documents").upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    });
+    if (upErr) {
+      setUploadingType(null);
+      return toast.error(upErr.message);
+    }
+    const { error: insErr } = await supabase.from("kyc_documents").insert({
+      entity_id: entityId,
+      user_id: user.id,
+      document_type: docType,
+      file_name: file.name,
+      storage_path: path,
+      mime_type: file.type || null,
+      size_bytes: file.size,
+    });
+    setUploadingType(null);
+    if (insErr) return toast.error(insErr.message);
+    toast.success(t("cdd_uploaded"));
+    await loadDocs();
+  };
+
+  const handleView = async (doc: any) => {
+    const { data, error } = await supabase.storage
+      .from("kyc-documents")
+      .createSignedUrl(doc.storage_path, 60 * 10);
+    if (error) return toast.error(error.message);
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDelete = async (doc: any) => {
+    await supabase.storage.from("kyc-documents").remove([doc.storage_path]);
+    const { error } = await supabase.from("kyc_documents").delete().eq("id", doc.id);
+    if (error) return toast.error(error.message);
+    toast.success(t("saved"));
+    await loadDocs();
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,6 +370,82 @@ export default function CddVerification() {
                 </div>
               )}
             </form>
+          </CardContent>
+        </Card>
+
+        {/* Documents */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="size-4" /> {t("cdd_documents")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid sm:grid-cols-3 gap-3">
+              {CDD_DOC_TYPES.map((d) => {
+                const isUploading = uploadingType === d.type;
+                return (
+                  <label
+                    key={d.type}
+                    className={`group rounded-lg border-2 border-dashed border-border hover:border-primary hover:bg-accent/30 transition-colors p-4 cursor-pointer flex flex-col items-center justify-center text-center min-h-[110px] ${
+                      isUploading ? "opacity-60 pointer-events-none" : ""
+                    }`}
+                  >
+                    <Upload className="size-5 text-muted-foreground group-hover:text-primary mb-2" />
+                    <span className="text-xs font-medium">
+                      {isUploading ? t("cdd_uploading") : t(d.uploadKey as any)}
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUpload(f, d.type);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+
+            {docs.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">{t("cdd_no_documents")}</div>
+            ) : (
+              <ul className="divide-y divide-border rounded-md border border-border">
+                {docs.map((doc) => {
+                  const meta = CDD_DOC_TYPES.find((d) => d.type === doc.document_type);
+                  return (
+                    <li key={doc.id} className="flex items-center gap-3 p-3">
+                      <FileText className="size-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium truncate">{doc.file_name}</div>
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-0.5">
+                          {meta && <Badge variant="secondary" className="text-[10px]">{t(meta.labelKey as any)}</Badge>}
+                          <span>{(doc.size_bytes / 1024).toFixed(1)} KB</span>
+                          <span>{new Date(doc.uploaded_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <Button type="button" size="sm" variant="outline" onClick={() => handleView(doc)}>
+                        <ExternalLink className="size-3.5" /> <span className="ms-1">{t("cdd_view")}</span>
+                      </Button>
+                      {(doc.user_id === user.id || isAdmin) && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(doc)}
+                          aria-label={t("cdd_delete")}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </CardContent>
         </Card>
 

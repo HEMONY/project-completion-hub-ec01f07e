@@ -235,6 +235,19 @@ export const dict: Dict = {
   },
   cdd_select: { ar: "اختر —", en: "Select —" },
   cdd_back_to_kyc: { ar: "العودة إلى KYC", en: "Back to KYC" },
+  cdd_documents: { ar: "المستندات الداعمة", en: "Supporting Documents" },
+  cdd_upload_identity: { ar: "رفع وثيقة الهوية", en: "Upload Identity Document" },
+  cdd_upload_eligibility: { ar: "رفع وثيقة الأهلية", en: "Upload Eligibility Document" },
+  cdd_upload_auditor: { ar: "رفع وثيقة المدقق", en: "Upload Auditor Document" },
+  cdd_no_documents: { ar: "لم يتم رفع أي مستند بعد", en: "No documents uploaded yet" },
+  cdd_uploading: { ar: "جارٍ الرفع…", en: "Uploading…" },
+  cdd_uploaded: { ar: "تم الرفع", en: "Uploaded" },
+  cdd_view: { ar: "عرض", en: "View" },
+  cdd_delete: { ar: "حذف", en: "Delete" },
+  cdd_file_too_large: { ar: "حجم الملف يتجاوز 10 ميجابايت", en: "File exceeds 10MB" },
+  cdd_doc_identity: { ar: "وثيقة الهوية", en: "Identity Document" },
+  cdd_doc_eligibility: { ar: "وثيقة الأهلية", en: "Eligibility Document" },
+  cdd_doc_auditor: { ar: "وثيقة المدقق", en: "Auditor Document" },
 };
 
 type I18nContext = {
