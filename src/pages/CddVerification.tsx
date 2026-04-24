@@ -11,7 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, ShieldCheck, AlertCircle, Clock } from "lucide-react";
+import { ArrowLeft, ShieldCheck, AlertCircle, Clock, Upload, FileText, Trash2, ExternalLink } from "lucide-react";
+
+const CDD_DOC_TYPES = [
+  { type: "cdd_identity", labelKey: "cdd_doc_identity", uploadKey: "cdd_upload_identity" },
+  { type: "cdd_eligibility", labelKey: "cdd_doc_eligibility", uploadKey: "cdd_upload_eligibility" },
+  { type: "cdd_auditor", labelKey: "cdd_doc_auditor", uploadKey: "cdd_upload_auditor" },
+] as const;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
