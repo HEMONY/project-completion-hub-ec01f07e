@@ -59,6 +59,8 @@ export default function CddVerification() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [docs, setDocs] = useState<any[]>([]);
+  const [uploadingType, setUploadingType] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     identity_verification: "",
