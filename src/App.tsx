@@ -13,6 +13,7 @@ import KycStep from "./pages/KycStep";
 import Screening from "./pages/Screening";
 import Sanctions from "./pages/Sanctions";
 import Audits from "./pages/Audits";
+import CddVerification from "./pages/CddVerification";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
