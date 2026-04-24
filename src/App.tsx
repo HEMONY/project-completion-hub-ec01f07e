@@ -35,6 +35,7 @@ const App = () => (
               <Route path="/screening" element={<Screening />} />
               <Route path="/sanctions" element={<Sanctions />} />
               <Route path="/audits" element={<Audits />} />
+              <Route path="/cdd/:entityId" element={<CddVerification />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
