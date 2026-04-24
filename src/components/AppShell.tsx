@@ -5,7 +5,6 @@ import {
   Building2,
   FilePlus2,
   ShieldCheck,
-  ScrollText,
   Sparkles,
   LogOut,
   Languages,
@@ -13,12 +12,12 @@ import {
   Sun,
   Menu,
   X,
+  Shield,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useRole } from "@/lib/auth";
 import { ChatWidget } from "@/components/ChatWidget";
-import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [dark, setDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { role } = useRole();
+
   useEffect(() => {
     const stored = localStorage.getItem("theme");
     const isDark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -44,13 +44,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     localStorage.setItem("theme", next ? "dark" : "light");
   };
 
+  // ── قائمة التنقل — بدون "العقوبات" (نقلت إلى لوحة الإدارة) ──
   const nav = [
     { to: "/", label: t("nav_dashboard"), icon: LayoutDashboard },
     { to: "/entities", label: t("nav_entities"), icon: Building2 },
     { to: "/kyc/start", label: t("nav_new_kyc"), icon: FilePlus2 },
     { to: "/screening", label: t("nav_screening"), icon: ShieldCheck },
-    { to: "/sanctions", label: t("nav_sanctions"), icon: ScrollText },
     { to: "/audits", label: t("nav_audits"), icon: Sparkles },
+    // لوحة الإدارة — تظهر فقط للمشرفين
     ...(["admin", "auditor", "moderator"].includes(role)
       ? [{ to: "/admin", label: "لوحة الإدارة", icon: Shield }]
       : []),
