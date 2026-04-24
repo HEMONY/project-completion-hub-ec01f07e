@@ -373,6 +373,82 @@ export default function CddVerification() {
           </CardContent>
         </Card>
 
+        {/* Documents */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="size-4" /> {t("cdd_documents")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid sm:grid-cols-3 gap-3">
+              {CDD_DOC_TYPES.map((d) => {
+                const isUploading = uploadingType === d.type;
+                return (
+                  <label
+                    key={d.type}
+                    className={`group rounded-lg border-2 border-dashed border-border hover:border-primary hover:bg-accent/30 transition-colors p-4 cursor-pointer flex flex-col items-center justify-center text-center min-h-[110px] ${
+                      isUploading ? "opacity-60 pointer-events-none" : ""
+                    }`}
+                  >
+                    <Upload className="size-5 text-muted-foreground group-hover:text-primary mb-2" />
+                    <span className="text-xs font-medium">
+                      {isUploading ? t("cdd_uploading") : t(d.uploadKey as any)}
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*,application/pdf"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleUpload(f, d.type);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+
+            {docs.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">{t("cdd_no_documents")}</div>
+            ) : (
+              <ul className="divide-y divide-border rounded-md border border-border">
+                {docs.map((doc) => {
+                  const meta = CDD_DOC_TYPES.find((d) => d.type === doc.document_type);
+                  return (
+                    <li key={doc.id} className="flex items-center gap-3 p-3">
+                      <FileText className="size-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium truncate">{doc.file_name}</div>
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-0.5">
+                          {meta && <Badge variant="secondary" className="text-[10px]">{t(meta.labelKey as any)}</Badge>}
+                          <span>{(doc.size_bytes / 1024).toFixed(1)} KB</span>
+                          <span>{new Date(doc.uploaded_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <Button type="button" size="sm" variant="outline" onClick={() => handleView(doc)}>
+                        <ExternalLink className="size-3.5" /> <span className="ms-1">{t("cdd_view")}</span>
+                      </Button>
+                      {(doc.user_id === user.id || isAdmin) && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(doc)}
+                          aria-label={t("cdd_delete")}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
         {/* History */}
         <Card className="shadow-card">
           <CardHeader>
