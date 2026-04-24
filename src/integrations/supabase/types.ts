@@ -49,7 +49,7 @@ export type Database = {
           {
             foreignKeyName: "audit_fees_entity_id_fkey"
             columns: ["entity_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "entities"
             referencedColumns: ["id"]
           },
@@ -233,7 +233,7 @@ export type Database = {
           {
             foreignKeyName: "financial_years_entity_id_fkey"
             columns: ["entity_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "entities"
             referencedColumns: ["id"]
           },
@@ -458,7 +458,7 @@ export type Database = {
           {
             foreignKeyName: "tax_status_entity_id_fkey"
             columns: ["entity_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "entities"
             referencedColumns: ["id"]
           },

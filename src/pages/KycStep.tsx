@@ -100,6 +100,9 @@ function KycForm({ entity, onSaved, t }: any) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (Number(form.total_turnover) > 50_000_000) {
+      return toast.error(t("kyc_turnover_max"));
+    }
     setBusy(true);
     const { data, error } = await supabase.from("entities").update({ ...form, shareholders, ubos, current_step: 2 }).eq("id", entity.id).select().single();
     setBusy(false);
@@ -134,7 +137,7 @@ function KycForm({ entity, onSaved, t }: any) {
                 {["Abu Dhabi","Dubai","Sharjah","Ajman","Umm Al Quwain","Ras Al Khaimah","Fujairah"].map(x => <option key={x}>{x}</option>)}
               </NativeSelect>
             </Field>
-            <Field label={t("kyc_turnover") + " *"}><Input required type="number" min={0} value={form.total_turnover} onChange={(e) => setForm({ ...form, total_turnover: parseFloat(e.target.value || "0") })} /></Field>
+            <Field label={t("kyc_turnover") + " *"}><Input required type="number" min={0} max={50000000} step="0.01" value={form.total_turnover} onChange={(e) => setForm({ ...form, total_turnover: parseFloat(e.target.value || "0") })} /></Field>
           </div>
           <Field label={t("kyc_address") + " *"}><Textarea required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
           <PeopleTable title={t("kyc_shareholders")} rows={shareholders} setRows={setShareholders} t={t} />
@@ -153,30 +156,51 @@ function PeopleTable({ title, rows, setRows, t }: any) {
   const remove = (i: number) => setRows(rows.filter((_: any, idx: number) => idx !== i));
   const update = (i: number, k: string, v: any) => setRows(rows.map((r: any, idx: number) => (idx === i ? { ...r, [k]: v } : r)));
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label className="text-base font-semibold">{title}</Label>
-        <Button type="button" size="sm" variant="outline" onClick={add}><Plus className="size-3.5" /> {t("kyc_add_row")}</Button>
+        <Button type="button" size="sm" variant="outline" onClick={add}>
+          <Plus className="size-3.5" /> {t("kyc_add_row")}
+        </Button>
       </div>
-      {rows.length === 0 ? <div className="text-xs text-muted-foreground italic">—</div> : (
-        <div className="overflow-x-auto rounded-md border border-border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs"><tr>
-              <th className="p-2 text-start">{t("kyc_name")}</th><th className="p-2 text-start">{t("kyc_capital")}</th>
-              <th className="p-2 text-start">{t("kyc_nationality")}</th><th className="p-2 text-start">{t("kyc_emirates_id")}</th>
-              <th className="p-2 text-start">{t("kyc_pep")}</th><th className="p-2"></th>
-            </tr></thead>
-            <tbody>{rows.map((r: any, i: number) => (
-              <tr key={i} className="border-t border-border">
-                <td className="p-1"><Input value={r.name} onChange={(e) => update(i, "name", e.target.value)} /></td>
-                <td className="p-1 w-24"><Input type="number" value={r.capital_percentage} onChange={(e) => update(i, "capital_percentage", parseFloat(e.target.value || "0"))} /></td>
-                <td className="p-1"><Input value={r.nationality} onChange={(e) => update(i, "nationality", e.target.value)} /></td>
-                <td className="p-1"><Input value={r.emirates_id} onChange={(e) => update(i, "emirates_id", e.target.value)} /></td>
-                <td className="p-1 w-24"><NativeSelect value={r.pep_status} onChange={(e) => update(i, "pep_status", e.target.value)}><option>No</option><option>Yes</option></NativeSelect></td>
-                <td className="p-1 w-12"><Button type="button" size="icon" variant="ghost" onClick={() => remove(i)}><Trash2 className="size-4 text-destructive" /></Button></td>
-              </tr>
-            ))}</tbody>
-          </table>
+      {rows.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          {t("kyc_no_entries")}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {rows.map((r: any, i: number) => (
+            <div key={i} className="rounded-lg border border-border bg-card p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {t("kyc_person_n")} {i + 1}
+                </span>
+                <Button type="button" size="sm" variant="ghost" onClick={() => remove(i)} className="text-destructive hover:text-destructive">
+                  <Trash2 className="size-4" /> <span className="ms-1">{t("kyc_remove")}</span>
+                </Button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <Field label={t("kyc_name")}>
+                  <Input value={r.name} onChange={(e) => update(i, "name", e.target.value)} />
+                </Field>
+                <Field label={t("kyc_capital")}>
+                  <Input type="number" min={0} max={100} step="0.01" value={r.capital_percentage} onChange={(e) => update(i, "capital_percentage", parseFloat(e.target.value || "0"))} />
+                </Field>
+                <Field label={t("kyc_nationality")}>
+                  <Input value={r.nationality} onChange={(e) => update(i, "nationality", e.target.value)} />
+                </Field>
+                <Field label={t("kyc_emirates_id")}>
+                  <Input value={r.emirates_id} onChange={(e) => update(i, "emirates_id", e.target.value)} />
+                </Field>
+                <Field label={t("kyc_pep")}>
+                  <NativeSelect value={r.pep_status} onChange={(e) => update(i, "pep_status", e.target.value)}>
+                    <option value="No">{t("no")}</option>
+                    <option value="Yes">{t("yes")}</option>
+                  </NativeSelect>
+                </Field>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
