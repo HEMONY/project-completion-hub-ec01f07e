@@ -96,6 +96,12 @@ export const dict: Dict = {
   kyc_pep: { ar: "شخصية معرضة سياسيًا (PEP)؟", en: "PEP?" },
   kyc_add_row: { ar: "+ إضافة سطر", en: "+ Add row" },
   kyc_remove: { ar: "حذف", en: "Remove" },
+  kyc_person_n: { ar: "السجل رقم", en: "Entry #" },
+  kyc_no_entries: { ar: "لا توجد سجلات بعد. اضغط \"إضافة سطر\" للبدء.", en: "No entries yet. Click \"Add row\" to start." },
+  kyc_turnover_max: {
+    ar: "نعتذر، الحد الأقصى لإجمالي الإيرادات هو 50,000,000 درهم. يرجى التواصل معنا لمناقشة الحالات الخاصة.",
+    en: "We apologize, the maximum total turnover is AED 50,000,000. Please contact us to discuss special cases.",
+  },
   kyc_documents: { ar: "المستندات", en: "Documents" },
   kyc_upload_id: { ar: "رفع الهوية / جواز السفر", en: "Upload ID / Passport" },
   kyc_upload_license: { ar: "رفع الرخصة التجارية", en: "Upload Trade License" },
