@@ -75,6 +75,16 @@ export default function CddVerification() {
     if (!loading && !user) navigate("/auth");
   }, [user, loading, navigate]);
 
+  const loadDocs = async () => {
+    const { data } = await supabase
+      .from("kyc_documents")
+      .select("*")
+      .eq("entity_id", entityId)
+      .in("document_type", CDD_DOC_TYPES.map((d) => d.type))
+      .order("uploaded_at", { ascending: false });
+    setDocs(data ?? []);
+  };
+
   useEffect(() => {
     if (!user || !entityId) return;
     setLoadingData(true);
@@ -82,7 +92,13 @@ export default function CddVerification() {
       supabase.from("entities").select("*").eq("id", entityId).maybeSingle(),
       supabase.from("cdd_verifications").select("*").eq("entity_id", entityId).maybeSingle(),
       supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
-    ]).then(([eRes, cRes, rRes]) => {
+      supabase
+        .from("kyc_documents")
+        .select("*")
+        .eq("entity_id", entityId)
+        .in("document_type", CDD_DOC_TYPES.map((d) => d.type))
+        .order("uploaded_at", { ascending: false }),
+    ]).then(([eRes, cRes, rRes, dRes]) => {
       if (eRes.error) toast.error(eRes.error.message);
       setEntity(eRes.data);
       if (cRes.data) {
@@ -97,9 +113,55 @@ export default function CddVerification() {
         });
       }
       setIsAdmin(Boolean(rRes.data));
+      setDocs(dRes.data ?? []);
       setLoadingData(false);
     });
   }, [user, entityId]);
+
+  const handleUpload = async (file: File, docType: string) => {
+    if (!user) return;
+    if (file.size > MAX_FILE_BYTES) return toast.error(t("cdd_file_too_large"));
+    setUploadingType(docType);
+    const ext = file.name.split(".").pop() || "bin";
+    const path = `${user.id}/${entityId}/${docType}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("kyc-documents").upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    });
+    if (upErr) {
+      setUploadingType(null);
+      return toast.error(upErr.message);
+    }
+    const { error: insErr } = await supabase.from("kyc_documents").insert({
+      entity_id: entityId,
+      user_id: user.id,
+      document_type: docType,
+      file_name: file.name,
+      storage_path: path,
+      mime_type: file.type || null,
+      size_bytes: file.size,
+    });
+    setUploadingType(null);
+    if (insErr) return toast.error(insErr.message);
+    toast.success(t("cdd_uploaded"));
+    await loadDocs();
+  };
+
+  const handleView = async (doc: any) => {
+    const { data, error } = await supabase.storage
+      .from("kyc-documents")
+      .createSignedUrl(doc.storage_path, 60 * 10);
+    if (error) return toast.error(error.message);
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDelete = async (doc: any) => {
+    await supabase.storage.from("kyc-documents").remove([doc.storage_path]);
+    const { error } = await supabase.from("kyc_documents").delete().eq("id", doc.id);
+    if (error) return toast.error(error.message);
+    toast.success(t("saved"));
+    await loadDocs();
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
