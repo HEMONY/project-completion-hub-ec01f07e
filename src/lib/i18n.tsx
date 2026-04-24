@@ -248,6 +248,93 @@ export const dict: Dict = {
   cdd_doc_identity: { ar: "وثيقة الهوية", en: "Identity Document" },
   cdd_doc_eligibility: { ar: "وثيقة الأهلية", en: "Eligibility Document" },
   cdd_doc_auditor: { ar: "وثيقة المدقق", en: "Auditor Document" },
+  // Admin
+  nav_admin: { ar: "لوحة الإدارة", en: "Admin Panel" },
+
+  // KYC missing keys
+  kyc_business_registration: { ar: "حالة التسجيل التجاري", en: "Business Registration Status" },
+  kyc_owner_name: { ar: "اسم الشركة / المالك", en: "Company / Owner Name" },
+  kyc_license_number: { ar: "رقم الترخيص", en: "License Number" },
+  kyc_issue_date: { ar: "تاريخ الإصدار", en: "Issue Date" },
+  kyc_expiry_date: { ar: "تاريخ الانتهاء", en: "Expiry Date" },
+  kyc_main_activity: { ar: "النشاط الرئيسي", en: "Main Activity" },
+  kyc_emirate: { ar: "الإمارة", en: "Emirate" },
+  kyc_turnover: { ar: "إجمالي دوران الأعمال", en: "Total Turnover (AED)" },
+  kyc_address: { ar: "العنوان", en: "Address" },
+  kyc_shareholders: { ar: "المساهمون", en: "Shareholders" },
+  kyc_ubos: { ar: "المستفيدون الفعليون", en: "Beneficial Owners (UBOs)" },
+  kyc_add_row: { ar: "إضافة", en: "Add" },
+  kyc_no_entries: { ar: "لا توجد إدخالات", en: "No entries yet" },
+  kyc_person_n: { ar: "شخص", en: "Person" },
+  kyc_remove: { ar: "حذف", en: "Remove" },
+  kyc_name: { ar: "الاسم", en: "Name" },
+  kyc_capital: { ar: "نسبة رأس المال %", en: "Capital %" },
+  kyc_nationality: { ar: "الجنسية", en: "Nationality" },
+  kyc_emirates_id: { ar: "رقم الهوية", en: "Emirates ID / Passport" },
+  kyc_pep: { ar: "شخص بارز سياسياً؟", en: "PEP?" },
+  kyc_turnover_max: { ar: "دوران الأعمال لا يتجاوز 50,000,000 درهم", en: "Turnover cannot exceed 50,000,000 AED" },
+  kyc_step1: { ar: "بيانات KYC", en: "KYC Information" },
+
+  // Audit fee
+  audit_fee_title: { ar: "رسوم المراجعة", en: "Audit Fee" },
+  audit_fee_desc: { ar: "يتم احتساب رسوم المراجعة بناءً على دوران أعمالك.", en: "Audit fee is calculated based on your total turnover." },
+  audit_fee_calculated: { ar: "الرسوم المحسوبة", en: "Calculated Fee" },
+  audit_fee_aed: { ar: "درهم", en: "AED" },
+  audit_fee_agree: { ar: "أوافق على رسوم المراجعة وشروط الدفع المبينة أعلاه.", en: "I agree to the audit fee and payment terms stated above." },
+
+  // Financial year
+  fy_title: { ar: "السنة المالية", en: "Financial Year" },
+  fy_first_question: { ar: "هل هذه أول سنة مالية؟", en: "Is this the first financial year?" },
+  fy_first_start: { ar: "تاريخ بداية السنة الأولى", en: "First Year Start Date" },
+  fy_first_end: { ar: "تاريخ نهاية السنة الأولى", en: "First Year End Date" },
+  fy_current_start: { ar: "تاريخ بداية السنة الحالية", en: "Current Year Start Date" },
+  fy_current_end: { ar: "تاريخ نهاية السنة الحالية", en: "Current Year End Date" },
+  fy_previous_audited: { ar: "هل السنة السابقة مراجَعة؟", en: "Was the previous year audited?" },
+
+  // Tax
+  tax_title: { ar: "الوضع الضريبي", en: "Tax Status" },
+  tax_vat_status: { ar: "حالة ضريبة القيمة المضافة", en: "VAT Status" },
+  tax_vat_number: { ar: "رقم تسجيل الضريبة", en: "VAT Registration Number" },
+  tax_excise_status: { ar: "حالة الضريبة الانتقائية", en: "Excise Tax Status" },
+  tax_corporate_status: { ar: "حالة ضريبة الشركات", en: "Corporate Tax Status" },
+  tax_corporate_number: { ar: "رقم تسجيل ضريبة الشركات", en: "Corporate Tax Registration Number" },
+  tax_corporate_treatment: { ar: "المعاملة الضريبية", en: "Tax Treatment" },
+  tax_sbr: { ar: "تخفيف الأعمال الصغيرة", en: "Small Business Relief" },
+
+  // Engagement
+  engagement_title: { ar: "خطاب الارتباط", en: "Engagement Letter" },
+  engagement_intro: { ar: "يرجى مراجعة شروط الارتباط والموافقة عليها.", en: "Please review and accept the engagement terms." },
+  engagement_accept: { ar: "أوافق على شروط خطاب الارتباط.", en: "I accept the terms of the engagement letter." },
+  engagement_complete: { ar: "إتمام الطلب", en: "Complete Application" },
+
+  // AI Audit
+  ai_audit_title: { ar: "مراجعة الذكاء الاصطناعي", en: "AI Audit" },
+  ai_audit_subtitle: { ar: "تحليل آلي شامل لبيانات الكيان", en: "Comprehensive automated entity analysis" },
+
+  // Screening
+  screening_title: { ar: "الفحص", en: "Screening" },
+
+  // Common
+  saving: { ar: "جاري الحفظ...", en: "Saving..." },
+  saved: { ar: "تم الحفظ", en: "Saved" },
+  loading: { ar: "جاري التحميل...", en: "Loading..." },
+  required: { ar: "هذا الحقل مطلوب", en: "This field is required" },
+  btn_next: { ar: "التالي", en: "Next" },
+  btn_back: { ar: "السابق", en: "Back" },
+  yes: { ar: "نعم", en: "Yes" },
+  no: { ar: "لا", en: "No" },
+  registered: { ar: "مسجّل", en: "Registered" },
+  not_registered: { ar: "غير مسجّل", en: "Not Registered" },
+
+  // Step 0
+  step0_welcome: { ar: "مرحباً بك في Muhasba", en: "Welcome to Muhasba" },
+  step0_subtitle: { ar: "ابدأ طلب KYC الخاص بك", en: "Start your KYC application" },
+  step0_new_client: { ar: "عميل جديد", en: "New Client" },
+  step0_new_desc: { ar: "تقديم طلب لأول مرة", en: "Submitting for the first time" },
+  step0_start_new: { ar: "بدء طلب جديد", en: "Start New Application" },
+  step0_returning: { ar: "عميل حالي", en: "Returning Client" },
+  step0_returning_desc: { ar: "تجديد أو تحديث طلب سابق", en: "Renewing or updating a previous application" },
+  step0_continue: { ar: "متابعة", en: "Continue" }
 };
 
 type I18nContext = {
