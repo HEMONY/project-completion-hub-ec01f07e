@@ -14,6 +14,7 @@ import Screening from "./pages/Screening";
 import Sanctions from "./pages/Sanctions";
 import Audits from "./pages/Audits";
 import CddVerification from "./pages/CddVerification";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,7 +37,8 @@ const App = () => (
               <Route path="/sanctions" element={<Sanctions />} />
               <Route path="/audits" element={<Audits />} />
               <Route path="/cdd/:entityId" element={<CddVerification />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="*" element={<NotFound />} /> />
             </Routes>
           </BrowserRouter>
         </AuthProvider>
