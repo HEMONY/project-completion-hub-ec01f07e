@@ -36,6 +36,17 @@ export const dict: Dict = {
     ar: "لا توجد كيانات بعد. ابدأ بإضافة كيان جديد.",
     en: "No entities yet. Start by adding a new entity.",
   },
+  filter_all: { ar: "الكل", en: "All" },
+  filter_draft: { ar: "مسودة", en: "Draft" },
+  filter_submitted: { ar: "مُقدَّم", en: "Submitted" },
+  filter_under_review: { ar: "قيد المراجعة", en: "Under Review" },
+  filter_approved: { ar: "معتمد", en: "Approved" },
+  filter_rejected: { ar: "مرفوض", en: "Rejected" },
+  entities_engagement: { ar: "رقم الارتباط", en: "Engagement #" },
+  entities_type: { ar: "النوع", en: "Type" },
+  entities_status: { ar: "الحالة", en: "Status" },
+  entities_created: { ar: "تاريخ الإنشاء", en: "Created" },
+  entities_actions: { ar: "إجراءات", en: "Actions" },
 
   // Auth
   auth_login: { ar: "تسجيل الدخول", en: "Login" },
