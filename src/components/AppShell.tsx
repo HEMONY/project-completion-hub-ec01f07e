@@ -16,6 +16,9 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
+import { useRole } from "@/lib/auth";
+import { ChatWidget } from "@/components/ChatWidget";
+import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [dark, setDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
+  const { role } = useRole();
   useEffect(() => {
     const stored = localStorage.getItem("theme");
     const isDark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -48,6 +51,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/screening", label: t("nav_screening"), icon: ShieldCheck },
     { to: "/sanctions", label: t("nav_sanctions"), icon: ScrollText },
     { to: "/audits", label: t("nav_audits"), icon: Sparkles },
+    ...(["admin", "auditor", "moderator"].includes(role)
+      ? [{ to: "/admin", label: "لوحة الإدارة", icon: Shield }]
+      : []),
   ];
 
   const isActive = (to: string) =>
@@ -147,6 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         <main className="flex-1 p-4 md:p-8 overflow-x-hidden animate-fade-in">{children}</main>
       </div>
+      <ChatWidget />
     </div>
   );
 }
