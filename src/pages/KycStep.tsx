@@ -100,6 +100,9 @@ function KycForm({ entity, onSaved, t }: any) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (Number(form.total_turnover) > 50_000_000) {
+      return toast.error(t("kyc_turnover_max"));
+    }
     setBusy(true);
     const { data, error } = await supabase.from("entities").update({ ...form, shareholders, ubos, current_step: 2 }).eq("id", entity.id).select().single();
     setBusy(false);
