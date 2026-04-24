@@ -1,0 +1,546 @@
+2026-01-17 13:14:53 - Session: {"user_id":1,"email":"admin@gmail.com","mobile":"+971567790819","full_name":"abdullah salah hussein","role":"client","authenticated":true,"form":{"step0":{"entity_id":"24","entity_name":"abdullah salah hussein","engagement_number":"ENG202601006","application_type":"new"},"step1":{"kyc-checkbox":"on","registration-status":"Unlicensed Natural Person(s)","mainland-type":"","owner-name":"FWEFEW","main-activity-input":"FEWFW","emirate-select":"Sharjah","address":"FEWF","shareholder_name":["FEWFEW"],"shareholder_capital":["100"],"shareholder_nationality":["FWEFWE"],"shareholder_emiratesId":["555555555555555"],"shareholder_expiryDate":["31\/01\/2026"],"shareholder_pep":["No"],"ubo-question":"No","management-control-select":"FEWFEW","turnover":"4000000","license-number":"","issue-date":"","expiry-date":""},"current_step":3,"current_entity":{"id":"24","name":"FWEFEW","engagement_number":"ENG202601006","application_type":"new"},"audit_fee":2000,"step2":{"turnover":"4000000","calculated_fee":2000,"agreement":"1"},"step3":{"year":"Yes","first-start-date":"01\/01\/2026","first-end-date":"31\/12\/2026","current-start-date":"","current-end-date":"","previous-start-date":"","previous-end-date":"","previous-audited":""},"step4":{"vat_status":"NOT REGISTERED","vat_registration_number":"","excise_tax_status":"NOT REGISTERED","corporate_tax_status":"NOT REGISTERED","corporate_tax_registration_number":"","corporate_tax_treatment":"","small_business_relief":"","not_registered_reason":"The Entity's annual income from its business or licensed activities does not exceed AED 1 million per year","other_reason_details":"","previous_vat_status":"","previous_excise_tax_status":"","previous_corporate_tax_status":"","previous_corporate_tax_treatment":"","previous_small_business_relief":""}},"entity_id":"25","success_message":"KYC data saved successfully!","last_saved_entity":{"id":"24","name":"FWEFEW","engagement_number":"ENG202601006","step1_id":20}}
+User ID: 1
+Raw input: {"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T12:14:53.685Z","engagement_number":""}
+Input data: {"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T12:14:53.685Z","engagement_number":""}
+2026-01-17 13:16:25 - Session: {"user_id":1,"email":"admin@gmail.com","mobile":"+971567790819","full_name":"abdullah salah hussein","role":"client","authenticated":true,"form":{"step0":{"entity_id":"24","entity_name":"abdullah salah hussein","engagement_number":"ENG202601006","application_type":"new"},"step1":{"kyc-checkbox":"on","registration-status":"Unlicensed Natural Person(s)","mainland-type":"","owner-name":"FWEFEW","main-activity-input":"FEWFW","emirate-select":"Sharjah","address":"FEWF","shareholder_name":["FEWFEW"],"shareholder_capital":["100"],"shareholder_nationality":["FWEFWE"],"shareholder_emiratesId":["555555555555555"],"shareholder_expiryDate":["31\/01\/2026"],"shareholder_pep":["No"],"ubo-question":"No","management-control-select":"FEWFEW","turnover":"4000000","license-number":"","issue-date":"","expiry-date":""},"current_step":3,"current_entity":{"id":"24","name":"FWEFEW","engagement_number":"ENG202601006","application_type":"new"},"audit_fee":2000,"step2":{"turnover":"4000000","calculated_fee":2000,"agreement":"1"},"step3":{"year":"Yes","first-start-date":"01\/01\/2026","first-end-date":"31\/12\/2026","current-start-date":"","current-end-date":"","previous-start-date":"","previous-end-date":"","previous-audited":""},"step4":{"vat_status":"NOT REGISTERED","vat_registration_number":"","excise_tax_status":"NOT REGISTERED","corporate_tax_status":"NOT REGISTERED","corporate_tax_registration_number":"","corporate_tax_treatment":"","small_business_relief":"","not_registered_reason":"The Entity's annual income from its business or licensed activities does not exceed AED 1 million per year","other_reason_details":"","previous_vat_status":"","previous_excise_tax_status":"","previous_corporate_tax_status":"","previous_corporate_tax_treatment":"","previous_small_business_relief":""},"step5":{"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T12:14:53.685Z","engagement_number":""}},"entity_id":"25","success_message":"KYC data saved successfully!","last_saved_entity":{"id":"24","name":"FWEFEW","engagement_number":"ENG202601006","step1_id":20}}
+User ID: 1
+Raw input: {"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T12:16:25.285Z","engagement_number":""}
+Input data: {"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T12:16:25.285Z","engagement_number":""}
+2026-01-17 13:17:29 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T12:17:29.267Z","engagement_number":""}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => FWEFEW
+    [digital_signature_date] => 2026-01-17T12:17:29.267Z
+    [engagement_number] => 
+)
+
+ERROR: Database config not found at: C:\xampp\htdocs\muhasba\controller\steps/../../config/database.php
+Final output sent: {"success":false,"message":"Error: Database config not found at: C:\\xampp\\htdocs\\muhasba\\controller\\steps\/..\/..\/config\/database.php","error_details":{"file":"C:\\xampp\\htdocs\\muhasba\\controller\\steps\\save_engagement.php","line":49}}
+2026-01-17 13:18:27 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T12:18:27.797Z","engagement_number":""}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => FWEFEW
+    [digital_signature_date] => 2026-01-17T12:18:27.797Z
+    [engagement_number] => 
+)
+
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":27}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":27}
+2026-01-17 14:02:28 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T13:02:28.324Z","engagement_number":"D256-P-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => FWEFEW
+    [digital_signature_date] => 2026-01-17T13:02:28.324Z
+    [engagement_number] => D256-P-2026 Provisional
+)
+
+Engagement number from session: D256-P-2026 Provisional
+ERROR: Invalid engagement number format. Use only letters, numbers, hyphens, underscores, and forward slashes.
+Final output sent: {"success":false,"message":"Error: Invalid engagement number format. Use only letters, numbers, hyphens, underscores, and forward slashes.","error_details":{"file":"C:\\xampp\\htdocs\\muhasba\\controller\\steps\\save_engagement.php","line":112}}
+2026-01-17 14:04:46 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"FWEFEW","digital_signature_date":"2026-01-17T13:04:46.920Z","engagement_number":"D256-P-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => FWEFEW
+    [digital_signature_date] => 2026-01-17T13:04:46.920Z
+    [engagement_number] => D256-P-2026 Provisional
+)
+
+Engagement number from session: D256-P-2026 Provisional
+Data to save - Engagement: D256-P-2026 Provisional, Terms: 1, Signature: FWEFEW
+Update SQL: UPDATE entity_step5 SET 
+                terms_accepted = :terms_accepted,
+                accepted_at = :accepted_at,
+                digital_signature_name = :digital_signature_name,
+                digital_signature_date = :digital_signature_date, engagement_number = :engagement_number, updated_at = NOW()
+                WHERE entity_id = :entity_id
+Update params: Array
+(
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-17 14:04:47
+    [:digital_signature_name] => FWEFEW
+    [:digital_signature_date] => 2026-01-17 14:04:47
+    [:entity_id] => 27
+    [:engagement_number] => D256-P-2026 Provisional
+)
+
+Update affected rows: 1
+Updated entities table with engagement number: D256-P-2026 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":27,"engagement_number":"D256-P-2026 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":27,"engagement_number":"D256-P-2026 Provisional"}
+2026-01-18 00:58:50 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"abdullah salah hussein","digital_signature_date":"2026-01-17T23:58:50.165Z","engagement_number":"D256-P-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => abdullah salah hussein
+    [digital_signature_date] => 2026-01-17T23:58:50.165Z
+    [engagement_number] => D256-P-2026 Provisional
+)
+
+Engagement number from session: D256-P-2026 Provisional
+Data to save - Engagement: D256-P-2026 Provisional, Terms: 1, Signature: abdullah salah hussein
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 32
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-18 00:58:50
+    [:digital_signature_name] => abdullah salah hussein
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-P-2026 Provisional
+)
+
+Inserted ID: 2
+Updated entities table with engagement number: D256-P-2026 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":32,"engagement_number":"D256-P-2026 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":32,"engagement_number":"D256-P-2026 Provisional"}
+2026-01-18 01:58:00 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"abdullah salah hussein","digital_signature_date":"2026-01-18T00:58:00.597Z","engagement_number":"D256-P-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => abdullah salah hussein
+    [digital_signature_date] => 2026-01-18T00:58:00.597Z
+    [engagement_number] => D256-P-2026 Provisional
+)
+
+Engagement number from session: D256-P-2026 Provisional
+Data to save - Engagement: D256-P-2026 Provisional, Terms: 1, Signature: abdullah salah hussein
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 35
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-18 01:58:00
+    [:digital_signature_name] => abdullah salah hussein
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-P-2026 Provisional
+)
+
+Inserted ID: 3
+Updated entities table with engagement number: D256-P-2026 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":35,"engagement_number":"D256-P-2026 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":35,"engagement_number":"D256-P-2026 Provisional"}
+2026-01-18 11:42:51 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"abdullah salah hussein","digital_signature_date":"2026-01-18T10:42:51.904Z","engagement_number":"D256-P-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => abdullah salah hussein
+    [digital_signature_date] => 2026-01-18T10:42:51.904Z
+    [engagement_number] => D256-P-2026 Provisional
+)
+
+Engagement number from session: D256-P-2026 Provisional
+Data to save - Engagement: D256-P-2026 Provisional, Terms: 1, Signature: abdullah salah hussein
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 38
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-18 11:42:51
+    [:digital_signature_name] => abdullah salah hussein
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-P-2026 Provisional
+)
+
+Inserted ID: 4
+Updated entities table with engagement number: D256-P-2026 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":38,"engagement_number":"D256-P-2026 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":38,"engagement_number":"D256-P-2026 Provisional"}
+2026-01-18 11:51:40 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"faisal abdullah","digital_signature_date":"2026-01-18T10:51:40.088Z","engagement_number":"D256-P-2027 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => faisal abdullah
+    [digital_signature_date] => 2026-01-18T10:51:40.088Z
+    [engagement_number] => D256-P-2027 Provisional
+)
+
+Engagement number from session: D256-P-2027 Provisional
+Data to save - Engagement: D256-P-2027 Provisional, Terms: 1, Signature: faisal abdullah
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 39
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-18 11:51:40
+    [:digital_signature_name] => faisal abdullah
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-P-2027 Provisional
+)
+
+Inserted ID: 5
+Updated entities table with engagement number: D256-P-2027 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":39,"engagement_number":"D256-P-2027 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":39,"engagement_number":"D256-P-2027 Provisional"}
+2026-01-18 11:59:17 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"abdullah salah hussein","digital_signature_date":"2026-01-18T10:59:17.918Z","engagement_number":"D256-P-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => abdullah salah hussein
+    [digital_signature_date] => 2026-01-18T10:59:17.918Z
+    [engagement_number] => D256-P-2026 Provisional
+)
+
+Engagement number from session: D256-P-2026 Provisional
+Data to save - Engagement: D256-P-2026 Provisional, Terms: 1, Signature: abdullah salah hussein
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 41
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-18 11:59:17
+    [:digital_signature_name] => abdullah salah hussein
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-P-2026 Provisional
+)
+
+Inserted ID: 6
+Updated entities table with engagement number: D256-P-2026 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":41,"engagement_number":"D256-P-2026 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":41,"engagement_number":"D256-P-2026 Provisional"}
+2026-01-18 12:11:05 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"omer salah","digital_signature_date":"2026-01-18T11:11:05.230Z","engagement_number":"D256-P-2026 Provisional-1"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => omer salah
+    [digital_signature_date] => 2026-01-18T11:11:05.230Z
+    [engagement_number] => D256-P-2026 Provisional-1
+)
+
+Engagement number from session: D256-P-2026 Provisional-1
+Data to save - Engagement: D256-P-2026 Provisional-1, Terms: 1, Signature: omer salah
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 42
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-18 12:11:05
+    [:digital_signature_name] => omer salah
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-P-2026 Provisional-1
+)
+
+Inserted ID: 7
+Updated entities table with engagement number: D256-P-2026 Provisional-1
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":42,"engagement_number":"D256-P-2026 Provisional-1"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":42,"engagement_number":"D256-P-2026 Provisional-1"}
+2026-01-21 09:59:35 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"salah hussein altahir","digital_signature_date":"2026-01-21T08:59:35.544Z","engagement_number":"D256-0-2027 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => salah hussein altahir
+    [digital_signature_date] => 2026-01-21T08:59:35.544Z
+    [engagement_number] => D256-0-2027 Provisional
+)
+
+Engagement number from session: D256-0-2027 Provisional
+Data to save - Engagement: D256-0-2027 Provisional, Terms: 1, Signature: salah hussein altahir
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 43
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-21 09:59:35
+    [:digital_signature_name] => salah hussein altahir
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-0-2027 Provisional
+)
+
+Inserted ID: 8
+Updated entities table with engagement number: D256-0-2027 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":43,"engagement_number":"D256-0-2027 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":43,"engagement_number":"D256-0-2027 Provisional"}
+2026-01-25 20:42:50 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"abdullah salah hussein","digital_signature_date":"2026-01-25T19:42:50.565Z","engagement_number":"D256-3-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => abdullah salah hussein
+    [digital_signature_date] => 2026-01-25T19:42:50.565Z
+    [engagement_number] => D256-3-2026 Provisional
+)
+
+Engagement number from session: D256-3-2026 Provisional
+Data to save - Engagement: D256-3-2026 Provisional, Terms: 1, Signature: abdullah salah hussein
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 3
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-25 20:42:50
+    [:digital_signature_name] => abdullah salah hussein
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-3-2026 Provisional
+)
+
+Inserted ID: 1
+Updated entities table with engagement number: D256-3-2026 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":3,"engagement_number":"D256-3-2026 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":3,"engagement_number":"D256-3-2026 Provisional"}
+2026-01-27 21:19:14 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"abdullah salah hussein","digital_signature_date":"2026-01-27T20:19:14.260Z","engagement_number":"D256-3-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => abdullah salah hussein
+    [digital_signature_date] => 2026-01-27T20:19:14.260Z
+    [engagement_number] => D256-3-2026 Provisional
+)
+
+Engagement number from session: D256-3-2026 Provisional
+Data to save - Engagement: D256-3-2026 Provisional, Terms: 1, Signature: abdullah salah hussein
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 1
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-27 21:19:16
+    [:digital_signature_name] => abdullah salah hussein
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-3-2026 Provisional
+)
+
+Inserted ID: 1
+Updated entities table with engagement number: D256-3-2026 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":1,"engagement_number":"D256-3-2026 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":1,"engagement_number":"D256-3-2026 Provisional"}
+2026-01-27 22:22:29 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"licneced company two years","digital_signature_date":"2026-01-27T21:22:29.623Z","engagement_number":"D256-3-2026 Provisional-1"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => licneced company two years
+    [digital_signature_date] => 2026-01-27T21:22:29.623Z
+    [engagement_number] => D256-3-2026 Provisional-1
+)
+
+Engagement number from session: D256-3-2026 Provisional-1
+Data to save - Engagement: D256-3-2026 Provisional-1, Terms: 1, Signature: licneced company two years
+Update SQL: UPDATE entity_step5 SET 
+                terms_accepted = :terms_accepted,
+                accepted_at = :accepted_at,
+                digital_signature_name = :digital_signature_name,
+                digital_signature_date = :digital_signature_date, engagement_number = :engagement_number, updated_at = NOW()
+                WHERE entity_id = :entity_id
+Update params: Array
+(
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-27 22:22:31
+    [:digital_signature_name] => licneced company two years
+    [:digital_signature_date] => 2026-01-27 22:22:31
+    [:entity_id] => 1
+    [:engagement_number] => D256-3-2026 Provisional-1
+)
+
+Update affected rows: 1
+Updated entities table with engagement number: D256-3-2026 Provisional-1
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":1,"engagement_number":"D256-3-2026 Provisional-1"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":1,"engagement_number":"D256-3-2026 Provisional-1"}
+2026-01-30 16:02:17 - Starting save_engagement.php
+User ID: 1
+Raw input received: {"terms_accepted":1,"digital_signature_name":"sole owner","digital_signature_date":"2026-01-30T15:02:17.220Z","engagement_number":"D256-P-2026 Provisional"}
+Parsed data: Array
+(
+    [terms_accepted] => 1
+    [digital_signature_name] => sole owner
+    [digital_signature_date] => 2026-01-30T15:02:17.220Z
+    [engagement_number] => D256-P-2026 Provisional
+)
+
+Engagement number from session: D256-P-2026 Provisional
+Data to save - Engagement: D256-P-2026 Provisional, Terms: 1, Signature: sole owner
+Insert SQL: INSERT INTO entity_step5 (
+                entity_id, engagement_number, terms_accepted,
+                accepted_at,
+                digital_signature_name,
+                digital_signature_date,
+                ip_address,
+                user_agent,
+                created_at)  VALUES (:entity_id, :engagement_number, :terms_accepted,
+                :accepted_at,
+                :digital_signature_name,
+                NOW(),
+                :ip_address,
+                :user_agent,
+                NOW())
+Insert params: Array
+(
+    [:entity_id] => 3
+    [:terms_accepted] => 1
+    [:accepted_at] => 2026-01-30 16:02:20
+    [:digital_signature_name] => sole owner
+    [:ip_address] => 127.0.0.1
+    [:user_agent] => Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0
+    [:engagement_number] => D256-P-2026 Provisional
+)
+
+Inserted ID: 2
+Updated entities table with engagement number: D256-P-2026 Provisional
+Updated application_status to submitted
+Success response prepared: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":3,"engagement_number":"D256-P-2026 Provisional"}
+Final output sent: {"success":true,"message":"Engagement saved successfully","terms_accepted":1,"entity_id":3,"engagement_number":"D256-P-2026 Provisional"}

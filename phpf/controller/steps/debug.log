@@ -1,0 +1,285 @@
+[2026-01-16 01:54:48] Request received
+Array
+(
+    [method] => POST
+    [post_data] => Array
+        (
+            [current-start-date] => 01/01/2027
+            [current-end-date] => 31/12/2027
+            [previous-start-date] => 01/01/2026
+            [previous-end-date] => 31/12/2026
+            [previous-audited] => Yes
+        )
+
+    [session_data] => Array
+        (
+            [form] => Array
+                (
+                    [audit_fee] => 6000
+                    [step0] => Array
+                        (
+                            [entity_id] => 20
+                            [entity_name] => tvrvrvvr
+                            [engagement_number] => ENG202601004
+                            [application_type] => return
+                        )
+
+                    [step1] => Array
+                        (
+                            [kyc-checkbox] => on
+                            [registration-status] => Free Zone Licensed
+                            [mainland-type] => 
+                            [owner-name] => tvrvrvvr
+                            [main-activity-input] => vrvr
+                            [emirate-select] => Sharjah
+                            [address] => vrvrvr
+                            [shareholder_name] => Array
+                                (
+                                    [0] => vrv
+                                )
+
+                            [shareholder_capital] => Array
+                                (
+                                    [0] => 100
+                                )
+
+                            [shareholder_nationality] => Array
+                                (
+                                    [0] => vtrvtr
+                                )
+
+                            [shareholder_emiratesId] => Array
+                                (
+                                    [0] => 555555555555555
+                                )
+
+                            [shareholder_expiryDate] => Array
+                                (
+                                    [0] => 31/01/2026
+                                )
+
+                            [shareholder_pep] => Array
+                                (
+                                    [0] => No
+                                )
+
+                            [ubo-question] => Yes
+                            [ubo_name] => Array
+                                (
+                                    [0] => tgrt
+                                )
+
+                            [ubo_capital] => Array
+                                (
+                                    [0] => 100
+                                )
+
+                            [ubo_nationality] => Array
+                                (
+                                    [0] => effr
+                                )
+
+                            [ubo_emiratesId] => Array
+                                (
+                                    [0] => 555555555555555
+                                )
+
+                            [ubo_expiryDate] => Array
+                                (
+                                    [0] => 31/01/2026
+                                )
+
+                            [ubo_pep] => Array
+                                (
+                                    [0] => No
+                                )
+
+                            [management-control-select] => vrv
+                            [turnover] => 50000000
+                            [license-number] => 55555555555555555555555
+                            [issue-date] => 01/01/2026
+                            [expiry-date] => 31/01/2026
+                            [save_kyc] => true
+                        )
+
+                    [current_step] => 3
+                    [current_entity] => Array
+                        (
+                            [id] => 20
+                            [name] => tvrvrvvr
+                            [engagement_number] => ENG202601004
+                            [application_type] => return
+                        )
+
+                    [step2] => Array
+                        (
+                            [turnover] => 50000000
+                            [calculated_fee] => 6000
+                            [agreement] => 1
+                        )
+
+                    [step3] => Array
+                        (
+                            [current-start-date] => 01/01/2027
+                            [current-end-date] => 31/12/2027
+                            [previous-start-date] => 01/01/2026
+                            [previous-end-date] => 31/12/2026
+                            [previous-audited] => Yes
+                        )
+
+                )
+
+            [user_id] => 1
+            [entity_id] => 21
+            [error_message] => Invalid request method
+            [form_data] => Array
+                (
+                    [current-start-date] => 01/01/2027
+                    [current-end-date] => 31/12/2027
+                    [previous-start-date] => 01/01/2026
+                    [previous-end-date] => 31/12/2026
+                    [previous-audited] => Yes
+                )
+
+        )
+
+    [files] => Array
+        (
+        )
+
+)
+
+---
+[2026-01-16 01:54:48] Processing POST data
+Array
+(
+    [current-start-date] => 01/01/2027
+    [current-end-date] => 31/12/2027
+    [previous-start-date] => 01/01/2026
+    [previous-end-date] => 31/12/2026
+    [previous-audited] => Yes
+)
+
+---
+[2026-01-16 01:54:48] Registration status is empty, checking alternatives
+Array
+(
+    [post_keys] => Array
+        (
+            [0] => current-start-date
+            [1] => current-end-date
+            [2] => previous-start-date
+            [3] => previous-end-date
+            [4] => previous-audited
+        )
+
+    [session_step1] => Array
+        (
+            [kyc-checkbox] => on
+            [registration-status] => Free Zone Licensed
+            [mainland-type] => 
+            [owner-name] => tvrvrvvr
+            [main-activity-input] => vrvr
+            [emirate-select] => Sharjah
+            [address] => vrvrvr
+            [shareholder_name] => Array
+                (
+                    [0] => vrv
+                )
+
+            [shareholder_capital] => Array
+                (
+                    [0] => 100
+                )
+
+            [shareholder_nationality] => Array
+                (
+                    [0] => vtrvtr
+                )
+
+            [shareholder_emiratesId] => Array
+                (
+                    [0] => 555555555555555
+                )
+
+            [shareholder_expiryDate] => Array
+                (
+                    [0] => 31/01/2026
+                )
+
+            [shareholder_pep] => Array
+                (
+                    [0] => No
+                )
+
+            [ubo-question] => Yes
+            [ubo_name] => Array
+                (
+                    [0] => tgrt
+                )
+
+            [ubo_capital] => Array
+                (
+                    [0] => 100
+                )
+
+            [ubo_nationality] => Array
+                (
+                    [0] => effr
+                )
+
+            [ubo_emiratesId] => Array
+                (
+                    [0] => 555555555555555
+                )
+
+            [ubo_expiryDate] => Array
+                (
+                    [0] => 31/01/2026
+                )
+
+            [ubo_pep] => Array
+                (
+                    [0] => No
+                )
+
+            [management-control-select] => vrv
+            [turnover] => 50000000
+            [license-number] => 55555555555555555555555
+            [issue-date] => 01/01/2026
+            [expiry-date] => 31/01/2026
+            [save_kyc] => true
+        )
+
+)
+
+---
+[2026-01-16 01:54:48] Using registration status from session step1
+Free Zone Licensed
+---
+[2026-01-16 01:54:48] Database parameters
+Array
+(
+    [:entity_id] => 21
+    [:registration_status] => Free Zone Licensed
+    [:first_financial_statements] => No
+    [:previous_audited] => Yes
+    [:current_start] => 2027-01-01
+    [:current_end] => 2027-12-31
+    [:previous_start] => 2026-01-01
+    [:previous_end] => 2026-12-31
+    [:files] => 
+)
+
+---
+[2026-01-16 01:54:48] Transaction rolled back due to error
+---
+[2026-01-16 01:54:48] Error occurred
+Array
+(
+    [message] => SQLSTATE[42S22]: Column not found: 1054 Unknown column 'registration_status' in 'field list'
+    [trace] => #0 C:\xampp\htdocs\muhasba\controller\steps\save_fin_year.php(484): PDO->prepare('INSERT INTO ent...')
+#1 {main}
+)
+
+---
