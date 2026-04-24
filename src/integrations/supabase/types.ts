@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_acceptance_memorandum: {
+        Row: {
+          accepted: boolean | null
+          accepted_at: string | null
+          auditor_name: string | null
+          client_name: string
+          commencement_date: string | null
+          created_at: string
+          engagement_number: string | null
+          entity_id: string
+          financial_year: string | null
+          id: string
+          notes: string | null
+          risk_assessment: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted?: boolean | null
+          accepted_at?: string | null
+          auditor_name?: string | null
+          client_name: string
+          commencement_date?: string | null
+          created_at?: string
+          engagement_number?: string | null
+          entity_id: string
+          financial_year?: string | null
+          id?: string
+          notes?: string | null
+          risk_assessment?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted?: boolean | null
+          accepted_at?: string | null
+          auditor_name?: string | null
+          client_name?: string
+          commencement_date?: string | null
+          created_at?: string
+          engagement_number?: string | null
+          entity_id?: string
+          financial_year?: string | null
+          id?: string
+          notes?: string | null
+          risk_assessment?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_fees: {
         Row: {
           agreed: boolean | null
@@ -54,6 +105,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cdd_verifications: {
+        Row: {
+          admin_id: string
+          auditor_verification: string | null
+          created_at: string
+          economic_sector: string | null
+          eligibility_status: string | null
+          eligibility_verification: string | null
+          entity_id: string
+          id: string
+          identity_verification: string | null
+          notes: string | null
+          updated_at: string
+          verification_history: Json | null
+        }
+        Insert: {
+          admin_id: string
+          auditor_verification?: string | null
+          created_at?: string
+          economic_sector?: string | null
+          eligibility_status?: string | null
+          eligibility_verification?: string | null
+          entity_id: string
+          id?: string
+          identity_verification?: string | null
+          notes?: string | null
+          updated_at?: string
+          verification_history?: Json | null
+        }
+        Update: {
+          admin_id?: string
+          auditor_verification?: string | null
+          created_at?: string
+          economic_sector?: string | null
+          eligibility_status?: string | null
+          eligibility_verification?: string | null
+          entity_id?: string
+          id?: string
+          identity_verification?: string | null
+          notes?: string | null
+          updated_at?: string
+          verification_history?: Json | null
+        }
+        Relationships: []
       }
       engagement_letters: {
         Row: {
@@ -119,6 +215,9 @@ export type Database = {
           mainland_company_type: string | null
           management_control: Json | null
           registration_status: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           screening_completed: boolean | null
           shareholders: Json | null
           submitted_at: string | null
@@ -146,6 +245,9 @@ export type Database = {
           mainland_company_type?: string | null
           management_control?: Json | null
           registration_status?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           screening_completed?: boolean | null
           shareholders?: Json | null
           submitted_at?: string | null
@@ -173,6 +275,9 @@ export type Database = {
           mainland_company_type?: string | null
           management_control?: Json | null
           registration_status?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           screening_completed?: boolean | null
           shareholders?: Json | null
           submitted_at?: string | null
@@ -238,6 +343,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      independence_confirmations: {
+        Row: {
+          client_audit: string | null
+          confirmation_status: string | null
+          confirmation_text: string | null
+          confirmation_type: string
+          confirmed_by: string | null
+          conflict_details: string | null
+          created_at: string
+          engagement_number: string | null
+          entity_id: string
+          id: string
+          is_sent: boolean | null
+          sent_at: string | null
+          signature_date: string | null
+          signature_name: string | null
+          status_message: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_audit?: string | null
+          confirmation_status?: string | null
+          confirmation_text?: string | null
+          confirmation_type: string
+          confirmed_by?: string | null
+          conflict_details?: string | null
+          created_at?: string
+          engagement_number?: string | null
+          entity_id: string
+          id?: string
+          is_sent?: boolean | null
+          sent_at?: string | null
+          signature_date?: string | null
+          signature_name?: string | null
+          status_message?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_audit?: string | null
+          confirmation_status?: string | null
+          confirmation_text?: string | null
+          confirmation_type?: string
+          confirmed_by?: string | null
+          conflict_details?: string | null
+          created_at?: string
+          engagement_number?: string | null
+          entity_id?: string
+          id?: string
+          is_sent?: boolean | null
+          sent_at?: string | null
+          signature_date?: string | null
+          signature_name?: string | null
+          status_message?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       kyc_documents: {
         Row: {
@@ -463,6 +628,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          description: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
