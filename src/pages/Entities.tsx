@@ -119,9 +119,14 @@ export default function Entities() {
                         <td className="py-3"><StatusBadge status={r.application_status} /></td>
                         <td className="py-3 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
                         <td className="py-3 text-end pe-3">
-                          <Button asChild size="sm" variant="outline">
-                            <Link to={`/kyc/${r.id}/kyc`}>{t("btn_view")}</Link>
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button asChild size="sm" variant="outline">
+                              <Link to={`/kyc/${r.id}/kyc`}>{t("btn_view")}</Link>
+                            </Button>
+                            <Button asChild size="sm" variant="ghost">
+                              <Link to={`/cdd/${r.id}`}>CDD</Link>
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

@@ -211,6 +211,30 @@ export const dict: Dict = {
   critical: { ar: "حرج", en: "Critical" },
   warning: { ar: "تحذير", en: "Warning" },
   info: { ar: "معلومة", en: "Info" },
+
+  // CDD Verifications
+  cdd_title: { ar: "التحقق من العناية الواجبة (CDD)", en: "Customer Due Diligence (CDD)" },
+  cdd_subtitle: { ar: "التحقق من هوية العميل والأهلية والمدقق", en: "Verify client identity, eligibility, and auditor" },
+  cdd_identity: { ar: "التحقق من الهوية", en: "Identity Verification" },
+  cdd_eligibility: { ar: "التحقق من الأهلية", en: "Eligibility Verification" },
+  cdd_auditor: { ar: "التحقق من المدقق", en: "Auditor Verification" },
+  cdd_economic_sector: { ar: "القطاع الاقتصادي", en: "Economic Sector" },
+  cdd_eligibility_status: { ar: "حالة الأهلية", en: "Eligibility Status" },
+  cdd_notes: { ar: "ملاحظات", en: "Notes" },
+  cdd_verified: { ar: "تم التحقق", en: "Verified" },
+  cdd_failed: { ar: "فشل", en: "Failed" },
+  cdd_eligible: { ar: "مؤهل", en: "Eligible" },
+  cdd_not_eligible: { ar: "غير مؤهل", en: "Not Eligible" },
+  cdd_pending: { ar: "قيد الانتظار", en: "Pending" },
+  cdd_history: { ar: "سجل التحققات", en: "Verification History" },
+  cdd_no_history: { ar: "لا يوجد سجل بعد", en: "No history yet" },
+  cdd_save: { ar: "حفظ التحقق", en: "Save Verification" },
+  cdd_admin_only: {
+    ar: "فقط المسؤولون يمكنهم تعديل بيانات CDD. يمكنك عرض البيانات فقط.",
+    en: "Only administrators can modify CDD data. You can view only.",
+  },
+  cdd_select: { ar: "اختر —", en: "Select —" },
+  cdd_back_to_kyc: { ar: "العودة إلى KYC", en: "Back to KYC" },
 };
 
 type I18nContext = {

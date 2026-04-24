@@ -13,6 +13,7 @@ import KycStep from "./pages/KycStep";
 import Screening from "./pages/Screening";
 import Sanctions from "./pages/Sanctions";
 import Audits from "./pages/Audits";
+import CddVerification from "./pages/CddVerification";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/screening" element={<Screening />} />
               <Route path="/sanctions" element={<Sanctions />} />
               <Route path="/audits" element={<Audits />} />
+              <Route path="/cdd/:entityId" element={<CddVerification />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
