@@ -137,7 +137,7 @@ function KycForm({ entity, onSaved, t }: any) {
                 {["Abu Dhabi","Dubai","Sharjah","Ajman","Umm Al Quwain","Ras Al Khaimah","Fujairah"].map(x => <option key={x}>{x}</option>)}
               </NativeSelect>
             </Field>
-            <Field label={t("kyc_turnover") + " *"}><Input required type="number" min={0} value={form.total_turnover} onChange={(e) => setForm({ ...form, total_turnover: parseFloat(e.target.value || "0") })} /></Field>
+            <Field label={t("kyc_turnover") + " *"}><Input required type="number" min={0} max={50000000} step="0.01" value={form.total_turnover} onChange={(e) => setForm({ ...form, total_turnover: parseFloat(e.target.value || "0") })} /></Field>
           </div>
           <Field label={t("kyc_address") + " *"}><Textarea required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></Field>
           <PeopleTable title={t("kyc_shareholders")} rows={shareholders} setRows={setShareholders} t={t} />
