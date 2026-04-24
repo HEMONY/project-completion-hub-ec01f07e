@@ -62,3 +62,29 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be inside AuthProvider");
   return ctx;
 }
+// new1
+
+export function useRole() {
+  const { user } = useAuth();
+  const [role, setRole] = useState<string>("user");
+  const [roleLoading, setRoleLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setRole("user");
+      setRoleLoading(false);
+      return;
+    }
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        setRole(data?.role ?? "user");
+        setRoleLoading(false);
+      });
+  }, [user]);
+
+  return { role, roleLoading };
+}
