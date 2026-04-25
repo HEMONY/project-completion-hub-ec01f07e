@@ -15,7 +15,7 @@ import {
   Building2, ShieldCheck,
   Search, Eye, FileText, AlertCircle, ScrollText,
   Upload, Trash2, Plus, Users, Activity,
-  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon,
+  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon, Loader2,
 } from "lucide-react";
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -65,23 +65,52 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 function DocumentPreview({ doc }: { doc: any }) {
   const [url, setUrl] = useState("");
+  const [loadingPreview, setLoadingPreview] = useState(true);
+  const [previewError, setPreviewError] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let active = true;
-    supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 60 * 10).then(({ data }) => {
-      if (active) setUrl(data?.signedUrl ?? "");
+    setLoadingPreview(true);
+    setPreviewError("");
+    setUrl("");
+    supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 60 * 10).then(({ data, error }) => {
+      if (!active) return;
+      if (error || !data?.signedUrl) {
+        setPreviewError(error?.message ?? "تعذر إنشاء رابط المعاينة");
+      } else {
+        setUrl(data.signedUrl);
+      }
+      setLoadingPreview(false);
+    }).catch((error) => {
+      if (!active) return;
+      setPreviewError(error instanceof Error ? error.message : "تعذر تحميل المعاينة");
+      setLoadingPreview(false);
     });
     return () => {
       active = false;
     };
-  }, [doc.storage_path]);
+  }, [doc.storage_path, retryKey]);
 
-  if (!url) return <div className="flex h-56 items-center justify-center rounded-md bg-muted/40 text-sm text-muted-foreground">جاري تحميل المعاينة...</div>;
+  if (loadingPreview) {
+    return <div className="flex h-56 flex-col items-center justify-center gap-3 rounded-md bg-muted/40 text-sm text-muted-foreground"><Loader2 className="size-6 animate-spin text-primary" /> جاري تحميل المعاينة...</div>;
+  }
+  if (previewError || !url) {
+    return (
+      <div className="flex h-56 flex-col items-center justify-center gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-center text-sm text-destructive">
+        <AlertCircle className="size-6" />
+        <span>{previewError || "تعذر تحميل رابط المعاينة"}</span>
+        <Button type="button" size="sm" variant="outline" onClick={() => setRetryKey((value) => value + 1)}>
+          <RefreshCw className="size-4" /> إعادة المحاولة
+        </Button>
+      </div>
+    );
+  }
   if (doc.mime_type?.startsWith("image/")) {
-    return <img src={url} alt={doc.file_name} className="h-56 w-full rounded-md border border-border object-contain bg-muted/30" loading="lazy" />;
+    return <img src={url} alt={doc.file_name} className="h-56 w-full rounded-md border border-border object-contain bg-muted/30" loading="lazy" onError={() => setPreviewError("تعذر عرض الصورة، قد يكون الرابط منتهي الصلاحية")} />;
   }
   if (doc.mime_type === "application/pdf") {
-    return <iframe title={doc.file_name} src={url} className="h-72 w-full rounded-md border border-border bg-background" />;
+    return <iframe title={doc.file_name} src={url} className="h-72 w-full rounded-md border border-border bg-background" onError={() => setPreviewError("تعذر عرض ملف PDF، قد يكون الرابط منتهي الصلاحية")} />;
   }
   return <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-md bg-muted/40 text-sm text-muted-foreground"><ImageIcon className="size-6" /> لا توجد معاينة لهذا النوع</div>;
 }
