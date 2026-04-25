@@ -298,13 +298,13 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!["admin", "auditor", "moderator"].includes(role)) {
+  if (role !== "admin") {
     return (
       <AppShell>
         <div className="max-w-lg mx-auto text-center py-20 space-y-4">
           <AlertCircle className="size-12 text-destructive mx-auto" />
           <h2 className="text-xl font-bold">غير مصرح</h2>
-          <p className="text-muted-foreground">هذه الصفحة مخصصة للمشرفين والمراجعين فقط.</p>
+          <p className="text-muted-foreground">هذه الصفحة مخصصة للمشرفين فقط.</p>
           <Button asChild variant="outline"><Link to="/">العودة للرئيسية</Link></Button>
         </div>
       </AppShell>
@@ -392,7 +392,10 @@ export default function AdminDashboard() {
                 { label: "مُقدَّمة", value: stats.submitted, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
                 { label: "قيد المراجعة", value: stats.under_review, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950/30" },
                 { label: "معتمدة", value: stats.approved, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-                { label: "مرفوضة", value: stats.rejected, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+                { label: "مرفوضة", value: stats.rejected, color: "text-destructive", bg: "bg-destructive/10" },
+                { label: "مستندات معلّقة", value: documents.filter((d) => (d.status ?? "pending") === "pending").length, color: "text-warning", bg: "bg-warning/10" },
+                { label: "مستندات معتمدة", value: documents.filter((d) => d.status === "approved").length, color: "text-success", bg: "bg-success/10" },
+                { label: "مستندات مرفوضة", value: documents.filter((d) => d.status === "rejected").length, color: "text-destructive", bg: "bg-destructive/10" },
               ].map((c) => (
                 <Card key={c.label} className="shadow-card">
                   <CardContent className="p-4 text-center">
