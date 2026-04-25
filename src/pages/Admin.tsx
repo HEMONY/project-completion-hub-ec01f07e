@@ -662,7 +662,7 @@ export default function AdminDashboard() {
                               )}
                               {e.application_status === "under_review" && (
                                 <>
-                                  <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white"
+                                  <Button size="sm" variant="success"
                                     onClick={() => setReviewModal({ entity: e, action: "approve" })}>
                                     موافقة
                                   </Button>
@@ -961,7 +961,7 @@ export default function AdminDashboard() {
                 </Field>
               )}
               {reviewModal.action === "approve" && (
-                <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-sm text-green-800 dark:text-green-300">
+                <div className="rounded-md bg-success/10 border border-success/30 p-3 text-sm text-success">
                   سيتم إخطار العميل بالموافقة على طلبه.
                 </div>
               )}
@@ -970,7 +970,6 @@ export default function AdminDashboard() {
                   إلغاء
                 </Button>
                 <Button
-                  className={reviewModal.action === "approve" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
                   variant={reviewModal.action === "reject" ? "destructive" : "default"}
                   onClick={submitReview}
                   disabled={reviewModal.action === "reject" && !reviewNotes.trim()}
