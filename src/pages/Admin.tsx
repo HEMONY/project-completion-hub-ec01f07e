@@ -186,7 +186,7 @@ export default function AdminDashboard() {
     await supabase.from("user_audit_logs").insert({
       user_id: user.id,
       action: `document_${docReview.status}`,
-      description: `${docReview.status === "approved" ? "اعتمد" : "رفض"} المستند: ${docReview.doc.file_name}${docReason ? ". السبب: " + docReason : ""}`,
+      description: `${docReview.status === "approved" ? "اعتمد" : "رفض"} المستند: ${docReview.doc.file_name} للكيان ${docReview.doc.entity_id}${docReason ? ". السبب: " + docReason : ""}`,
     });
     toast.success(docReview.status === "approved" ? "تم اعتماد المستند" : "تم رفض المستند");
     setDocReview(null);
@@ -400,6 +400,99 @@ export default function AdminDashboard() {
             {role === "admin" ? "مشرف" : role === "auditor" ? "مراجع" : "مشرف وسيط"}
           </Badge>
         </div>
+
+        {selectedEntity && (
+          <Card className="shadow-card border-primary/30">
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <Button variant="ghost" size="sm" className="mb-2" onClick={() => setSelectedEntity(null)}>
+                    <ArrowLeft className="size-4" /> العودة للكيانات
+                  </Button>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Building2 className="size-5 text-primary" /> {selectedEntity.entity_name}
+                  </CardTitle>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedEntity.profiles?.full_name ?? "—"} · {selectedEntity.profiles?.email ?? "—"}
+                  </p>
+                </div>
+                <Badge variant={(STATUS_COLORS[selectedEntity.application_status] as any) ?? "secondary"}>
+                  {STATUS_LABELS[selectedEntity.application_status] ?? selectedEntity.application_status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">رقم الارتباط</div><div className="mt-1 font-medium">{selectedEntity.engagement_number ?? "—"}</div></div>
+                <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">نوع الطلب</div><div className="mt-1 font-medium">{selectedEntity.application_type ?? "—"}</div></div>
+                <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">CDD</div><div className="mt-1 font-medium">{selectedEntity.cdd_completed ? "مكتمل" : "غير مكتمل"}</div></div>
+                <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">تاريخ الإنشاء</div><div className="mt-1 font-medium">{new Date(selectedEntity.created_at).toLocaleDateString("ar-AE")}</div></div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold flex items-center gap-2"><FileText className="size-4" /> مستندات الكيان ({selectedEntityDocuments.length})</h3>
+                  <Button size="sm" variant="outline" onClick={fetchDocuments}><RefreshCw className="size-4" /> تحديث</Button>
+                </div>
+                {selectedEntityDocuments.length === 0 ? (
+                  <div className="rounded-md border border-border py-10 text-center text-sm text-muted-foreground">لا توجد مستندات لهذا الكيان</div>
+                ) : (
+                  <div className="grid lg:grid-cols-2 gap-4">
+                    {selectedEntityDocuments.map((doc) => {
+                      const status = doc.status ?? "pending";
+                      return (
+                        <Card key={doc.id} className="overflow-hidden shadow-card">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <CardTitle className="truncate text-base">{doc.file_name}</CardTitle>
+                                <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                  <Badge variant="secondary">{DOC_TYPE_LABELS[doc.document_type] ?? doc.document_type}</Badge>
+                                  <span>{new Date(doc.uploaded_at).toLocaleString("ar-AE")}</span>
+                                </div>
+                              </div>
+                              <Badge variant={status === "approved" ? "success" : status === "rejected" ? "destructive" : "warning"}>
+                                {status === "approved" ? "معتمد" : status === "rejected" ? "مرفوض" : "قيد المراجعة"}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <DocumentPreview doc={doc} />
+                            {doc.rejection_reason && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">سبب الرفض: {doc.rejection_reason}</div>}
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => openDocument(doc)}><ExternalLink className="size-4" /> فتح</Button>
+                              {status !== "approved" && <Button size="sm" variant="success" onClick={() => setDocReview({ doc, status: "approved" })}>اعتماد</Button>}
+                              {status !== "rejected" && <Button size="sm" variant="destructive" onClick={() => setDocReview({ doc, status: "rejected" })}>رفض</Button>}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2"><Activity className="size-4" /> سجل المراجعة</h3>
+                {selectedEntityLogs.length === 0 ? (
+                  <div className="rounded-md border border-border py-8 text-center text-sm text-muted-foreground">لا يوجد سجل مراجعة لهذا الكيان بعد</div>
+                ) : (
+                  <div className="rounded-md border border-border divide-y divide-border">
+                    {selectedEntityLogs.map((log) => (
+                      <div key={log.id} className="p-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <Badge variant="outline">{log.action}</Badge>
+                          <span className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString("ar-AE")}</span>
+                        </div>
+                        <div className="mt-2 text-muted-foreground">{log.description ?? "—"}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border overflow-x-auto">
