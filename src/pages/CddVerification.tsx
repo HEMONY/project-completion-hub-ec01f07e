@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ArrowLeft, ShieldCheck, AlertCircle, Clock, Upload, FileText, Trash2, ExternalLink } from "lucide-react";
+import { ArrowLeft, ShieldCheck, AlertCircle, Clock, Upload, FileText, Trash2, ExternalLink, Image as ImageIcon } from "lucide-react";
 
 const CDD_DOC_TYPES = [
   { type: "cdd_identity", labelKey: "cdd_doc_identity", uploadKey: "cdd_upload_identity" },
@@ -19,6 +20,7 @@ const CDD_DOC_TYPES = [
   { type: "cdd_auditor", labelKey: "cdd_doc_auditor", uploadKey: "cdd_upload_auditor" },
 ] as const;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -61,6 +63,8 @@ export default function CddVerification() {
   const [busy, setBusy] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     identity_verification: "",
@@ -84,6 +88,20 @@ export default function CddVerification() {
       .order("uploaded_at", { ascending: false });
     setDocs(data ?? []);
   };
+
+  useEffect(() => {
+    const imageDocs = docs.filter((doc) => doc.mime_type?.startsWith("image/"));
+    if (!imageDocs.length) {
+      setPreviewUrls({});
+      return;
+    }
+    Promise.all(
+      imageDocs.map(async (doc) => {
+        const { data } = await supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 60 * 10);
+        return [doc.id, data?.signedUrl ?? ""] as const;
+      }),
+    ).then((entries) => setPreviewUrls(Object.fromEntries(entries.filter(([, url]) => Boolean(url)))));
+  }, [docs]);
 
   useEffect(() => {
     if (!user || !entityId) return;
@@ -118,32 +136,51 @@ export default function CddVerification() {
     });
   }, [user, entityId]);
 
-  const handleUpload = async (file: File, docType: string) => {
+  const handleUpload = async (files: FileList | File[], docType: string) => {
     if (!user) return;
-    if (file.size > MAX_FILE_BYTES) return toast.error(t("cdd_file_too_large"));
+    const selected = Array.from(files);
+    if (!selected.length) return;
+    const invalid = selected.find((file) => !ALLOWED_FILE_TYPES.includes(file.type));
+    if (invalid) return toast.error(t("cdd_invalid_file_type"));
+    const oversized = selected.find((file) => file.size > MAX_FILE_BYTES);
+    if (oversized) return toast.error(t("cdd_file_too_large"));
     setUploadingType(docType);
-    const ext = file.name.split(".").pop() || "bin";
-    const path = `${user.id}/${entityId}/${docType}-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("kyc-documents").upload(path, file, {
-      contentType: file.type || undefined,
-      upsert: false,
-    });
-    if (upErr) {
-      setUploadingType(null);
-      return toast.error(upErr.message);
+    setUploadProgress((prev) => ({ ...prev, [docType]: 5 }));
+    let completed = 0;
+    let failed = false;
+    for (const file of selected) {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${user.id}/${entityId}/${docType}-${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      setUploadProgress((prev) => ({ ...prev, [docType]: Math.max(prev[docType] ?? 5, Math.round((completed / selected.length) * 80) + 10) }));
+      const { error: upErr } = await supabase.storage.from("kyc-documents").upload(path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+      if (upErr) {
+        failed = true;
+        toast.error(upErr.message);
+        continue;
+      }
+      const { error: insErr } = await supabase.from("kyc_documents").insert({
+        entity_id: entityId,
+        user_id: user.id,
+        document_type: docType,
+        file_name: file.name,
+        storage_path: path,
+        mime_type: file.type || null,
+        size_bytes: file.size,
+      } as any);
+      if (insErr) {
+        failed = true;
+        toast.error(insErr.message);
+      } else {
+        completed += 1;
+      }
     }
-    const { error: insErr } = await supabase.from("kyc_documents").insert({
-      entity_id: entityId,
-      user_id: user.id,
-      document_type: docType,
-      file_name: file.name,
-      storage_path: path,
-      mime_type: file.type || null,
-      size_bytes: file.size,
-    });
+    setUploadProgress((prev) => ({ ...prev, [docType]: 100 }));
     setUploadingType(null);
-    if (insErr) return toast.error(insErr.message);
-    toast.success(t("cdd_uploaded"));
+    window.setTimeout(() => setUploadProgress((prev) => ({ ...prev, [docType]: 0 })), 800);
+    toast[failed ? "error" : "success"](failed ? t("cdd_upload_error") : t("cdd_upload_success"));
     await loadDocs();
   };
 
