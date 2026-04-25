@@ -420,7 +420,11 @@ export type Database = {
           file_name: string
           id: string
           mime_type: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           size_bytes: number | null
+          status: string
           storage_path: string
           uploaded_at: string
           user_id: string
@@ -431,7 +435,11 @@ export type Database = {
           file_name: string
           id?: string
           mime_type?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           size_bytes?: number | null
+          status?: string
           storage_path: string
           uploaded_at?: string
           user_id: string
@@ -442,7 +450,11 @@ export type Database = {
           file_name?: string
           id?: string
           mime_type?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           size_bytes?: number | null
+          status?: string
           storage_path?: string
           uploaded_at?: string
           user_id?: string
