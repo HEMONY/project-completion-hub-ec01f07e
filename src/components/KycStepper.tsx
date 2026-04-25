@@ -3,16 +3,36 @@ import { Check } from "lucide-react";
 import { useI18n, type dict } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-export type KycStepKey = "kyc" | "audit-fee" | "financial-year" | "tax-status" | "engagement";
+export type KycStepKey =
+  | "kyc"
+  | "uae-id"
+  | "audit-fee"
+  | "financial-year"
+  | "tax-status"
+  | "engagement"
+  | "financial-analysis"
+  | "payment";
 
-const stepOrder: KycStepKey[] = ["kyc", "audit-fee", "financial-year", "tax-status", "engagement"];
+const stepOrder: KycStepKey[] = [
+  "kyc",
+  "uae-id",
+  "audit-fee",
+  "financial-year",
+  "tax-status",
+  "engagement",
+  "financial-analysis",
+  "payment",
+];
 
 const labelKeys: Record<KycStepKey, keyof typeof dict> = {
-  kyc: "kyc_step1",
-  "audit-fee": "kyc_step2",
-  "financial-year": "kyc_step3",
-  "tax-status": "kyc_step4",
-  engagement: "kyc_step5",
+  "kyc":                "kyc_step1",
+  "uae-id":             "kyc_step_uaeid",
+  "audit-fee":          "kyc_step2",
+  "financial-year":     "kyc_step3",
+  "tax-status":         "kyc_step4",
+  "engagement":         "kyc_step5",
+  "financial-analysis": "kyc_step_analysis",
+  "payment":            "kyc_step_payment",
 };
 
 export function KycStepper({
