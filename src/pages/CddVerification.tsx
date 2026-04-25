@@ -432,13 +432,20 @@ export default function CddVerification() {
                     <span className="text-xs font-medium">
                       {isUploading ? t("cdd_uploading") : t(d.uploadKey as any)}
                     </span>
+                    {isUploading && (
+                      <div className="mt-3 w-full space-y-1">
+                        <Progress value={uploadProgress[d.type] ?? 10} className="h-2" />
+                        <span className="text-[11px] text-muted-foreground">{uploadProgress[d.type] ?? 10}%</span>
+                      </div>
+                    )}
                     <input
                       type="file"
+                      multiple
                       className="hidden"
-                      accept="image/*,application/pdf"
+                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                       onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleUpload(f, d.type);
+                        const f = e.target.files;
+                        if (f?.length) handleUpload(f, d.type);
                         e.target.value = "";
                       }}
                     />
@@ -453,16 +460,29 @@ export default function CddVerification() {
               <ul className="divide-y divide-border rounded-md border border-border">
                 {docs.map((doc) => {
                   const meta = CDD_DOC_TYPES.find((d) => d.type === doc.document_type);
+                  const status = doc.status ?? "pending";
                   return (
-                    <li key={doc.id} className="flex items-center gap-3 p-3">
-                      <FileText className="size-4 text-muted-foreground shrink-0" />
+                    <li key={doc.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+                      <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40">
+                        {doc.mime_type?.startsWith("image/") && previewUrls[doc.id] ? (
+                          <img src={previewUrls[doc.id]} alt={doc.file_name} className="h-full w-full object-cover" loading="lazy" />
+                        ) : doc.mime_type?.startsWith("image/") ? (
+                          <ImageIcon className="size-5 text-muted-foreground" />
+                        ) : (
+                          <FileText className="size-5 text-muted-foreground" />
+                        )}
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">{doc.file_name}</div>
                         <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-0.5">
                           {meta && <Badge variant="secondary" className="text-[10px]">{t(meta.labelKey as any)}</Badge>}
+                          <Badge variant={status === "approved" ? "success" as any : status === "rejected" ? "destructive" : "outline"} className="text-[10px]">
+                            {status === "approved" ? t("cdd_status_approved") : status === "rejected" ? t("cdd_status_rejected") : t("cdd_status_pending")}
+                          </Badge>
                           <span>{(doc.size_bytes / 1024).toFixed(1)} KB</span>
                           <span>{new Date(doc.uploaded_at).toLocaleString()}</span>
                         </div>
+                        {doc.rejection_reason && <div className="mt-1 text-xs text-destructive">{t("cdd_rejection_reason")}: {doc.rejection_reason}</div>}
                       </div>
                       <Button type="button" size="sm" variant="outline" onClick={() => handleView(doc)}>
                         <ExternalLink className="size-3.5" /> <span className="ms-1">{t("cdd_view")}</span>
