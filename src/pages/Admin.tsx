@@ -83,7 +83,7 @@ function DocumentPreview({ doc }: { doc: any }) {
   if (doc.mime_type === "application/pdf") {
     return <iframe title={doc.file_name} src={url} className="h-72 w-full rounded-md border border-border bg-background" />;
   }
-  return <div className="flex h-56 items-center justify-center rounded-md bg-muted/40 text-sm text-muted-foreground">لا توجد معاينة لهذا النوع</div>;
+  return <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-md bg-muted/40 text-sm text-muted-foreground"><ImageIcon className="size-6" /> لا توجد معاينة لهذا النوع</div>;
 }
 
 type Tab = "overview" | "entities" | "documents" | "sanctions" | "users" | "logs";
