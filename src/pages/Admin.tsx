@@ -545,6 +545,86 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* ─── TAB: DOCUMENTS ────────────────────────────────── */}
+        {tab === "documents" && (
+          <div className="space-y-4">
+            <Card className="shadow-card">
+              <CardContent className="p-4">
+                <div className="flex flex-wrap gap-3">
+                  <div className="relative flex-1 min-w-56">
+                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input placeholder="بحث باسم الملف أو الكيان أو المستخدم..." value={docQ} onChange={(e) => setDocQ(e.target.value)} className="ps-9" />
+                  </div>
+                  <NativeSelect value={docStatusFilter} onChange={(e) => setDocStatusFilter(e.target.value)} style={{ width: 170 }}>
+                    <option value="all">كل حالات المستندات</option>
+                    <option value="pending">قيد المراجعة</option>
+                    <option value="approved">معتمدة</option>
+                    <option value="rejected">مرفوضة</option>
+                  </NativeSelect>
+                  <NativeSelect value={docTypeFilter} onChange={(e) => setDocTypeFilter(e.target.value)} style={{ width: 170 }}>
+                    <option value="all">كل الأنواع</option>
+                    <option value="cdd_identity">هوية</option>
+                    <option value="cdd_eligibility">أهلية</option>
+                    <option value="cdd_auditor">مدقق</option>
+                  </NativeSelect>
+                  <Button variant="outline" onClick={fetchDocuments}>
+                    <RefreshCw className="size-4" /> تحديث
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="size-5" /> مستندات CDD ({filteredDocuments.length})</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 border-b border-border">
+                      <tr>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">المستند</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">النوع</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">الحالة</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">تاريخ الرفع</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDocuments.length === 0 ? (
+                        <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">لا توجد مستندات</td></tr>
+                      ) : filteredDocuments.map((doc) => {
+                        const status = doc.status ?? "pending";
+                        return (
+                          <tr key={doc.id} className="border-b border-border/60 hover:bg-muted/20 transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="font-medium max-w-64 truncate">{doc.file_name}</div>
+                              <div className="text-xs text-muted-foreground font-mono truncate">{doc.entity_id}</div>
+                            </td>
+                            <td className="py-3 px-4"><Badge variant="secondary">{doc.document_type}</Badge></td>
+                            <td className="py-3 px-4">
+                              <Badge variant={status === "approved" ? "success" : status === "rejected" ? "destructive" : "warning"}>
+                                {status === "approved" ? "معتمد" : status === "rejected" ? "مرفوض" : "قيد المراجعة"}
+                              </Badge>
+                              {doc.rejection_reason && <div className="mt-1 text-xs text-destructive max-w-48 truncate">{doc.rejection_reason}</div>}
+                            </td>
+                            <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">{new Date(doc.uploaded_at).toLocaleString("ar-AE")}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <Button size="sm" variant="outline" onClick={() => openDocument(doc)}><ExternalLink className="size-3.5" /> عرض</Button>
+                                {status !== "approved" && <Button size="sm" variant="success" onClick={() => setDocReview({ doc, status: "approved" })}>اعتماد</Button>}
+                                {status !== "rejected" && <Button size="sm" variant="destructive" onClick={() => setDocReview({ doc, status: "rejected" })}>رفض</Button>}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* ─── TAB: SANCTIONS ────────────────────────────────── */}
         {tab === "sanctions" && (
           <div className="space-y-4">
