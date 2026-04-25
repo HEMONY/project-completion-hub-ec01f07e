@@ -67,12 +67,14 @@ function DocumentPreview({ doc }: { doc: any }) {
   const [url, setUrl] = useState("");
   const [loadingPreview, setLoadingPreview] = useState(true);
   const [previewError, setPreviewError] = useState("");
+  const [pdfLoadError, setPdfLoadError] = useState("");
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let active = true;
     setLoadingPreview(true);
     setPreviewError("");
+    setPdfLoadError("");
     setUrl("");
     supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 60 * 10).then(({ data, error }) => {
       if (!active) return;
@@ -110,7 +112,19 @@ function DocumentPreview({ doc }: { doc: any }) {
     return <img src={url} alt={doc.file_name} className="h-56 w-full rounded-md border border-border object-contain bg-muted/30" loading="lazy" onError={() => setPreviewError("تعذر عرض الصورة، قد يكون الرابط منتهي الصلاحية")} />;
   }
   if (doc.mime_type === "application/pdf") {
-    return <iframe title={doc.file_name} src={url} className="h-72 w-full rounded-md border border-border bg-background" onError={() => setPreviewError("تعذر عرض ملف PDF، قد يكون الرابط منتهي الصلاحية")} />;
+    if (pdfLoadError) {
+      return (
+        <div className="flex h-72 flex-col items-center justify-center gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-4 text-center text-sm text-destructive">
+          <AlertCircle className="size-6" />
+          <span>{pdfLoadError}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => setRetryKey((value) => value + 1)}>
+            <RefreshCw className="size-4" /> إعادة المحاولة
+          </Button>
+        </div>
+      );
+    }
+
+    return <iframe title={doc.file_name} src={url} className="h-72 w-full rounded-md border border-border bg-background" onError={() => setPdfLoadError("تعذر عرض ملف PDF، قد يكون الرابط منتهي الصلاحية")} />;
   }
   return <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-md bg-muted/40 text-sm text-muted-foreground"><ImageIcon className="size-6" /> لا توجد معاينة لهذا النوع</div>;
 }
