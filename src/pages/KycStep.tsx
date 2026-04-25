@@ -13,8 +13,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, Trash2, Upload, FileText, X } from "lucide-react";
 
-const validSteps: KycStepKey[] = ["kyc", "audit-fee", "financial-year", "tax-status", "engagement"];
-
+//const validSteps: KycStepKey[] = ["kyc", "audit-fee", "financial-year", "tax-status", "engagement"];
+const validSteps: KycStepKey[] = [
+  "kyc",
+  "uae-id",
+  "audit-fee",
+  "financial-year",
+  "tax-status",
+  "engagement",
+  "financial-analysis",
+  "payment",
+];
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
