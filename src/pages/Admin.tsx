@@ -646,6 +646,9 @@ export default function AdminDashboard() {
                               <Button asChild size="sm" variant="outline" title="عرض">
                                 <Link to={`/kyc/${e.id}/kyc`}><Eye className="size-3.5" /></Link>
                               </Button>
+                              <Button size="sm" variant="outline" title="مراجعة المستندات" onClick={() => { setSelectedEntity(e); setTab("entities"); }}>
+                                <FileText className="size-3.5" /> فتح الكيان
+                              </Button>
                               <Button asChild size="sm" variant="outline" title="فحص">
                                 <Link to={`/screening`}><ShieldCheck className="size-3.5" /></Link>
                               </Button>
