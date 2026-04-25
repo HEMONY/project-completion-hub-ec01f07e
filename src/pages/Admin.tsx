@@ -102,6 +102,7 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{ entity: any; action: "approve" | "reject" } | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [selectedEntity, setSelectedEntity] = useState<any | null>(null);
   const [documents, setDocuments] = useState<any[]>([]);
   const [docQ, setDocQ] = useState("");
   const [docStatusFilter, setDocStatusFilter] = useState("all");
@@ -364,6 +365,13 @@ export default function AdminDashboard() {
     return [doc.file_name, doc.document_type, doc.entity_id, doc.user_id]
       .some((value) => String(value ?? "").toLowerCase().includes(query));
   });
+
+  const selectedEntityDocuments = selectedEntity
+    ? documents.filter((doc) => doc.entity_id === selectedEntity.id)
+    : [];
+  const selectedEntityLogs = selectedEntity
+    ? logs.filter((log) => String(log.description ?? "").includes(selectedEntity.entity_name) || String(log.metadata ?? "").includes(selectedEntity.id))
+    : [];
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: "overview", label: "نظرة عامة", icon: BarChart3 },
