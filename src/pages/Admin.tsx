@@ -844,6 +844,33 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* ─── Modal: Review Document ─────────────────────────── */}
+      {docReview && (
+        <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl">
+            <CardHeader>
+              <CardTitle>{docReview.status === "approved" ? "تأكيد اعتماد المستند" : "تأكيد رفض المستند"}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                المستند: <strong className="text-foreground">{docReview.doc.file_name}</strong>
+              </p>
+              {docReview.status === "rejected" && (
+                <Field label="سبب الرفض *">
+                  <Textarea value={docReason} onChange={(e) => setDocReason(e.target.value)} rows={3} placeholder="اكتب سبب الرفض..." />
+                </Field>
+              )}
+              <div className="flex gap-3 justify-end pt-2 border-t border-border">
+                <Button variant="outline" onClick={() => { setDocReview(null); setDocReason(""); }}>إلغاء</Button>
+                <Button variant={docReview.status === "rejected" ? "destructive" : "success"} onClick={submitDocumentReview} disabled={docReview.status === "rejected" && !docReason.trim()}>
+                  {docReview.status === "approved" ? "اعتماد" : "رفض"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* ─── Modal: Add Sanction ───────────────────────────── */}
       {addModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
