@@ -15,7 +15,7 @@ import {
   Building2, Clock, CheckCircle2, XCircle, ShieldCheck,
   Search, Eye, FileText, AlertCircle, ScrollText,
   UserCheck, Upload, Trash2, Plus, Users, Activity,
-  BarChart3, Shield,
+  BarChart3, Shield, RefreshCw, ExternalLink,
 } from "lucide-react";
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -54,7 +54,7 @@ const STATUS_LABELS: Record<string, string> = {
   edited: "معدَّل",
 };
 
-type Tab = "overview" | "entities" | "sanctions" | "users" | "logs";
+type Tab = "overview" | "entities" | "documents" | "sanctions" | "users" | "logs";
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -70,6 +70,12 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{ entity: any; action: "approve" | "reject" } | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [docQ, setDocQ] = useState("");
+  const [docStatusFilter, setDocStatusFilter] = useState("all");
+  const [docTypeFilter, setDocTypeFilter] = useState("all");
+  const [docReview, setDocReview] = useState<{ doc: any; status: "approved" | "rejected" } | null>(null);
+  const [docReason, setDocReason] = useState("");
 
   // Sanctions state
   const [sanctions, setSanctions] = useState<any[]>([]);
@@ -95,6 +101,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!user) return;
     fetchEntities();
+    fetchDocuments();
     fetchSanctions();
     fetchUsers();
     fetchLogs();
@@ -116,6 +123,43 @@ export default function AdminDashboard() {
       rejected: rows.filter((r) => r.application_status === "rejected").length,
       draft: rows.filter((r) => r.application_status === "draft").length,
     });
+  };
+
+  const fetchDocuments = async () => {
+    const { data, error } = await supabase
+      .from("kyc_documents")
+      .select("*")
+      .order("uploaded_at", { ascending: false });
+    if (error) return toast.error(error.message);
+    setDocuments(data ?? []);
+  };
+
+  const openDocument = async (doc: any) => {
+    const { data, error } = await supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 60 * 10);
+    if (error) return toast.error(error.message);
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const submitDocumentReview = async () => {
+    if (!docReview || !user) return;
+    const payload = {
+      status: docReview.status,
+      rejection_reason: docReview.status === "rejected" ? docReason.trim() : null,
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("kyc_documents").update(payload as any).eq("id", docReview.doc.id);
+    if (error) return toast.error(error.message);
+    await supabase.from("user_audit_logs").insert({
+      user_id: user.id,
+      action: `document_${docReview.status}`,
+      description: `${docReview.status === "approved" ? "اعتمد" : "رفض"} المستند: ${docReview.doc.file_name}${docReason ? ". السبب: " + docReason : ""}`,
+    });
+    toast.success(docReview.status === "approved" ? "تم اعتماد المستند" : "تم رفض المستند");
+    setDocReview(null);
+    setDocReason("");
+    fetchDocuments();
+    fetchLogs();
   };
 
   const moveToReview = async (entityId: string) => {
@@ -228,7 +272,7 @@ export default function AdminDashboard() {
     // Delete existing role then insert new one
     await supabase.from("user_roles").delete().eq("user_id", userId);
     if (newRole !== "user") {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole } as any);
       if (error) return toast.error(error.message);
     }
     toast.success("تم تحديث صلاحية المستخدم");
