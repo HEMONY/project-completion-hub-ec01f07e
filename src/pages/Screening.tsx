@@ -80,13 +80,13 @@ export default function Screening() {
     }
 
     // المساهمون
-    const shareholders: any[] = entityData.shareholders ?? [];
+    const shareholders: any[] = Array.isArray(entityData.shareholders) ? entityData.shareholders : [];
     shareholders.forEach((s) => {
       if (s.name) namesToScreen.push({ name: s.name, type: "Shareholder" });
     });
 
     // UBOs
-    const ubos: any[] = entityData.ubos ?? [];
+    const ubos: any[] = Array.isArray(entityData.ubos) ? entityData.ubos : [];
     ubos.forEach((u) => {
       if (u.name) namesToScreen.push({ name: u.name, type: "UBO" });
     });
