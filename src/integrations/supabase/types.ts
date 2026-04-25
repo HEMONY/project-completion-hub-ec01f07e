@@ -70,6 +70,8 @@ export type Database = {
           agreed: boolean | null
           calculated_fee: number
           created_at: string
+          digital_signature_date: string | null
+          digital_signature_name: string | null
           entity_id: string
           id: string
           turnover: number
@@ -80,6 +82,8 @@ export type Database = {
           agreed?: boolean | null
           calculated_fee: number
           created_at?: string
+          digital_signature_date?: string | null
+          digital_signature_name?: string | null
           entity_id: string
           id?: string
           turnover: number
@@ -90,6 +94,8 @@ export type Database = {
           agreed?: boolean | null
           calculated_fee?: number
           created_at?: string
+          digital_signature_date?: string | null
+          digital_signature_name?: string | null
           entity_id?: string
           id?: string
           turnover?: number
@@ -206,6 +212,7 @@ export type Database = {
           emirate: string | null
           engagement_number: string | null
           entity_name: string
+          has_ubo: boolean | null
           id: string
           ind_completed: boolean | null
           license_expiry_date: string | null
@@ -236,6 +243,7 @@ export type Database = {
           emirate?: string | null
           engagement_number?: string | null
           entity_name: string
+          has_ubo?: boolean | null
           id?: string
           ind_completed?: boolean | null
           license_expiry_date?: string | null
@@ -266,6 +274,7 @@ export type Database = {
           emirate?: string | null
           engagement_number?: string | null
           entity_name?: string
+          has_ubo?: boolean | null
           id?: string
           ind_completed?: boolean | null
           license_expiry_date?: string | null
@@ -454,6 +463,8 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          phone: string | null
+          role: string | null
           updated_at: string
         }
         Insert: {
@@ -461,6 +472,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          phone?: string | null
+          role?: string | null
           updated_at?: string
         }
         Update: {
@@ -468,6 +481,8 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          phone?: string | null
+          role?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -688,6 +703,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_entity_stats: {
+        Args: never
+        Returns: {
+          count: number
+          status: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -697,7 +719,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "auditor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -825,7 +847,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "auditor"],
     },
   },
 } as const
