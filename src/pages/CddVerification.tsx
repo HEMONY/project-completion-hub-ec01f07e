@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ArrowLeft, ShieldCheck, AlertCircle, Clock, Upload, FileText, Trash2, ExternalLink } from "lucide-react";
+import { ArrowLeft, ShieldCheck, AlertCircle, Clock, Upload, FileText, Trash2, ExternalLink, Image as ImageIcon } from "lucide-react";
 
 const CDD_DOC_TYPES = [
   { type: "cdd_identity", labelKey: "cdd_doc_identity", uploadKey: "cdd_upload_identity" },
@@ -19,6 +20,7 @@ const CDD_DOC_TYPES = [
   { type: "cdd_auditor", labelKey: "cdd_doc_auditor", uploadKey: "cdd_upload_auditor" },
 ] as const;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -61,6 +63,8 @@ export default function CddVerification() {
   const [busy, setBusy] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     identity_verification: "",
@@ -84,6 +88,20 @@ export default function CddVerification() {
       .order("uploaded_at", { ascending: false });
     setDocs(data ?? []);
   };
+
+  useEffect(() => {
+    const imageDocs = docs.filter((doc) => doc.mime_type?.startsWith("image/"));
+    if (!imageDocs.length) {
+      setPreviewUrls({});
+      return;
+    }
+    Promise.all(
+      imageDocs.map(async (doc) => {
+        const { data } = await supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 60 * 10);
+        return [doc.id, data?.signedUrl ?? ""] as const;
+      }),
+    ).then((entries) => setPreviewUrls(Object.fromEntries(entries.filter(([, url]) => Boolean(url)))));
+  }, [docs]);
 
   useEffect(() => {
     if (!user || !entityId) return;
@@ -118,32 +136,51 @@ export default function CddVerification() {
     });
   }, [user, entityId]);
 
-  const handleUpload = async (file: File, docType: string) => {
+  const handleUpload = async (files: FileList | File[], docType: string) => {
     if (!user) return;
-    if (file.size > MAX_FILE_BYTES) return toast.error(t("cdd_file_too_large"));
+    const selected = Array.from(files);
+    if (!selected.length) return;
+    const invalid = selected.find((file) => !ALLOWED_FILE_TYPES.includes(file.type));
+    if (invalid) return toast.error(t("cdd_invalid_file_type"));
+    const oversized = selected.find((file) => file.size > MAX_FILE_BYTES);
+    if (oversized) return toast.error(t("cdd_file_too_large"));
     setUploadingType(docType);
-    const ext = file.name.split(".").pop() || "bin";
-    const path = `${user.id}/${entityId}/${docType}-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("kyc-documents").upload(path, file, {
-      contentType: file.type || undefined,
-      upsert: false,
-    });
-    if (upErr) {
-      setUploadingType(null);
-      return toast.error(upErr.message);
+    setUploadProgress((prev) => ({ ...prev, [docType]: 5 }));
+    let completed = 0;
+    let failed = false;
+    for (const file of selected) {
+      const ext = file.name.split(".").pop() || "bin";
+      const path = `${user.id}/${entityId}/${docType}-${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      setUploadProgress((prev) => ({ ...prev, [docType]: Math.max(prev[docType] ?? 5, Math.round((completed / selected.length) * 80) + 10) }));
+      const { error: upErr } = await supabase.storage.from("kyc-documents").upload(path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+      if (upErr) {
+        failed = true;
+        toast.error(upErr.message);
+        continue;
+      }
+      const { error: insErr } = await supabase.from("kyc_documents").insert({
+        entity_id: entityId,
+        user_id: user.id,
+        document_type: docType,
+        file_name: file.name,
+        storage_path: path,
+        mime_type: file.type || null,
+        size_bytes: file.size,
+      } as any);
+      if (insErr) {
+        failed = true;
+        toast.error(insErr.message);
+      } else {
+        completed += 1;
+      }
     }
-    const { error: insErr } = await supabase.from("kyc_documents").insert({
-      entity_id: entityId,
-      user_id: user.id,
-      document_type: docType,
-      file_name: file.name,
-      storage_path: path,
-      mime_type: file.type || null,
-      size_bytes: file.size,
-    });
+    setUploadProgress((prev) => ({ ...prev, [docType]: 100 }));
     setUploadingType(null);
-    if (insErr) return toast.error(insErr.message);
-    toast.success(t("cdd_uploaded"));
+    window.setTimeout(() => setUploadProgress((prev) => ({ ...prev, [docType]: 0 })), 800);
+    toast[failed ? "error" : "success"](failed ? t("cdd_upload_error") : t("cdd_upload_success"));
     await loadDocs();
   };
 
@@ -395,13 +432,20 @@ export default function CddVerification() {
                     <span className="text-xs font-medium">
                       {isUploading ? t("cdd_uploading") : t(d.uploadKey as any)}
                     </span>
+                    {isUploading && (
+                      <div className="mt-3 w-full space-y-1">
+                        <Progress value={uploadProgress[d.type] ?? 10} className="h-2" />
+                        <span className="text-[11px] text-muted-foreground">{uploadProgress[d.type] ?? 10}%</span>
+                      </div>
+                    )}
                     <input
                       type="file"
+                      multiple
                       className="hidden"
-                      accept="image/*,application/pdf"
+                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                       onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleUpload(f, d.type);
+                        const f = e.target.files;
+                        if (f?.length) handleUpload(f, d.type);
                         e.target.value = "";
                       }}
                     />
@@ -416,16 +460,29 @@ export default function CddVerification() {
               <ul className="divide-y divide-border rounded-md border border-border">
                 {docs.map((doc) => {
                   const meta = CDD_DOC_TYPES.find((d) => d.type === doc.document_type);
+                  const status = doc.status ?? "pending";
                   return (
-                    <li key={doc.id} className="flex items-center gap-3 p-3">
-                      <FileText className="size-4 text-muted-foreground shrink-0" />
+                    <li key={doc.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+                      <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/40">
+                        {doc.mime_type?.startsWith("image/") && previewUrls[doc.id] ? (
+                          <img src={previewUrls[doc.id]} alt={doc.file_name} className="h-full w-full object-cover" loading="lazy" />
+                        ) : doc.mime_type?.startsWith("image/") ? (
+                          <ImageIcon className="size-5 text-muted-foreground" />
+                        ) : (
+                          <FileText className="size-5 text-muted-foreground" />
+                        )}
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">{doc.file_name}</div>
                         <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-0.5">
                           {meta && <Badge variant="secondary" className="text-[10px]">{t(meta.labelKey as any)}</Badge>}
+                          <Badge variant={status === "approved" ? "success" as any : status === "rejected" ? "destructive" : "outline"} className="text-[10px]">
+                            {status === "approved" ? t("cdd_status_approved") : status === "rejected" ? t("cdd_status_rejected") : t("cdd_status_pending")}
+                          </Badge>
                           <span>{(doc.size_bytes / 1024).toFixed(1)} KB</span>
                           <span>{new Date(doc.uploaded_at).toLocaleString()}</span>
                         </div>
+                        {doc.rejection_reason && <div className="mt-1 text-xs text-destructive">{t("cdd_rejection_reason")}: {doc.rejection_reason}</div>}
                       </div>
                       <Button type="button" size="sm" variant="outline" onClick={() => handleView(doc)}>
                         <ExternalLink className="size-3.5" /> <span className="ms-1">{t("cdd_view")}</span>

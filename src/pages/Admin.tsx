@@ -12,10 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import {
-  Building2, Clock, CheckCircle2, XCircle, ShieldCheck,
+  Building2, ShieldCheck,
   Search, Eye, FileText, AlertCircle, ScrollText,
-  UserCheck, Upload, Trash2, Plus, Users, Activity,
-  BarChart3, Shield,
+  Upload, Trash2, Plus, Users, Activity,
+  BarChart3, Shield, RefreshCw, ExternalLink,
 } from "lucide-react";
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -54,7 +54,7 @@ const STATUS_LABELS: Record<string, string> = {
   edited: "معدَّل",
 };
 
-type Tab = "overview" | "entities" | "sanctions" | "users" | "logs";
+type Tab = "overview" | "entities" | "documents" | "sanctions" | "users" | "logs";
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -70,6 +70,12 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{ entity: any; action: "approve" | "reject" } | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [docQ, setDocQ] = useState("");
+  const [docStatusFilter, setDocStatusFilter] = useState("all");
+  const [docTypeFilter, setDocTypeFilter] = useState("all");
+  const [docReview, setDocReview] = useState<{ doc: any; status: "approved" | "rejected" } | null>(null);
+  const [docReason, setDocReason] = useState("");
 
   // Sanctions state
   const [sanctions, setSanctions] = useState<any[]>([]);
@@ -95,6 +101,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!user) return;
     fetchEntities();
+    fetchDocuments();
     fetchSanctions();
     fetchUsers();
     fetchLogs();
@@ -116,6 +123,43 @@ export default function AdminDashboard() {
       rejected: rows.filter((r) => r.application_status === "rejected").length,
       draft: rows.filter((r) => r.application_status === "draft").length,
     });
+  };
+
+  const fetchDocuments = async () => {
+    const { data, error } = await supabase
+      .from("kyc_documents")
+      .select("*")
+      .order("uploaded_at", { ascending: false });
+    if (error) return toast.error(error.message);
+    setDocuments(data ?? []);
+  };
+
+  const openDocument = async (doc: any) => {
+    const { data, error } = await supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 60 * 10);
+    if (error) return toast.error(error.message);
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const submitDocumentReview = async () => {
+    if (!docReview || !user) return;
+    const payload = {
+      status: docReview.status,
+      rejection_reason: docReview.status === "rejected" ? docReason.trim() : null,
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("kyc_documents").update(payload as any).eq("id", docReview.doc.id);
+    if (error) return toast.error(error.message);
+    await supabase.from("user_audit_logs").insert({
+      user_id: user.id,
+      action: `document_${docReview.status}`,
+      description: `${docReview.status === "approved" ? "اعتمد" : "رفض"} المستند: ${docReview.doc.file_name}${docReason ? ". السبب: " + docReason : ""}`,
+    });
+    toast.success(docReview.status === "approved" ? "تم اعتماد المستند" : "تم رفض المستند");
+    setDocReview(null);
+    setDocReason("");
+    fetchDocuments();
+    fetchLogs();
   };
 
   const moveToReview = async (entityId: string) => {
@@ -228,7 +272,7 @@ export default function AdminDashboard() {
     // Delete existing role then insert new one
     await supabase.from("user_roles").delete().eq("user_id", userId);
     if (newRole !== "user") {
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole } as any);
       if (error) return toast.error(error.message);
     }
     toast.success("تم تحديث صلاحية المستخدم");
@@ -254,13 +298,13 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!["admin", "auditor", "moderator"].includes(role)) {
+  if (role !== "admin") {
     return (
       <AppShell>
         <div className="max-w-lg mx-auto text-center py-20 space-y-4">
           <AlertCircle className="size-12 text-destructive mx-auto" />
           <h2 className="text-xl font-bold">غير مصرح</h2>
-          <p className="text-muted-foreground">هذه الصفحة مخصصة للمشرفين والمراجعين فقط.</p>
+          <p className="text-muted-foreground">هذه الصفحة مخصصة للمشرفين فقط.</p>
           <Button asChild variant="outline"><Link to="/">العودة للرئيسية</Link></Button>
         </div>
       </AppShell>
@@ -280,9 +324,19 @@ export default function AdminDashboard() {
     s.arabic_name?.includes(sanctionQ)
   );
 
+  const filteredDocuments = documents.filter((doc) => {
+    if (docStatusFilter !== "all" && (doc.status ?? "pending") !== docStatusFilter) return false;
+    if (docTypeFilter !== "all" && doc.document_type !== docTypeFilter) return false;
+    const query = docQ.trim().toLowerCase();
+    if (!query) return true;
+    return [doc.file_name, doc.document_type, doc.entity_id, doc.user_id]
+      .some((value) => String(value ?? "").toLowerCase().includes(query));
+  });
+
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: "overview", label: "نظرة عامة", icon: BarChart3 },
     { id: "entities", label: `الكيانات (${entities.length})`, icon: Building2 },
+    { id: "documents", label: `المستندات (${documents.length})`, icon: FileText },
     { id: "sanctions", label: `قائمة العقوبات (${sanctions.length})`, icon: ScrollText },
     { id: "users", label: `المستخدمون (${users.length})`, icon: Users },
     { id: "logs", label: "سجل النشاط", icon: Activity },
@@ -338,7 +392,10 @@ export default function AdminDashboard() {
                 { label: "مُقدَّمة", value: stats.submitted, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
                 { label: "قيد المراجعة", value: stats.under_review, color: "text-yellow-600", bg: "bg-yellow-50 dark:bg-yellow-950/30" },
                 { label: "معتمدة", value: stats.approved, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950/30" },
-                { label: "مرفوضة", value: stats.rejected, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
+                { label: "مرفوضة", value: stats.rejected, color: "text-destructive", bg: "bg-destructive/10" },
+                { label: "مستندات معلّقة", value: documents.filter((d) => (d.status ?? "pending") === "pending").length, color: "text-warning", bg: "bg-warning/10" },
+                { label: "مستندات معتمدة", value: documents.filter((d) => d.status === "approved").length, color: "text-success", bg: "bg-success/10" },
+                { label: "مستندات مرفوضة", value: documents.filter((d) => d.status === "rejected").length, color: "text-destructive", bg: "bg-destructive/10" },
               ].map((c) => (
                 <Card key={c.label} className="shadow-card">
                   <CardContent className="p-4 text-center">
@@ -483,6 +540,86 @@ export default function AdminDashboard() {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ─── TAB: DOCUMENTS ────────────────────────────────── */}
+        {tab === "documents" && (
+          <div className="space-y-4">
+            <Card className="shadow-card">
+              <CardContent className="p-4">
+                <div className="flex flex-wrap gap-3">
+                  <div className="relative flex-1 min-w-56">
+                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input placeholder="بحث باسم الملف أو الكيان أو المستخدم..." value={docQ} onChange={(e) => setDocQ(e.target.value)} className="ps-9" />
+                  </div>
+                  <NativeSelect value={docStatusFilter} onChange={(e) => setDocStatusFilter(e.target.value)} style={{ width: 170 }}>
+                    <option value="all">كل حالات المستندات</option>
+                    <option value="pending">قيد المراجعة</option>
+                    <option value="approved">معتمدة</option>
+                    <option value="rejected">مرفوضة</option>
+                  </NativeSelect>
+                  <NativeSelect value={docTypeFilter} onChange={(e) => setDocTypeFilter(e.target.value)} style={{ width: 170 }}>
+                    <option value="all">كل الأنواع</option>
+                    <option value="cdd_identity">هوية</option>
+                    <option value="cdd_eligibility">أهلية</option>
+                    <option value="cdd_auditor">مدقق</option>
+                  </NativeSelect>
+                  <Button variant="outline" onClick={fetchDocuments}>
+                    <RefreshCw className="size-4" /> تحديث
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader><CardTitle className="flex items-center gap-2"><FileText className="size-5" /> مستندات CDD ({filteredDocuments.length})</CardTitle></CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 border-b border-border">
+                      <tr>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">المستند</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">النوع</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">الحالة</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">تاريخ الرفع</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDocuments.length === 0 ? (
+                        <tr><td colSpan={5} className="py-12 text-center text-muted-foreground">لا توجد مستندات</td></tr>
+                      ) : filteredDocuments.map((doc) => {
+                        const status = doc.status ?? "pending";
+                        return (
+                          <tr key={doc.id} className="border-b border-border/60 hover:bg-muted/20 transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="font-medium max-w-64 truncate">{doc.file_name}</div>
+                              <div className="text-xs text-muted-foreground font-mono truncate">{doc.entity_id}</div>
+                            </td>
+                            <td className="py-3 px-4"><Badge variant="secondary">{doc.document_type}</Badge></td>
+                            <td className="py-3 px-4">
+                              <Badge variant={status === "approved" ? "success" : status === "rejected" ? "destructive" : "warning"}>
+                                {status === "approved" ? "معتمد" : status === "rejected" ? "مرفوض" : "قيد المراجعة"}
+                              </Badge>
+                              {doc.rejection_reason && <div className="mt-1 text-xs text-destructive max-w-48 truncate">{doc.rejection_reason}</div>}
+                            </td>
+                            <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">{new Date(doc.uploaded_at).toLocaleString("ar-AE")}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <Button size="sm" variant="outline" onClick={() => openDocument(doc)}><ExternalLink className="size-3.5" /> عرض</Button>
+                                {status !== "approved" && <Button size="sm" variant="success" onClick={() => setDocReview({ doc, status: "approved" })}>اعتماد</Button>}
+                                {status !== "rejected" && <Button size="sm" variant="destructive" onClick={() => setDocReview({ doc, status: "rejected" })}>رفض</Button>}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -703,6 +840,33 @@ export default function AdminDashboard() {
                   disabled={reviewModal.action === "reject" && !reviewNotes.trim()}
                 >
                   {reviewModal.action === "approve" ? "تأكيد الموافقة" : "تأكيد الرفض"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ─── Modal: Review Document ─────────────────────────── */}
+      {docReview && (
+        <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl">
+            <CardHeader>
+              <CardTitle>{docReview.status === "approved" ? "تأكيد اعتماد المستند" : "تأكيد رفض المستند"}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                المستند: <strong className="text-foreground">{docReview.doc.file_name}</strong>
+              </p>
+              {docReview.status === "rejected" && (
+                <Field label="سبب الرفض *">
+                  <Textarea value={docReason} onChange={(e) => setDocReason(e.target.value)} rows={3} placeholder="اكتب سبب الرفض..." />
+                </Field>
+              )}
+              <div className="flex gap-3 justify-end pt-2 border-t border-border">
+                <Button variant="outline" onClick={() => { setDocReview(null); setDocReason(""); }}>إلغاء</Button>
+                <Button variant={docReview.status === "rejected" ? "destructive" : "success"} onClick={submitDocumentReview} disabled={docReview.status === "rejected" && !docReason.trim()}>
+                  {docReview.status === "approved" ? "اعتماد" : "رفض"}
                 </Button>
               </div>
             </CardContent>
