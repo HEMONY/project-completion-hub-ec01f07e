@@ -15,7 +15,7 @@ import {
   Building2, ShieldCheck,
   Search, Eye, FileText, AlertCircle, ScrollText,
   Upload, Trash2, Plus, Users, Activity,
-  BarChart3, Shield, RefreshCw, ExternalLink,
+  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon,
 } from "lucide-react";
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -53,6 +53,38 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "مرفوض",
   edited: "معدَّل",
 };
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  cdd_identity: "هوية",
+  cdd_eligibility: "أهلية",
+  cdd_auditor: "مدقق",
+  eid_passport: "هوية / جواز",
+  trade_license: "رخصة تجارية",
+  authorization_letter: "تفويض",
+};
+
+function DocumentPreview({ doc }: { doc: any }) {
+  const [url, setUrl] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 60 * 10).then(({ data }) => {
+      if (active) setUrl(data?.signedUrl ?? "");
+    });
+    return () => {
+      active = false;
+    };
+  }, [doc.storage_path]);
+
+  if (!url) return <div className="flex h-56 items-center justify-center rounded-md bg-muted/40 text-sm text-muted-foreground">جاري تحميل المعاينة...</div>;
+  if (doc.mime_type?.startsWith("image/")) {
+    return <img src={url} alt={doc.file_name} className="h-56 w-full rounded-md border border-border object-contain bg-muted/30" loading="lazy" />;
+  }
+  if (doc.mime_type === "application/pdf") {
+    return <iframe title={doc.file_name} src={url} className="h-72 w-full rounded-md border border-border bg-background" />;
+  }
+  return <div className="flex h-56 items-center justify-center rounded-md bg-muted/40 text-sm text-muted-foreground">لا توجد معاينة لهذا النوع</div>;
+}
 
 type Tab = "overview" | "entities" | "documents" | "sanctions" | "users" | "logs";
 
