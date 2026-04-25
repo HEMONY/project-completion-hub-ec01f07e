@@ -12,9 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import {
-  Building2, Clock, CheckCircle2, XCircle, ShieldCheck,
+  Building2, ShieldCheck,
   Search, Eye, FileText, AlertCircle, ScrollText,
-  UserCheck, Upload, Trash2, Plus, Users, Activity,
+  Upload, Trash2, Plus, Users, Activity,
   BarChart3, Shield, RefreshCw, ExternalLink,
 } from "lucide-react";
 
@@ -324,9 +324,19 @@ export default function AdminDashboard() {
     s.arabic_name?.includes(sanctionQ)
   );
 
+  const filteredDocuments = documents.filter((doc) => {
+    if (docStatusFilter !== "all" && (doc.status ?? "pending") !== docStatusFilter) return false;
+    if (docTypeFilter !== "all" && doc.document_type !== docTypeFilter) return false;
+    const query = docQ.trim().toLowerCase();
+    if (!query) return true;
+    return [doc.file_name, doc.document_type, doc.entity_id, doc.user_id]
+      .some((value) => String(value ?? "").toLowerCase().includes(query));
+  });
+
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: "overview", label: "نظرة عامة", icon: BarChart3 },
     { id: "entities", label: `الكيانات (${entities.length})`, icon: Building2 },
+    { id: "documents", label: `المستندات (${documents.length})`, icon: FileText },
     { id: "sanctions", label: `قائمة العقوبات (${sanctions.length})`, icon: ScrollText },
     { id: "users", label: `المستخدمون (${users.length})`, icon: Users },
     { id: "logs", label: "سجل النشاط", icon: Activity },
