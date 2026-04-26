@@ -766,8 +766,17 @@ export default function AdminDashboard() {
                               <Button asChild size="sm" variant="outline" title="فحص">
                                 <Link to={`/screening`}><ShieldCheck className="size-3.5" /></Link>
                               </Button>
+                              <Button size="sm" variant="outline" disabled={busy === e.id} title="فحص من الإدارة" onClick={() => runEntityScreening(e)}>
+                                فحص
+                              </Button>
+                              <Button size="sm" variant="outline" disabled={busy === e.id} title="تدقيق" onClick={() => runAdminAudit(e)}>
+                                تدقيق
+                              </Button>
                               <Button asChild size="sm" variant="outline" title="CDD">
                                 <Link to={`/cdd/${e.id}`}><FileText className="size-3.5" /></Link>
+                              </Button>
+                              <Button size="sm" variant="premium" disabled={busy === e.id || e.digital_signature_status === "requested" || e.digital_signature_status === "signed"} onClick={() => requestDigitalSignature(e)}>
+                                توقيع الهوية
                               </Button>
                               {e.application_status === "submitted" && (
                                 <Button size="sm" variant="outline" disabled={busy === e.id} onClick={() => moveToReview(e.id)}>
@@ -979,18 +988,20 @@ export default function AdminDashboard() {
                             {new Date(u.created_at).toLocaleDateString("ar-AE")}
                           </td>
                           <td className="py-3 px-4">
-                            {role === "admin" ? (
+                            {canManageStaff ? (
                               <NativeSelect
                                 value={userRole}
                                 onChange={(e) => setUserRole(u.id, e.target.value)}
                                 style={{ width: 140 }}
                               >
                                 <option value="user">مستخدم</option>
-                                <option value="moderator">مشرف وسيط</option>
-                                <option value="admin">مشرف</option>
+                                <option value="auditor">مدقق</option>
+                                <option value="moderator">مشرف</option>
+                                <option value="manager">مدير مشرفين</option>
+                                {role === "admin" && <option value="admin">مدير</option>}
                               </NativeSelect>
                             ) : (
-                              <Badge variant="secondary">{userRole === "admin" ? "مشرف" : userRole === "moderator" ? "مشرف وسيط" : "مستخدم"}</Badge>
+                              <Badge variant="secondary">{userRole === "admin" ? "مدير" : userRole === "manager" ? "مدير مشرفين" : userRole === "auditor" ? "مدقق" : userRole === "moderator" ? "مشرف" : "مستخدم"}</Badge>
                             )}
                           </td>
                         </tr>
