@@ -819,16 +819,16 @@ export default function AdminDashboard() {
                               <Button asChild size="sm" variant="outline" title="فحص">
                                 <Link to={`/screening`}><ShieldCheck className="size-3.5" /></Link>
                               </Button>
-                              <Button size="sm" variant="outline" disabled={busy === e.id} title="فحص من الإدارة" onClick={() => runEntityScreening(e)}>
+                              <Button size="sm" variant="outline" disabled={busy === e.id || getWorkflowIndex(e) >= 1 || e.application_status === "approved"} title="فحص من الإدارة" onClick={() => runEntityScreening(e)}>
                                 فحص
                               </Button>
-                              <Button size="sm" variant="outline" disabled={busy === e.id} title="تدقيق" onClick={() => runAdminAudit(e)}>
+                              <Button size="sm" variant="outline" disabled={busy === e.id || getWorkflowIndex(e) < 1 || getWorkflowIndex(e) >= 2 || e.application_status === "approved"} title="تدقيق" onClick={() => runAdminAudit(e)}>
                                 تدقيق
                               </Button>
                               <Button asChild size="sm" variant="outline" title="CDD">
                                 <Link to={`/cdd/${e.id}`}><FileText className="size-3.5" /></Link>
                               </Button>
-                              <Button size="sm" variant="premium" disabled={busy === e.id || e.digital_signature_status === "requested" || e.digital_signature_status === "signed"} onClick={() => requestDigitalSignature(e)}>
+                              <Button size="sm" variant="premium" disabled={busy === e.id || getWorkflowIndex(e) < 2 || e.digital_signature_status === "requested" || e.digital_signature_status === "signed" || e.application_status === "approved"} onClick={() => requestDigitalSignature(e)}>
                                 توقيع الهوية
                               </Button>
                               {e.application_status === "submitted" && (
