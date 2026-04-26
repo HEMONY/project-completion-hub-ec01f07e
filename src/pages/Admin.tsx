@@ -210,6 +210,19 @@ export default function AdminDashboard() {
     fetchLogs();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("admin-workflow-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "entities" }, () => fetchEntities())
+      .on("postgres_changes", { event: "*", schema: "public", table: "kyc_documents" }, () => fetchDocuments())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_audit_logs" }, () => fetchLogs())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // ── Entities ──────────────────────────────────────────────
   const fetchEntities = async () => {
     const { data } = await supabase
@@ -218,6 +231,7 @@ export default function AdminDashboard() {
       .order("created_at", { ascending: false });
     const rows = data ?? [];
     setEntities(rows);
+    setSelectedEntity((current) => current ? rows.find((row) => row.id === current.id) ?? current : current);
     setStats({
       total: rows.length,
       submitted: rows.filter((r) => r.application_status === "submitted").length,
