@@ -503,8 +503,9 @@ export default function AdminDashboard() {
     ? documents.filter((doc) => doc.entity_id === selectedEntity.id)
     : [];
   const selectedEntityLogs = selectedEntity
-    ? logs.filter((log) => String(log.description ?? "").includes(selectedEntity.entity_name) || String(log.metadata ?? "").includes(selectedEntity.id))
+    ? logs.filter((log) => String(log.description ?? "").includes(selectedEntity.entity_name) || JSON.stringify(log.metadata ?? {}).includes(selectedEntity.id))
     : [];
+  const selectedEntityWorkflowIndex = selectedEntity ? getWorkflowIndex(selectedEntity) : -1;
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: "overview", label: "نظرة عامة", icon: BarChart3 },
@@ -568,15 +569,31 @@ export default function AdminDashboard() {
                     <div className="font-semibold">مسار المراجعة</div>
                     <div className="text-sm text-muted-foreground">{REVIEW_STAGE_LABELS[selectedEntity.review_stage] ?? "جاهز للمراجعة"}</div>
                   </div>
-                  <Badge variant={selectedEntity.digital_signature_status === "signed" ? "success" : selectedEntity.digital_signature_status === "requested" ? "warning" : "secondary"}>
+                  <Badge variant={selectedEntity.application_status === "approved" ? "success" : selectedEntity.digital_signature_status === "signed" ? "success" : selectedEntity.digital_signature_status === "requested" ? "warning" : "secondary"}>
+                    {selectedEntity.application_status === "approved" ? "اعتماد نهائي مكتمل" :
                     {selectedEntity.digital_signature_status === "signed" ? "تم توقيع الهوية الرقمية" : selectedEntity.digital_signature_status === "requested" ? "بانتظار توقيع العميل" : "لم يُطلب التوقيع"}
                   </Badge>
                 </div>
+                <div className="grid gap-2 md:grid-cols-6">
+                  {WORKFLOW_STEPS.map((step, index) => {
+                    const complete = selectedEntityWorkflowIndex >= index;
+                    const current = selectedEntityWorkflowIndex === index;
+                    return (
+                      <div key={step.stage} className={`rounded-md border p-3 text-center text-xs transition-colors ${complete ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"}`}>
+                        <div className="mb-1 flex justify-center">
+                          {complete ? <CheckCircle2 className="size-4" /> : <Circle className="size-4" />}
+                        </div>
+                        <div className="font-medium">{step.label}</div>
+                        {current && <div className="mt-1 text-[11px] text-muted-foreground">الحالة الحالية</div>}
+                      </div>
+                    );
+                  })}
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" disabled={busy === selectedEntity.id} onClick={() => runEntityScreening(selectedEntity)}><ShieldCheck className="size-4" /> الفحص</Button>
-                  <Button size="sm" variant="outline" disabled={busy === selectedEntity.id} onClick={() => runAdminAudit(selectedEntity)}><Sparkles className="size-4" /> التدقيق ومراجعة الملف</Button>
-                  <Button size="sm" variant="premium" disabled={busy === selectedEntity.id || selectedEntity.digital_signature_status === "requested" || selectedEntity.digital_signature_status === "signed"} onClick={() => requestDigitalSignature(selectedEntity)}><PenLine className="size-4" /> إرسال لتوقيع الهوية الرقمية</Button>
-                  {selectedEntity.digital_signature_status === "signed" && <Button size="sm" variant="success" onClick={() => setReviewModal({ entity: selectedEntity, action: "approve" })}><CheckCircle2 className="size-4" /> اعتماد نهائي</Button>}
+                  <Button size="sm" variant="outline" disabled={busy === selectedEntity.id || selectedEntityWorkflowIndex >= 1 || selectedEntity.application_status === "approved"} onClick={() => runEntityScreening(selectedEntity)}><ShieldCheck className="size-4" /> الفحص</Button>
+                  <Button size="sm" variant="outline" disabled={busy === selectedEntity.id || selectedEntityWorkflowIndex < 1 || selectedEntityWorkflowIndex >= 2 || selectedEntity.application_status === "approved"} onClick={() => runAdminAudit(selectedEntity)}><Sparkles className="size-4" /> التدقيق ومراجعة الملف</Button>
+                  <Button size="sm" variant="premium" disabled={busy === selectedEntity.id || selectedEntityWorkflowIndex < 2 || selectedEntity.digital_signature_status === "requested" || selectedEntity.digital_signature_status === "signed" || selectedEntity.application_status === "approved"} onClick={() => requestDigitalSignature(selectedEntity)}><PenLine className="size-4" /> إرسال لتوقيع الهوية الرقمية</Button>
+                  <Button size="sm" variant="success" disabled={selectedEntity.digital_signature_status !== "signed" || selectedEntity.application_status === "approved"} onClick={() => setReviewModal({ entity: selectedEntity, action: "approve" })}><CheckCircle2 className="size-4" /> اعتماد نهائي</Button>
                 </div>
               </div>
 
