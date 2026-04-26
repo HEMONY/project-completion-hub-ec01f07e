@@ -212,6 +212,7 @@ export type Database = {
           emirate: string | null
           engagement_number: string | null
           entity_name: string
+          financial_analyzed: boolean | null
           has_ubo: boolean | null
           id: string
           ind_completed: boolean | null
@@ -221,6 +222,7 @@ export type Database = {
           main_activity: string | null
           mainland_company_type: string | null
           management_control: Json | null
+          payment_status: string | null
           registration_status: string | null
           rejection_reason: string | null
           reviewed_at: string | null
@@ -229,6 +231,7 @@ export type Database = {
           shareholders: Json | null
           submitted_at: string | null
           total_turnover: number | null
+          uae_id_verified: boolean | null
           ubos: Json | null
           updated_at: string
           user_id: string
@@ -243,6 +246,7 @@ export type Database = {
           emirate?: string | null
           engagement_number?: string | null
           entity_name: string
+          financial_analyzed?: boolean | null
           has_ubo?: boolean | null
           id?: string
           ind_completed?: boolean | null
@@ -252,6 +256,7 @@ export type Database = {
           main_activity?: string | null
           mainland_company_type?: string | null
           management_control?: Json | null
+          payment_status?: string | null
           registration_status?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -260,6 +265,7 @@ export type Database = {
           shareholders?: Json | null
           submitted_at?: string | null
           total_turnover?: number | null
+          uae_id_verified?: boolean | null
           ubos?: Json | null
           updated_at?: string
           user_id: string
@@ -274,6 +280,7 @@ export type Database = {
           emirate?: string | null
           engagement_number?: string | null
           entity_name?: string
+          financial_analyzed?: boolean | null
           has_ubo?: boolean | null
           id?: string
           ind_completed?: boolean | null
@@ -283,6 +290,7 @@ export type Database = {
           main_activity?: string | null
           mainland_company_type?: string | null
           management_control?: Json | null
+          payment_status?: string | null
           registration_status?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
@@ -291,11 +299,68 @@ export type Database = {
           shareholders?: Json | null
           submitted_at?: string | null
           total_turnover?: number | null
+          uae_id_verified?: boolean | null
           ubos?: Json | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      financial_analyses: {
+        Row: {
+          ai_risks: Json | null
+          ai_summary: string | null
+          analyzed_at: string | null
+          balance_sheet: Json | null
+          created_at: string
+          entity_id: string
+          health_score: number | null
+          id: string
+          income_stmt: Json | null
+          ratios: Json | null
+          raw_data: Json | null
+          source_files: Json | null
+          user_id: string
+        }
+        Insert: {
+          ai_risks?: Json | null
+          ai_summary?: string | null
+          analyzed_at?: string | null
+          balance_sheet?: Json | null
+          created_at?: string
+          entity_id: string
+          health_score?: number | null
+          id?: string
+          income_stmt?: Json | null
+          ratios?: Json | null
+          raw_data?: Json | null
+          source_files?: Json | null
+          user_id: string
+        }
+        Update: {
+          ai_risks?: Json | null
+          ai_summary?: string | null
+          analyzed_at?: string | null
+          balance_sheet?: Json | null
+          created_at?: string
+          entity_id?: string
+          health_score?: number | null
+          id?: string
+          income_stmt?: Json | null
+          ratios?: Json | null
+          raw_data?: Json | null
+          source_files?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_analyses_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_years: {
         Row: {
@@ -462,6 +527,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "kyc_documents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          entity_id: string
+          gateway_ref: string | null
+          id: string
+          method: string | null
+          paid_at: string | null
+          reference: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          entity_id: string
+          gateway_ref?: string | null
+          id?: string
+          method?: string | null
+          paid_at?: string | null
+          reference?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          entity_id?: string
+          gateway_ref?: string | null
+          id?: string
+          method?: string | null
+          paid_at?: string | null
+          reference?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_entity_id_fkey"
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "entities"
@@ -651,6 +766,71 @@ export type Database = {
             foreignKeyName: "tax_status_entity_id_fkey"
             columns: ["entity_id"]
             isOneToOne: true
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      uae_id_verifications: {
+        Row: {
+          back_path: string | null
+          created_at: string
+          dob: string | null
+          entity_id: string
+          expiry_date: string | null
+          front_path: string | null
+          full_name_ar: string | null
+          full_name_en: string | null
+          gender: string | null
+          id: string
+          id_number: string
+          nationality: string | null
+          ocr_data: Json | null
+          status: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          back_path?: string | null
+          created_at?: string
+          dob?: string | null
+          entity_id: string
+          expiry_date?: string | null
+          front_path?: string | null
+          full_name_ar?: string | null
+          full_name_en?: string | null
+          gender?: string | null
+          id?: string
+          id_number: string
+          nationality?: string | null
+          ocr_data?: Json | null
+          status?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          back_path?: string | null
+          created_at?: string
+          dob?: string | null
+          entity_id?: string
+          expiry_date?: string | null
+          front_path?: string | null
+          full_name_ar?: string | null
+          full_name_en?: string | null
+          gender?: string | null
+          id?: string
+          id_number?: string
+          nationality?: string | null
+          ocr_data?: Json | null
+          status?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uae_id_verifications_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
             referencedRelation: "entities"
             referencedColumns: ["id"]
           },
