@@ -3,7 +3,8 @@ import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/lib/auth";
+import { useAuth, useRole } from "@/lib/auth";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, FileBarChart, ShieldCheck, TrendingUp, CheckCircle2, AlertTriangle, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -58,8 +59,11 @@ function ScoreRing({ score }: { score: number }) {
 export default function Audits() {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { role, roleLoading } = useRole();
+  const navigate = useNavigate();
   const [entities, setEntities] = useState<any[]>([]);
   const [entityId, setEntityId] = useState("");
+  const [selectedEntity, setSelectedEntity] = useState<any>(null);
   const [result, setResult] = useState("");
   const [score, setScore] = useState<number | null>(null);
   const [risks, setRisks] = useState<string[]>([]);
@@ -128,7 +132,7 @@ CDD: ${cdd?.eligibility_status ?? "لم يكتمل"}
         supabase.from("screening_results").select("*").eq("entity_id", entityId),
         supabase.from("cdd_verifications").select("*").eq("entity_id", entityId).maybeSingle(),
       ]);
-
+    setSelectedEntity(entity);
     // حساب الدرجة
     const s = calcScore(entity, auditFee, screenings ?? [], cdd, taxStatus);
     setScore(s);
@@ -162,6 +166,19 @@ CDD: ${cdd?.eligibility_status ?? "لم يكتمل"}
             action: "ai_audit_run",
             description: `AI Audit للكيان: ${entity?.entity_name} — درجة: ${s}/100`,
           });
+
+          // حفظ نتيجة التدقيق في جدول audit_signatures لإرسالها للمستخدم
+          await supabase.from("audit_signatures").upsert({
+            entity_id: selectedEntity?.id,
+            auditor_id: user.id,
+            health_score: s,
+            ai_summary: text,
+            risks: buildRisks(selectedEntity, screenings ?? [], cdd, taxStatus),
+            status: "pending_client_signature",
+            sent_at: new Date().toISOString(),
+          }, { onConflict: "entity_id" });
+
+          toast.success("✅ تم إرسال نتيجة التدقيق إلى العميل للتوقيع");
           setBusy(false);
           return;
         }
@@ -179,13 +196,37 @@ ${s < 60 ? `${risks.length + 1}. يُنصح بمراجعة فورية للملف
     setResult(localReport);
     setMethod("local");
     await supabase.from("user_audit_logs").insert({
-      user_id: user.id,
-      action: "audit_run_local",
-      description: `تحليل محلي للكيان: ${entity?.entity_name} — درجة: ${s}/100`,
-    });
+        user_id: user.id,
+        action: "audit_run_local",
+        description: `تحليل محلي للكيان: ${entity?.entity_name} — درجة: ${s}/100`,
+      });
+
+      // إرسال النتيجة للمستخدم للتوقيع حتى في التحليل المحلي
+      await supabase.from("audit_signatures").upsert({
+        entity_id: selectedEntity?.id ?? entityId,
+        auditor_id: user.id,
+        health_score: s,
+        ai_summary: localReport,
+        risks: buildRisks(selectedEntity, screenings ?? [], cdd, taxStatus),
+        status: "pending_client_signature",
+        sent_at: new Date().toISOString(),
+      }, { onConflict: "entity_id" });
+
+      toast.success("✅ تم إرسال نتيجة التحليل إلى العميل للتوقيع");
     setBusy(false);
   };
-
+  // Guard: للمشرفين فقط
+  if (!roleLoading && !["admin", "auditor", "moderator"].includes(role)) {
+    return (
+      <AppShell>
+        <div className="max-w-md mx-auto text-center py-24 space-y-4">
+          <div className="text-5xl">🔒</div>
+          <h2 className="text-xl font-bold">غير مصرح بالوصول</h2>
+          <p className="text-muted-foreground">صفحة التدقيق متاحة للمشرفين فقط.</p>
+        </div>
+      </AppShell>
+    );
+  }
   return (
     <AppShell>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -293,7 +334,30 @@ ${s < 60 ? `${risks.length + 1}. يُنصح بمراجعة فورية للملف
                     </ul>
                   </div>
                 )}
-
+                {/* زر إرسال النتيجة للعميل */}
+                <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold">إرسال النتيجة للعميل</div>
+                    <div className="text-xs text-muted-foreground">سيتمكن العميل من مراجعة التقرير والتوقيع عليه</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      await supabase.from("audit_signatures").upsert({
+                        entity_id: selectedEntity?.id ?? entityId,
+                        auditor_id: user!.id,
+                        health_score: score ?? 0,
+                        ai_summary: result,
+                        risks: risks,
+                        status: "pending_client_signature",
+                        sent_at: new Date().toISOString(),
+                      }, { onConflict: "entity_id" });
+                      toast.success("تم إرسال النتيجة للعميل");
+                    }}
+                  >
+                    إرسال للعميل
+                  </Button>
+                </div>
                 {/* AI Report */}
                 <div className="rounded-xl border border-border bg-muted/10 p-5 space-y-2">
                   <div className="text-sm font-semibold">تقرير المراجعة</div>
