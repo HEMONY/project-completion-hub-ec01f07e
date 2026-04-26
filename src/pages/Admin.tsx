@@ -424,13 +424,16 @@ export default function AdminDashboard() {
     );
   }
 
-  if (role !== "admin") {
+  const canManageStaff = role === "admin" || role === "manager";
+  const canUseAdminPanel = ["admin", "manager", "moderator", "auditor"].includes(role);
+
+  if (!canUseAdminPanel) {
     return (
       <AppShell>
         <div className="max-w-lg mx-auto text-center py-20 space-y-4">
           <AlertCircle className="size-12 text-destructive mx-auto" />
           <h2 className="text-xl font-bold">غير مصرح</h2>
-          <p className="text-muted-foreground">هذه الصفحة مخصصة للمشرفين فقط.</p>
+            <p className="text-muted-foreground">هذه الصفحة مخصصة لفريق الإدارة والمشرفين فقط.</p>
           <Button asChild variant="outline"><Link to="/">العودة للرئيسية</Link></Button>
         </div>
       </AppShell>
@@ -490,7 +493,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <Badge variant="outline" className="text-xs px-3 py-1">
-            {role === "admin" ? "مشرف" : role === "auditor" ? "مراجع" : "مشرف وسيط"}
+            {role === "admin" ? "مدير" : role === "manager" ? "مدير مشرفين" : role === "auditor" ? "مدقق" : "مشرف"}
           </Badge>
         </div>
 
@@ -520,6 +523,24 @@ export default function AdminDashboard() {
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">نوع الطلب</div><div className="mt-1 font-medium">{selectedEntity.application_type ?? "—"}</div></div>
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">CDD</div><div className="mt-1 font-medium">{selectedEntity.cdd_completed ? "مكتمل" : "غير مكتمل"}</div></div>
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">تاريخ الإنشاء</div><div className="mt-1 font-medium">{new Date(selectedEntity.created_at).toLocaleDateString("ar-AE")}</div></div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="font-semibold">مسار المراجعة</div>
+                    <div className="text-sm text-muted-foreground">{REVIEW_STAGE_LABELS[selectedEntity.review_stage] ?? "جاهز للمراجعة"}</div>
+                  </div>
+                  <Badge variant={selectedEntity.digital_signature_status === "signed" ? "success" : selectedEntity.digital_signature_status === "requested" ? "warning" : "secondary"}>
+                    {selectedEntity.digital_signature_status === "signed" ? "تم توقيع الهوية الرقمية" : selectedEntity.digital_signature_status === "requested" ? "بانتظار توقيع العميل" : "لم يُطلب التوقيع"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={busy === selectedEntity.id} onClick={() => runEntityScreening(selectedEntity)}><ShieldCheck className="size-4" /> الفحص</Button>
+                  <Button size="sm" variant="outline" disabled={busy === selectedEntity.id} onClick={() => runAdminAudit(selectedEntity)}><Sparkles className="size-4" /> التدقيق ومراجعة الملف</Button>
+                  <Button size="sm" variant="premium" disabled={busy === selectedEntity.id || selectedEntity.digital_signature_status === "requested" || selectedEntity.digital_signature_status === "signed"} onClick={() => requestDigitalSignature(selectedEntity)}><PenLine className="size-4" /> إرسال لتوقيع الهوية الرقمية</Button>
+                  {selectedEntity.digital_signature_status === "signed" && <Button size="sm" variant="success" onClick={() => setReviewModal({ entity: selectedEntity, action: "approve" })}><CheckCircle2 className="size-4" /> اعتماد نهائي</Button>}
+                </div>
               </div>
 
               <div className="space-y-3">
