@@ -15,7 +15,7 @@ import {
   Building2, ShieldCheck,
   Search, Eye, FileText, AlertCircle, ScrollText,
   Upload, Trash2, Plus, Users, Activity,
-  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon, Loader2,
+  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon, Loader2, Sparkles, PenLine, CheckCircle2,
 } from "lucide-react";
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -52,6 +52,15 @@ const STATUS_LABELS: Record<string, string> = {
   approved: "معتمد",
   rejected: "مرفوض",
   edited: "معدَّل",
+};
+
+const REVIEW_STAGE_LABELS: Record<string, string> = {
+  client_draft: "لدى العميل",
+  admin_review_ready: "جاهز لمراجعة المشرف",
+  admin_review: "تدقيق المشرف",
+  digital_signature_requested: "بانتظار توقيع الهوية الرقمية",
+  returned_to_admin: "عاد للمشرف بعد التوقيع",
+  finalized: "مكتمل نهائيًا",
 };
 
 const DOC_TYPE_LABELS: Record<string, string> = {
