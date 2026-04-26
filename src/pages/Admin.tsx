@@ -570,8 +570,7 @@ export default function AdminDashboard() {
                     <div className="text-sm text-muted-foreground">{REVIEW_STAGE_LABELS[selectedEntity.review_stage] ?? "جاهز للمراجعة"}</div>
                   </div>
                   <Badge variant={selectedEntity.application_status === "approved" ? "success" : selectedEntity.digital_signature_status === "signed" ? "success" : selectedEntity.digital_signature_status === "requested" ? "warning" : "secondary"}>
-                    {selectedEntity.application_status === "approved" ? "اعتماد نهائي مكتمل" :
-                    {selectedEntity.digital_signature_status === "signed" ? "تم توقيع الهوية الرقمية" : selectedEntity.digital_signature_status === "requested" ? "بانتظار توقيع العميل" : "لم يُطلب التوقيع"}
+                    {selectedEntity.application_status === "approved" ? "اعتماد نهائي مكتمل" : selectedEntity.digital_signature_status === "signed" ? "تم توقيع الهوية الرقمية" : selectedEntity.digital_signature_status === "requested" ? "بانتظار توقيع العميل" : "لم يُطلب التوقيع"}
                   </Badge>
                 </div>
                 <div className="grid gap-2 md:grid-cols-6">
