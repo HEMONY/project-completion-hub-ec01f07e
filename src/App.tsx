@@ -7,6 +7,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Entities from "./pages/Entities";
 import KycStart from "./pages/KycStart";
 import KycStep from "./pages/KycStep";
@@ -30,6 +31,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/entities" element={<Entities />} />
               <Route path="/kyc/start" element={<KycStart />} />
               <Route path="/kyc/:entityId/:step" element={<KycStep />} />
