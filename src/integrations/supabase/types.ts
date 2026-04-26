@@ -209,6 +209,11 @@ export type Database = {
           cdd_completed: boolean | null
           created_at: string
           current_step: number
+          digital_signature_name: string | null
+          digital_signature_requested_at: string | null
+          digital_signature_required: boolean
+          digital_signature_signed_at: string | null
+          digital_signature_status: string
           emirate: string | null
           engagement_number: string | null
           entity_name: string
@@ -225,6 +230,7 @@ export type Database = {
           payment_status: string | null
           registration_status: string | null
           rejection_reason: string | null
+          review_stage: string
           reviewed_at: string | null
           reviewed_by: string | null
           screening_completed: boolean | null
@@ -243,6 +249,11 @@ export type Database = {
           cdd_completed?: boolean | null
           created_at?: string
           current_step?: number
+          digital_signature_name?: string | null
+          digital_signature_requested_at?: string | null
+          digital_signature_required?: boolean
+          digital_signature_signed_at?: string | null
+          digital_signature_status?: string
           emirate?: string | null
           engagement_number?: string | null
           entity_name: string
@@ -259,6 +270,7 @@ export type Database = {
           payment_status?: string | null
           registration_status?: string | null
           rejection_reason?: string | null
+          review_stage?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           screening_completed?: boolean | null
@@ -277,6 +289,11 @@ export type Database = {
           cdd_completed?: boolean | null
           created_at?: string
           current_step?: number
+          digital_signature_name?: string | null
+          digital_signature_requested_at?: string | null
+          digital_signature_required?: boolean
+          digital_signature_signed_at?: string | null
+          digital_signature_status?: string
           emirate?: string | null
           engagement_number?: string | null
           entity_name?: string
@@ -293,6 +310,7 @@ export type Database = {
           payment_status?: string | null
           registration_status?: string | null
           rejection_reason?: string | null
+          review_stage?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           screening_completed?: boolean | null
@@ -895,6 +913,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_staff: { Args: { _user_id: string }; Returns: boolean }
       get_entity_stats: {
         Args: never
         Returns: {
@@ -911,7 +930,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user" | "auditor"
+      app_role: "admin" | "moderator" | "user" | "auditor" | "manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1039,7 +1058,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user", "auditor"],
+      app_role: ["admin", "moderator", "user", "auditor", "manager"],
     },
   },
 } as const
