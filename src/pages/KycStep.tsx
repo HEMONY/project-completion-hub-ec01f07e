@@ -16,13 +16,13 @@ import { Plus, Trash2, Upload, FileText, X } from "lucide-react";
 //const validSteps: KycStepKey[] = ["kyc", "audit-fee", "financial-year", "tax-status", "engagement"];
 const validSteps: KycStepKey[] = [
   "kyc",
-  "uae-id",
   "audit-fee",
   "financial-year",
   "tax-status",
   "engagement",
-  "financial-analysis",
   "payment",
+  "uae-id",
+  "financial-analysis",
 ];
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -80,13 +80,13 @@ export default function KycStep() {
         <KycStepper current={stepKey} entityId={entityId} completed={completed} />
         <div className="min-w-0">
           {stepKey === "kyc" && <KycForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} t={t} />}
-          {stepKey === "uae-id" && <UaeIdForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} onBack={goBack} t={t} />}
           {stepKey === "audit-fee" && <AuditFeeForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "financial-year" && <FinancialYearForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "tax-status" && <TaxStatusForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "engagement" && <EngagementForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "financial-analysis" && <FinancialAnalysisForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "payment" && <PaymentForm entity={entity} onBack={goBack} t={t} />}
+          {stepKey === "uae-id" && <UaeIdForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} onBack={goBack} t={t} />}
         </div>
       </div>
     </AppShell>
@@ -132,7 +132,6 @@ function KycForm({ entity, onSaved, t }: any) {
   const uploadFilesToStorage = async (files: File[], folder: string) => {
     const paths: string[] = [];
     for (const file of files) {
-      const ext = file.name.split(".").pop() || "bin";
       const path = `${user!.id}/${entity.id}/${folder}/${Date.now()}_${file.name}`;
       const { error } = await supabase.storage
         .from("kyc-documents")
@@ -419,136 +418,32 @@ function FileUploadZone({ label, files, onChange, accept }: {
 function UaeIdForm({ entity, onSaved, onBack, t }: any) {
   const { user } = useAuth();
   const [form, setForm] = useState({
-    id_number: "",
-    full_name_ar: "",
-    full_name_en: "",
-    nationality: "",
-    dob: "",
-    expiry_date: "",
-    gender: "",
+    digital_signature_name: entity.digital_signature_name ?? "",
   });
-  const [frontFile, setFrontFile] = useState<File[]>([]);
-  const [backFile, setBackFile] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
-  const [extracting, setExtracting] = useState(false);
-  const [existing, setExisting] = useState<any>(null);
-
-  useEffect(() => {
-    supabase
-      .from("uae_id_verifications")
-      .select("*")
-      .eq("entity_id", entity.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          setExisting(data);
-          setForm({
-            id_number: data.id_number ?? "",
-            full_name_ar: data.full_name_ar ?? "",
-            full_name_en: data.full_name_en ?? "",
-            nationality: data.nationality ?? "",
-            dob: data.dob ?? "",
-            expiry_date: data.expiry_date ?? "",
-            gender: data.gender ?? "",
-          });
-        }
-      });
-  }, [entity.id]);
-
-  // استخراج البيانات من صورة الهوية باستخدام Claude Vision
-  const extractFromImage = async (file: File) => {
-    setExtracting(true);
-    try {
-      const reader = new FileReader();
-      const b64 = await new Promise<string>((res) => {
-        reader.onload = () => res((reader.result as string).split(",")[1]);
-        reader.readAsDataURL(file);
-      });
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY ?? "",
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 500,
-          messages: [{
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: { type: "base64", media_type: file.type as any, data: b64 },
-              },
-              {
-                type: "text",
-                text: `استخرج المعلومات من هذه الهوية الإماراتية وأجب بـ JSON فقط بدون أي نص آخر:
-{
-  "id_number": "رقم الهوية (784-XXXX-XXXXXXX-X)",
-  "full_name_ar": "الاسم بالعربية",
-  "full_name_en": "Name in English",
-  "nationality": "الجنسية بالإنجليزية",
-  "dob": "YYYY-MM-DD",
-  "expiry_date": "YYYY-MM-DD",
-  "gender": "Male أو Female"
-}`,
-              },
-            ],
-          }],
-        }),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const text = data.content?.[0]?.text ?? "";
-        const clean = text.replace(/```json|```/g, "").trim();
-        const parsed = JSON.parse(clean);
-        setForm((f) => ({ ...f, ...parsed }));
-        toast.success("تم استخراج البيانات من الهوية بنجاح");
-      }
-    } catch {
-      toast.error("لم يتمكن النظام من استخراج البيانات — يرجى إدخالها يدوياً");
-    }
-    setExtracting(false);
-  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.id_number.trim()) return toast.error("رقم الهوية مطلوب");
+    if (!form.digital_signature_name.trim()) return toast.error("اسم الموقّع مطلوب");
+    if (!entity.digital_signature_required) return toast.error("لم يرسل المشرف ملفًا للتوقيع بعد");
     setBusy(true);
-
-    // رفع صورة الوجه
-    let frontPath: string | null = existing?.front_path ?? null;
-    let backPath: string | null = existing?.back_path ?? null;
-    if (frontFile[0]) {
-      const p = `${user!.id}/${entity.id}/uae-front-${Date.now()}`;
-      const { data } = await supabase.storage.from("uae-id-docs").upload(p, frontFile[0], { upsert: true });
-      if (data) frontPath = data.path;
-    }
-    if (backFile[0]) {
-      const p = `${user!.id}/${entity.id}/uae-back-${Date.now()}`;
-      const { data } = await supabase.storage.from("uae-id-docs").upload(p, backFile[0], { upsert: true });
-      if (data) backPath = data.path;
-    }
-
-    const payload = {
-      entity_id: entity.id,
+    const { error } = await supabase.from("entities").update({
+      digital_signature_status: "signed",
+      digital_signature_signed_at: new Date().toISOString(),
+      digital_signature_name: form.digital_signature_name,
+      uae_id_verified: true,
+      review_stage: "returned_to_admin",
+      current_step: 8,
+    } as any).eq("id", entity.id);
+    await supabase.from("user_audit_logs").insert({
       user_id: user!.id,
-      ...form,
-      front_path: frontPath,
-      back_path: backPath,
-      status: "pending",
-    };
-
-    const { error } = existing
-      ? await supabase.from("uae_id_verifications").update(payload).eq("id", existing.id)
-      : await supabase.from("uae_id_verifications").insert(payload);
-
-    await supabase.from("entities").update({ current_step: 3, uae_id_verified: false }).eq("id", entity.id);
+      action: "digital_identity_signed",
+      description: `وقّع العميل الهوية الرقمية للكيان ${entity.entity_name}`,
+    });
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("تم حفظ بيانات الهوية");
-    onSaved(entity);
+    toast.success("تم توقيع الهوية الرقمية وإرجاع الملف للمشرف");
+    onSaved({ ...entity, digital_signature_status: "signed", digital_signature_name: form.digital_signature_name });
   };
 
   return (
@@ -557,109 +452,20 @@ function UaeIdForm({ entity, onSaved, onBack, t }: any) {
         <CardTitle className="flex items-center gap-2">
           التحقق من الهوية الإماراتية
         </CardTitle>
-        {existing?.status === "verified" && (
-          <div className="text-sm text-green-600 font-medium">✅ الهوية موثّقة</div>
-        )}
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-6">
-          {/* رفع صور الهوية */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium">صور الهوية الإماراتية</div>
-            <div className="grid md:grid-cols-2 gap-3">
-              <div>
-                <FileUploadZone
-                  label="الوجه الأمامي"
-                  files={frontFile}
-                  onChange={(files) => {
-                    setFrontFile(files);
-                    if (files[0]) extractFromImage(files[0]);
-                  }}
-                  accept=".jpg,.jpeg,.png,.pdf"
-                />
-                {extracting && (
-                  <div className="text-xs text-primary mt-1 animate-pulse">
-                    جاري استخراج البيانات بالذكاء الاصطناعي...
-                  </div>
-                )}
-              </div>
-              <FileUploadZone
-                label="الوجه الخلفي"
-                files={backFile}
-                onChange={setBackFile}
-                accept=".jpg,.jpeg,.png,.pdf"
-              />
-            </div>
-            <div className="text-xs text-muted-foreground">
-              عند رفع الوجه الأمامي، سيقوم الذكاء الاصطناعي باستخراج البيانات تلقائياً.
-            </div>
+          <div className="rounded-lg border border-border bg-muted/30 p-5 text-sm text-muted-foreground">
+            يتم توقيع الملف المُرسل من المشرف بالهوية الرقمية الإماراتية بدون رفع صور أو ملفات إضافية.
           </div>
-
-          {/* بيانات الهوية */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="رقم الهوية الإماراتية *">
-              <Input
-                required
-                placeholder="784-XXXX-XXXXXXX-X"
-                value={form.id_number}
-                onChange={(e) => setForm({ ...form, id_number: e.target.value })}
-                dir="ltr"
-              />
-            </Field>
-            <Field label="الجنس">
-              <NativeSelect value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-                <option value="">—</option>
-                <option value="Male">ذكر</option>
-                <option value="Female">أنثى</option>
-              </NativeSelect>
-            </Field>
-            <Field label="الاسم الكامل (عربي)">
-              <Input
-                value={form.full_name_ar}
-                onChange={(e) => setForm({ ...form, full_name_ar: e.target.value })}
-                dir="rtl"
-              />
-            </Field>
-            <Field label="Full Name (English)">
-              <Input
-                value={form.full_name_en}
-                onChange={(e) => setForm({ ...form, full_name_en: e.target.value })}
-                dir="ltr"
-              />
-            </Field>
-            <Field label="الجنسية">
-              <Input
-                value={form.nationality}
-                onChange={(e) => setForm({ ...form, nationality: e.target.value })}
-              />
-            </Field>
-            <Field label="تاريخ الميلاد">
-              <Input
-                type="date"
-                value={form.dob}
-                onChange={(e) => setForm({ ...form, dob: e.target.value })}
-              />
-            </Field>
-            <Field label="تاريخ انتهاء الهوية">
-              <Input
-                type="date"
-                value={form.expiry_date}
-                onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
-              />
-            </Field>
-          </div>
-
-          {/* تحذير إذا انتهت الهوية */}
-          {form.expiry_date && new Date(form.expiry_date) < new Date() && (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-              ⚠️ تاريخ انتهاء الهوية قد مضى — تأكد من صحة التاريخ
-            </div>
-          )}
+          <Field label="اسم الموقّع كما يظهر في الهوية الرقمية *">
+            <Input required value={form.digital_signature_name} onChange={(e) => setForm({ digital_signature_name: e.target.value })} />
+          </Field>
 
           <div className="flex justify-between pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
-            <Button type="submit" variant="premium" disabled={busy || extracting}>
-              {busy ? t("saving") : t("btn_next")}
+            <Button type="submit" variant="premium" disabled={busy || entity.digital_signature_status === "signed"}>
+              {busy ? t("saving") : entity.digital_signature_status === "signed" ? "تم التوقيع" : "توقيع الهوية الرقمية"}
             </Button>
           </div>
         </form>
@@ -1273,7 +1079,6 @@ ${dataText}
 function EngagementForm({ entity, onSaved, onBack, t }: any) {
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
-  const navigate = useNavigate();
   const engagementNumber = `ENG-${entity.id.slice(0, 8).toUpperCase()}-${new Date().getFullYear()}`;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1359,7 +1164,7 @@ function PaymentForm({ entity, onBack, t }: any) {
       paid_at: new Date().toISOString(),
     });
     if (!error) {
-      await supabase.from("entities").update({ payment_status: "paid" }).eq("id", entity.id);
+      await supabase.from("entities").update({ payment_status: "paid", application_status: "submitted", review_stage: "admin_review_ready", current_step: 7 } as any).eq("id", entity.id);
       await supabase.from("user_audit_logs").insert({
         user_id: user!.id,
         action: "payment_completed",
