@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Shield,
-} from "lucide-react";
+  FileText,   
+ } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useRole } from "@/lib/auth";
@@ -50,6 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/", label: t("nav_dashboard"), icon: LayoutDashboard },
     { to: "/entities", label: t("nav_entities"), icon: Building2 },
     { to: "/kyc/start", label: t("nav_new_kyc"), icon: FilePlus2 },
+    { to: "/audit-result", label: "نتائج التدقيق", icon: FileText },
     // الفحص والتدقيق — للمشرفين فقط
     ...(isAdmin
       ? [
