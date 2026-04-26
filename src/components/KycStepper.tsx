@@ -15,13 +15,12 @@ export type KycStepKey =
 
 const stepOrder: KycStepKey[] = [
   "kyc",
-  "uae-id",
   "audit-fee",
   "financial-year",
   "tax-status",
   "engagement",
-  "financial-analysis",
   "payment",
+  "uae-id",
 ];
 
 const labelKeys: Record<KycStepKey, keyof typeof dict> = {

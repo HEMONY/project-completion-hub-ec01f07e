@@ -16,13 +16,13 @@ import { Plus, Trash2, Upload, FileText, X } from "lucide-react";
 //const validSteps: KycStepKey[] = ["kyc", "audit-fee", "financial-year", "tax-status", "engagement"];
 const validSteps: KycStepKey[] = [
   "kyc",
-  "uae-id",
   "audit-fee",
   "financial-year",
   "tax-status",
   "engagement",
-  "financial-analysis",
   "payment",
+  "uae-id",
+  "financial-analysis",
 ];
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -80,13 +80,13 @@ export default function KycStep() {
         <KycStepper current={stepKey} entityId={entityId} completed={completed} />
         <div className="min-w-0">
           {stepKey === "kyc" && <KycForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} t={t} />}
-          {stepKey === "uae-id" && <UaeIdForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} onBack={goBack} t={t} />}
           {stepKey === "audit-fee" && <AuditFeeForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "financial-year" && <FinancialYearForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "tax-status" && <TaxStatusForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "engagement" && <EngagementForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "financial-analysis" && <FinancialAnalysisForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
           {stepKey === "payment" && <PaymentForm entity={entity} onBack={goBack} t={t} />}
+          {stepKey === "uae-id" && <UaeIdForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} onBack={goBack} t={t} />}
         </div>
       </div>
     </AppShell>
