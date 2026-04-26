@@ -15,7 +15,7 @@ import {
   Building2, ShieldCheck,
   Search, Eye, FileText, AlertCircle, ScrollText,
   Upload, Trash2, Plus, Users, Activity,
-  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon, Loader2, Sparkles, PenLine, CheckCircle2,
+  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon, Loader2, Sparkles, PenLine, CheckCircle2, Circle,
 } from "lucide-react";
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -57,10 +57,28 @@ const STATUS_LABELS: Record<string, string> = {
 const REVIEW_STAGE_LABELS: Record<string, string> = {
   client_draft: "لدى العميل",
   admin_review_ready: "جاهز لمراجعة المشرف",
+  screening_completed: "تم الفحص",
   admin_review: "تدقيق المشرف",
   digital_signature_requested: "بانتظار توقيع الهوية الرقمية",
   returned_to_admin: "عاد للمشرف بعد التوقيع",
   finalized: "مكتمل نهائيًا",
+  rejected: "مرفوض",
+};
+
+const WORKFLOW_STEPS = [
+  { stage: "admin_review_ready", label: "استلام الطلب" },
+  { stage: "screening_completed", label: "الفحص" },
+  { stage: "admin_review", label: "التدقيق" },
+  { stage: "digital_signature_requested", label: "توقيع الهوية" },
+  { stage: "returned_to_admin", label: "عودة للمشرف" },
+  { stage: "finalized", label: "اعتماد نهائي" },
+];
+
+const getWorkflowIndex = (entity: any) => {
+  if (entity?.application_status === "approved" || entity?.review_stage === "finalized") return WORKFLOW_STEPS.length - 1;
+  if (entity?.digital_signature_status === "signed" || entity?.review_stage === "returned_to_admin") return 4;
+  const index = WORKFLOW_STEPS.findIndex((step) => step.stage === entity?.review_stage);
+  return index >= 0 ? index : entity?.application_status === "submitted" ? 0 : -1;
 };
 
 const DOC_TYPE_LABELS: Record<string, string> = {
