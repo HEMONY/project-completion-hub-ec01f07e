@@ -44,16 +44,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     localStorage.setItem("theme", next ? "dark" : "light");
   };
 
-  // ── قائمة التنقل — بدون "العقوبات" (نقلت إلى لوحة الإدارة) ──
+  const isAdmin = ["admin", "auditor", "moderator"].includes(role);
+
   const nav = [
     { to: "/", label: t("nav_dashboard"), icon: LayoutDashboard },
     { to: "/entities", label: t("nav_entities"), icon: Building2 },
     { to: "/kyc/start", label: t("nav_new_kyc"), icon: FilePlus2 },
-    { to: "/screening", label: t("nav_screening"), icon: ShieldCheck },
-    { to: "/audits", label: t("nav_audits"), icon: Sparkles },
-    // لوحة الإدارة — تظهر فقط للمشرفين
-    ...(["admin", "auditor", "moderator"].includes(role)
-      ? [{ to: "/admin", label: "لوحة الإدارة", icon: Shield }]
+    // الفحص والتدقيق — للمشرفين فقط
+    ...(isAdmin
+      ? [
+          { to: "/screening", label: t("nav_screening"), icon: ShieldCheck },
+          { to: "/audits", label: t("nav_audits"), icon: Sparkles },
+          { to: "/admin", label: "لوحة الإدارة", icon: Shield },
+        ]
       : []),
   ];
 
