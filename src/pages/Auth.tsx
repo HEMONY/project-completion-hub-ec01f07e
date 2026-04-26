@@ -10,10 +10,10 @@ import { toast } from "sonner";
 import { Languages } from "lucide-react";
 
 export default function AuthPage() {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, signUp, resetPassword, loading } = useAuth();
   const { t, dir, lang, setLang } = useI18n();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -27,9 +27,10 @@ export default function AuthPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      const { error } = mode === "login" ? await signIn(email, password) : await signUp(email, password, name);
+      const { error } = mode === "login" ? await signIn(email, password) : mode === "signup" ? await signUp(email, password, name) : await resetPassword(email);
       if (error) toast.error(error);
       else if (mode === "signup") toast.success(lang === "ar" ? "تحقق من بريدك لتأكيد الحساب." : "Check your email to verify your account.");
+      else if (mode === "forgot") toast.success(lang === "ar" ? "تم إرسال رابط إعادة التعيين إلى بريدك." : "Password reset link sent to your email.");
       else navigate("/");
     } finally {
       setBusy(false);
@@ -43,7 +44,7 @@ export default function AuthPage() {
           <div className="mx-auto size-14 rounded-2xl gradient-primary grid place-items-center text-primary-foreground font-bold text-2xl mb-3 shadow-elegant">
             م
           </div>
-          <CardTitle className="text-2xl">{mode === "login" ? t("auth_welcome_back") : t("auth_create_account")}</CardTitle>
+          <CardTitle className="text-2xl">{mode === "forgot" ? t("auth_reset_password") : mode === "login" ? t("auth_welcome_back") : t("auth_create_account")}</CardTitle>
           <CardDescription>{t("app_tagline")}</CardDescription>
           <Button variant="ghost" size="sm" className="mx-auto mt-2 gap-2" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
             <Languages className="size-4" />
@@ -62,12 +63,12 @@ export default function AuthPage() {
               <Label htmlFor="email">{t("auth_email")}</Label>
               <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
-            <div className="space-y-2">
+            {mode !== "forgot" && <div className="space-y-2">
               <Label htmlFor="password">{t("auth_password")}</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required autoComplete={mode === "login" ? "current-password" : "new-password"} />
-            </div>
+            </div>}
             <Button type="submit" disabled={busy} variant="premium" className="w-full" size="lg">
-              {busy ? t("loading") : mode === "login" ? t("auth_login") : t("auth_signup")}
+              {busy ? t("loading") : mode === "forgot" ? t("auth_reset_password") : mode === "login" ? t("auth_login") : t("auth_signup")}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm text-muted-foreground">
@@ -76,6 +77,7 @@ export default function AuthPage() {
               {mode === "login" ? t("auth_signup") : t("auth_login")}
             </button>
           </div>
+          {mode === "login" && <div className="mt-3 text-center text-sm"><button type="button" className="text-primary font-medium underline-offset-4 hover:underline" onClick={() => setMode("forgot")}>{t("auth_forgot_password")}</button></div>}
         </CardContent>
       </Card>
     </div>
