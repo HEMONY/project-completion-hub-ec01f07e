@@ -132,7 +132,6 @@ function KycForm({ entity, onSaved, t }: any) {
   const uploadFilesToStorage = async (files: File[], folder: string) => {
     const paths: string[] = [];
     for (const file of files) {
-      const ext = file.name.split(".").pop() || "bin";
       const path = `${user!.id}/${entity.id}/${folder}/${Date.now()}_${file.name}`;
       const { error } = await supabase.storage
         .from("kyc-documents")
@@ -1080,7 +1079,6 @@ ${dataText}
 function EngagementForm({ entity, onSaved, onBack, t }: any) {
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
-  const navigate = useNavigate();
   const engagementNumber = `ENG-${entity.id.slice(0, 8).toUpperCase()}-${new Date().getFullYear()}`;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1166,7 +1164,7 @@ function PaymentForm({ entity, onBack, t }: any) {
       paid_at: new Date().toISOString(),
     });
     if (!error) {
-      await supabase.from("entities").update({ payment_status: "paid" }).eq("id", entity.id);
+      await supabase.from("entities").update({ payment_status: "paid", application_status: "submitted", review_stage: "admin_review_ready", current_step: 7 } as any).eq("id", entity.id);
       await supabase.from("user_audit_logs").insert({
         user_id: user!.id,
         action: "payment_completed",
