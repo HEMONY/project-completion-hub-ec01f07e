@@ -15,7 +15,7 @@ import {
   Building2, ShieldCheck,
   Search, Eye, FileText, AlertCircle, ScrollText,
   Upload, Trash2, Plus, Users, Activity,
-  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon, Loader2, Sparkles, PenLine, CheckCircle2, Circle,
+  BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon, Loader2,
 } from "lucide-react";
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -52,33 +52,6 @@ const STATUS_LABELS: Record<string, string> = {
   approved: "معتمد",
   rejected: "مرفوض",
   edited: "معدَّل",
-};
-
-const REVIEW_STAGE_LABELS: Record<string, string> = {
-  client_draft: "لدى العميل",
-  admin_review_ready: "جاهز لمراجعة المشرف",
-  screening_completed: "تم الفحص",
-  admin_review: "تدقيق المشرف",
-  digital_signature_requested: "بانتظار توقيع الهوية الرقمية",
-  returned_to_admin: "عاد للمشرف بعد التوقيع",
-  finalized: "مكتمل نهائيًا",
-  rejected: "مرفوض",
-};
-
-const WORKFLOW_STEPS = [
-  { stage: "admin_review_ready", label: "استلام الطلب" },
-  { stage: "screening_completed", label: "الفحص" },
-  { stage: "admin_review", label: "التدقيق" },
-  { stage: "digital_signature_requested", label: "توقيع الهوية" },
-  { stage: "returned_to_admin", label: "عودة للمشرف" },
-  { stage: "finalized", label: "اعتماد نهائي" },
-];
-
-const getWorkflowIndex = (entity: any) => {
-  if (entity?.application_status === "approved" || entity?.review_stage === "finalized") return WORKFLOW_STEPS.length - 1;
-  if (entity?.digital_signature_status === "signed" || entity?.review_stage === "returned_to_admin") return 4;
-  const index = WORKFLOW_STEPS.findIndex((step) => step.stage === entity?.review_stage);
-  return index >= 0 ? index : entity?.application_status === "submitted" ? 0 : -1;
 };
 
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -210,28 +183,21 @@ export default function AdminDashboard() {
     fetchLogs();
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel("admin-workflow-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "entities" }, () => fetchEntities())
-      .on("postgres_changes", { event: "*", schema: "public", table: "kyc_documents" }, () => fetchDocuments())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_audit_logs" }, () => fetchLogs())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
   // ── Entities ──────────────────────────────────────────────
   const fetchEntities = async () => {
     const { data } = await supabase
       .from("entities")
       .select("*, profiles(full_name, email)")
       .order("created_at", { ascending: false });
+    // جلب حالات توقيعات التدقيق
+    const { data: sigs } = await supabase
+      .from("audit_signatures")
+      .select("entity_id, status, client_signature, client_signed_at");
+    
+    const sigsMap = Object.fromEntries((sigs ?? []).map((s) => [s.entity_id, s]));
+    setEntities(rows.map((e) => ({ ...e, auditSig: sigsMap[e.id] ?? null })));
     const rows = data ?? [];
     setEntities(rows);
-    setSelectedEntity((current) => current ? rows.find((row) => row.id === current.id) ?? current : current);
     setStats({
       total: rows.length,
       submitted: rows.filter((r) => r.application_status === "submitted").length,
@@ -296,13 +262,10 @@ export default function AdminDashboard() {
     const { entity, action } = reviewModal;
     setBusy(entity.id);
     const newStatus = action === "approve" ? "approved" : "rejected";
-    const newStage = action === "approve" ? "finalized" : "rejected";
     const { error } = await supabase
       .from("entities")
       .update({
         application_status: newStatus,
-        review_stage: newStage,
-        digital_signature_required: action === "approve" ? false : entity.digital_signature_required,
         rejection_reason: action === "reject" ? reviewNotes : null,
         reviewed_by: user!.id,
         reviewed_at: new Date().toISOString(),
@@ -318,49 +281,6 @@ export default function AdminDashboard() {
     setReviewNotes("");
     if (error) return toast.error(error.message);
     toast.success(action === "approve" ? "✅ تمت الموافقة على الكيان" : "❌ تم رفض الكيان");
-    fetchEntities();
-    fetchLogs();
-  };
-
-  const runEntityScreening = async (entity: any) => {
-    if (!user) return;
-    setBusy(entity.id);
-    const names = [
-      entity.entity_name,
-      ...(Array.isArray(entity.shareholders) ? entity.shareholders.map((s: any) => s.name) : []),
-      ...(Array.isArray(entity.ubos) ? entity.ubos.map((u: any) => u.name) : []),
-    ].filter(Boolean);
-    for (const name of names) {
-      const { data: hits } = await supabase.from("sanctions_list").select("english_name, arabic_name").or(`english_name.ilike.%${name}%,arabic_name.ilike.%${name}%`).limit(5);
-      const ai_result = hits?.length ? (hits.some((h) => h.english_name?.toLowerCase() === String(name).toLowerCase()) ? "confirmed" : "partial") : "no-match";
-      await supabase.from("screening_results").insert({ user_id: user.id, entity_id: entity.id, name_to_screen: String(name), name_type: "admin_review", ai_result, notes: hits?.length ? `Matched: ${hits.map((h) => h.english_name).join(", ")}` : null });
-    }
-    await supabase.from("entities").update({ review_stage: "screening_completed", application_status: "under_review", screening_completed: true, reviewed_by: user.id, reviewed_at: new Date().toISOString() } as any).eq("id", entity.id);
-    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "workflow_screening_completed", description: `اكتمل الفحص للكيان ${entity.entity_name}`, metadata: { entity_id: entity.id, stage: "screening_completed" } as any });
-    setBusy(null);
-    toast.success("تم تشغيل الفحص وتحديث حالة سير العمل");
-    fetchEntities();
-    fetchLogs();
-  };
-
-  const runAdminAudit = async (entity: any) => {
-    if (!user) return;
-    setBusy(entity.id);
-    await supabase.from("entities").update({ review_stage: "admin_review", application_status: "under_review", reviewed_by: user.id, reviewed_at: new Date().toISOString() } as any).eq("id", entity.id);
-    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "workflow_audit_started", description: `بدأ المشرف تدقيق ملف الكيان ${entity.entity_name}`, metadata: { entity_id: entity.id, stage: "admin_review" } as any });
-    setBusy(null);
-    toast.success("تم بدء التدقيق ومراجعة الملف");
-    fetchEntities();
-    fetchLogs();
-  };
-
-  const requestDigitalSignature = async (entity: any) => {
-    if (!user) return;
-    setBusy(entity.id);
-    await supabase.from("entities").update({ digital_signature_required: true, digital_signature_status: "requested", digital_signature_requested_at: new Date().toISOString(), review_stage: "digital_signature_requested", current_step: 7 } as any).eq("id", entity.id);
-    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "workflow_signature_requested", description: `أرسل المشرف ملف الكيان ${entity.entity_name} للعميل لتوقيع الهوية الرقمية`, metadata: { entity_id: entity.id, stage: "digital_signature_requested" } as any });
-    setBusy(null);
-    toast.success("تم إرسال الملف للعميل لتوقيع الهوية الرقمية");
     fetchEntities();
     fetchLogs();
   };
@@ -461,16 +381,13 @@ export default function AdminDashboard() {
     );
   }
 
-  const canManageStaff = role === "admin" || role === "manager";
-  const canUseAdminPanel = ["admin", "manager", "moderator", "auditor"].includes(role);
-
-  if (!canUseAdminPanel) {
+  if (role !== "admin") {
     return (
       <AppShell>
         <div className="max-w-lg mx-auto text-center py-20 space-y-4">
           <AlertCircle className="size-12 text-destructive mx-auto" />
           <h2 className="text-xl font-bold">غير مصرح</h2>
-            <p className="text-muted-foreground">هذه الصفحة مخصصة لفريق الإدارة والمشرفين فقط.</p>
+          <p className="text-muted-foreground">هذه الصفحة مخصصة للمشرفين فقط.</p>
           <Button asChild variant="outline"><Link to="/">العودة للرئيسية</Link></Button>
         </div>
       </AppShell>
@@ -503,9 +420,8 @@ export default function AdminDashboard() {
     ? documents.filter((doc) => doc.entity_id === selectedEntity.id)
     : [];
   const selectedEntityLogs = selectedEntity
-    ? logs.filter((log) => String(log.description ?? "").includes(selectedEntity.entity_name) || JSON.stringify(log.metadata ?? {}).includes(selectedEntity.id))
+    ? logs.filter((log) => String(log.description ?? "").includes(selectedEntity.entity_name) || String(log.metadata ?? "").includes(selectedEntity.id))
     : [];
-  const selectedEntityWorkflowIndex = selectedEntity ? getWorkflowIndex(selectedEntity) : -1;
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: "overview", label: "نظرة عامة", icon: BarChart3 },
@@ -531,7 +447,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <Badge variant="outline" className="text-xs px-3 py-1">
-            {role === "admin" ? "مدير" : role === "manager" ? "مدير مشرفين" : role === "auditor" ? "مدقق" : "مشرف"}
+            {role === "admin" ? "مشرف" : role === "auditor" ? "مراجع" : "مشرف وسيط"}
           </Badge>
         </div>
 
@@ -561,39 +477,6 @@ export default function AdminDashboard() {
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">نوع الطلب</div><div className="mt-1 font-medium">{selectedEntity.application_type ?? "—"}</div></div>
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">CDD</div><div className="mt-1 font-medium">{selectedEntity.cdd_completed ? "مكتمل" : "غير مكتمل"}</div></div>
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">تاريخ الإنشاء</div><div className="mt-1 font-medium">{new Date(selectedEntity.created_at).toLocaleDateString("ar-AE")}</div></div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <div className="font-semibold">مسار المراجعة</div>
-                    <div className="text-sm text-muted-foreground">{REVIEW_STAGE_LABELS[selectedEntity.review_stage] ?? "جاهز للمراجعة"}</div>
-                  </div>
-                  <Badge variant={selectedEntity.application_status === "approved" ? "success" : selectedEntity.digital_signature_status === "signed" ? "success" : selectedEntity.digital_signature_status === "requested" ? "warning" : "secondary"}>
-                    {selectedEntity.application_status === "approved" ? "اعتماد نهائي مكتمل" : selectedEntity.digital_signature_status === "signed" ? "تم توقيع الهوية الرقمية" : selectedEntity.digital_signature_status === "requested" ? "بانتظار توقيع العميل" : "لم يُطلب التوقيع"}
-                  </Badge>
-                </div>
-                <div className="grid gap-2 md:grid-cols-6">
-                  {WORKFLOW_STEPS.map((step, index) => {
-                    const complete = selectedEntityWorkflowIndex >= index;
-                    const current = selectedEntityWorkflowIndex === index;
-                    return (
-                      <div key={step.stage} className={`rounded-md border p-3 text-center text-xs transition-colors ${complete ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground"}`}>
-                        <div className="mb-1 flex justify-center">
-                          {complete ? <CheckCircle2 className="size-4" /> : <Circle className="size-4" />}
-                        </div>
-                        <div className="font-medium">{step.label}</div>
-                        {current && <div className="mt-1 text-[11px] text-muted-foreground">الحالة الحالية</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" disabled={busy === selectedEntity.id || selectedEntityWorkflowIndex >= 1 || selectedEntity.application_status === "approved"} onClick={() => runEntityScreening(selectedEntity)}><ShieldCheck className="size-4" /> الفحص</Button>
-                  <Button size="sm" variant="outline" disabled={busy === selectedEntity.id || selectedEntityWorkflowIndex < 1 || selectedEntityWorkflowIndex >= 2 || selectedEntity.application_status === "approved"} onClick={() => runAdminAudit(selectedEntity)}><Sparkles className="size-4" /> التدقيق ومراجعة الملف</Button>
-                  <Button size="sm" variant="premium" disabled={busy === selectedEntity.id || selectedEntityWorkflowIndex < 2 || selectedEntity.digital_signature_status === "requested" || selectedEntity.digital_signature_status === "signed" || selectedEntity.application_status === "approved"} onClick={() => requestDigitalSignature(selectedEntity)}><PenLine className="size-4" /> إرسال لتوقيع الهوية الرقمية</Button>
-                  <Button size="sm" variant="success" disabled={selectedEntity.digital_signature_status !== "signed" || selectedEntity.application_status === "approved"} onClick={() => setReviewModal({ entity: selectedEntity, action: "approve" })}><CheckCircle2 className="size-4" /> اعتماد نهائي</Button>
-                </div>
               </div>
 
               <div className="space-y-3">
@@ -786,6 +669,7 @@ export default function AdminDashboard() {
                         <th className="py-3 px-4 text-start font-medium text-muted-foreground">اسم الكيان</th>
                         <th className="py-3 px-4 text-start font-medium text-muted-foreground">العميل</th>
                         <th className="py-3 px-4 text-start font-medium text-muted-foreground">الحالة</th>
+                        <th className="py-3 px-4 text-start font-medium text-muted-foreground">توقيع التدقيق</th>
                         <th className="py-3 px-4 text-start font-medium text-muted-foreground">تاريخ الإنشاء</th>
                         <th className="py-3 px-4 text-start font-medium text-muted-foreground">الإجراءات</th>
                       </tr>
@@ -805,6 +689,15 @@ export default function AdminDashboard() {
                               {STATUS_LABELS[e.application_status] ?? e.application_status}
                             </Badge>
                           </td>
+                          <td className="py-3 px-4">
+                            {e.auditSig?.status === "client_signed" ? (
+                                <span className="text-xs text-green-600 font-medium">✅ وقّع العميل</span>
+                            ) : e.auditSig?.status === "pending_client_signature" ? (
+                                <span className="text-xs text-yellow-600">⏳ بانتظار التوقيع</span>
+                            ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
                           <td className="py-3 px-4 text-xs text-muted-foreground">
                             {new Date(e.created_at).toLocaleDateString("ar-AE")}
                           </td>
@@ -819,17 +712,8 @@ export default function AdminDashboard() {
                               <Button asChild size="sm" variant="outline" title="فحص">
                                 <Link to={`/screening`}><ShieldCheck className="size-3.5" /></Link>
                               </Button>
-                              <Button size="sm" variant="outline" disabled={busy === e.id || getWorkflowIndex(e) >= 1 || e.application_status === "approved"} title="فحص من الإدارة" onClick={() => runEntityScreening(e)}>
-                                فحص
-                              </Button>
-                              <Button size="sm" variant="outline" disabled={busy === e.id || getWorkflowIndex(e) < 1 || getWorkflowIndex(e) >= 2 || e.application_status === "approved"} title="تدقيق" onClick={() => runAdminAudit(e)}>
-                                تدقيق
-                              </Button>
                               <Button asChild size="sm" variant="outline" title="CDD">
                                 <Link to={`/cdd/${e.id}`}><FileText className="size-3.5" /></Link>
-                              </Button>
-                              <Button size="sm" variant="premium" disabled={busy === e.id || getWorkflowIndex(e) < 2 || e.digital_signature_status === "requested" || e.digital_signature_status === "signed" || e.application_status === "approved"} onClick={() => requestDigitalSignature(e)}>
-                                توقيع الهوية
                               </Button>
                               {e.application_status === "submitted" && (
                                 <Button size="sm" variant="outline" disabled={busy === e.id} onClick={() => moveToReview(e.id)}>
@@ -1041,20 +925,18 @@ export default function AdminDashboard() {
                             {new Date(u.created_at).toLocaleDateString("ar-AE")}
                           </td>
                           <td className="py-3 px-4">
-                            {canManageStaff ? (
+                            {role === "admin" ? (
                               <NativeSelect
                                 value={userRole}
                                 onChange={(e) => setUserRole(u.id, e.target.value)}
                                 style={{ width: 140 }}
                               >
                                 <option value="user">مستخدم</option>
-                                <option value="auditor">مدقق</option>
-                                <option value="moderator">مشرف</option>
-                                <option value="manager">مدير مشرفين</option>
-                                {role === "admin" && <option value="admin">مدير</option>}
+                                <option value="moderator">مشرف وسيط</option>
+                                <option value="admin">مشرف</option>
                               </NativeSelect>
                             ) : (
-                              <Badge variant="secondary">{userRole === "admin" ? "مدير" : userRole === "manager" ? "مدير مشرفين" : userRole === "auditor" ? "مدقق" : userRole === "moderator" ? "مشرف" : "مستخدم"}</Badge>
+                              <Badge variant="secondary">{userRole === "admin" ? "مشرف" : userRole === "moderator" ? "مشرف وسيط" : "مستخدم"}</Badge>
                             )}
                           </td>
                         </tr>
