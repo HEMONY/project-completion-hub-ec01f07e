@@ -287,6 +287,47 @@ export default function AdminDashboard() {
     fetchLogs();
   };
 
+  const runEntityScreening = async (entity: any) => {
+    if (!user) return;
+    setBusy(entity.id);
+    const names = [
+      entity.entity_name,
+      ...(Array.isArray(entity.shareholders) ? entity.shareholders.map((s: any) => s.name) : []),
+      ...(Array.isArray(entity.ubos) ? entity.ubos.map((u: any) => u.name) : []),
+    ].filter(Boolean);
+    for (const name of names) {
+      const { data: hits } = await supabase.from("sanctions_list").select("english_name, arabic_name").or(`english_name.ilike.%${name}%,arabic_name.ilike.%${name}%`).limit(5);
+      const ai_result = hits?.length ? (hits.some((h) => h.english_name?.toLowerCase() === String(name).toLowerCase()) ? "confirmed" : "partial") : "no-match";
+      await supabase.from("screening_results").insert({ user_id: user.id, entity_id: entity.id, name_to_screen: String(name), name_type: "admin_review", ai_result, notes: hits?.length ? `Matched: ${hits.map((h) => h.english_name).join(", ")}` : null });
+    }
+    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "admin_screening_run", description: `نفّذ المشرف الفحص للكيان ${entity.entity_name}` });
+    setBusy(null);
+    toast.success("تم تشغيل الفحص من لوحة المشرف");
+    fetchLogs();
+  };
+
+  const runAdminAudit = async (entity: any) => {
+    if (!user) return;
+    setBusy(entity.id);
+    await supabase.from("entities").update({ review_stage: "admin_review", application_status: "under_review", reviewed_by: user.id, reviewed_at: new Date().toISOString() } as any).eq("id", entity.id);
+    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "admin_audit_started", description: `بدأ المشرف تدقيق ملف الكيان ${entity.entity_name}` });
+    setBusy(null);
+    toast.success("تم بدء التدقيق ومراجعة الملف");
+    fetchEntities();
+    fetchLogs();
+  };
+
+  const requestDigitalSignature = async (entity: any) => {
+    if (!user) return;
+    setBusy(entity.id);
+    await supabase.from("entities").update({ digital_signature_required: true, digital_signature_status: "requested", digital_signature_requested_at: new Date().toISOString(), review_stage: "digital_signature_requested", current_step: 7 } as any).eq("id", entity.id);
+    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "digital_signature_requested", description: `أرسل المشرف ملف الكيان ${entity.entity_name} للعميل لتوقيع الهوية الرقمية` });
+    setBusy(null);
+    toast.success("تم إرسال الملف للعميل لتوقيع الهوية الرقمية");
+    fetchEntities();
+    fetchLogs();
+  };
+
   // ── Sanctions ─────────────────────────────────────────────
   const fetchSanctions = async () => {
     const { data } = await supabase.from("sanctions_list").select("*").order("english_name");
