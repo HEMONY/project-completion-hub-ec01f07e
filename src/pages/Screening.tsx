@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useI18n } from "@/lib/i18n";
-import { useAuth } from "@/lib/auth";
+import { useAuth, useRole } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { ShieldCheck, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 export default function Screening() {
   const { t } = useI18n();
   const { user } = useAuth();
+  const { role, roleLoading } = useRole();
   const [entities, setEntities] = useState<any[]>([]);
   const [entityId, setEntityId] = useState<string>("");
   const [name, setName] = useState("");
@@ -140,6 +141,18 @@ export default function Screening() {
       .order("screened_at", { ascending: false })
       .then(({ data }) => setResults(data ?? []));
   };
+  // Guard: للمشرفين فقط
+  if (!roleLoading && !["admin", "auditor", "moderator"].includes(role)) {
+    return (
+      <AppShell>
+        <div className="max-w-md mx-auto text-center py-24 space-y-4">
+          <div className="text-5xl">🔒</div>
+          <h2 className="text-xl font-bold">غير مصرح بالوصول</h2>
+          <p className="text-muted-foreground">صفحة الفحص متاحة للمشرفين فقط.</p>
+        </div>
+      </AppShell>
+    );
+  }
   return (
     <AppShell>
       <div className="max-w-5xl mx-auto space-y-6">
