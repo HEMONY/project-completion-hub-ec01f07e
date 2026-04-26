@@ -296,10 +296,13 @@ export default function AdminDashboard() {
     const { entity, action } = reviewModal;
     setBusy(entity.id);
     const newStatus = action === "approve" ? "approved" : "rejected";
+    const newStage = action === "approve" ? "finalized" : "rejected";
     const { error } = await supabase
       .from("entities")
       .update({
         application_status: newStatus,
+        review_stage: newStage,
+        digital_signature_required: action === "approve" ? false : entity.digital_signature_required,
         rejection_reason: action === "reject" ? reviewNotes : null,
         reviewed_by: user!.id,
         reviewed_at: new Date().toISOString(),
@@ -332,9 +335,11 @@ export default function AdminDashboard() {
       const ai_result = hits?.length ? (hits.some((h) => h.english_name?.toLowerCase() === String(name).toLowerCase()) ? "confirmed" : "partial") : "no-match";
       await supabase.from("screening_results").insert({ user_id: user.id, entity_id: entity.id, name_to_screen: String(name), name_type: "admin_review", ai_result, notes: hits?.length ? `Matched: ${hits.map((h) => h.english_name).join(", ")}` : null });
     }
-    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "admin_screening_run", description: `نفّذ المشرف الفحص للكيان ${entity.entity_name}` });
+    await supabase.from("entities").update({ review_stage: "screening_completed", application_status: "under_review", screening_completed: true, reviewed_by: user.id, reviewed_at: new Date().toISOString() } as any).eq("id", entity.id);
+    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "workflow_screening_completed", description: `اكتمل الفحص للكيان ${entity.entity_name}`, metadata: { entity_id: entity.id, stage: "screening_completed" } as any });
     setBusy(null);
-    toast.success("تم تشغيل الفحص من لوحة المشرف");
+    toast.success("تم تشغيل الفحص وتحديث حالة سير العمل");
+    fetchEntities();
     fetchLogs();
   };
 
@@ -342,7 +347,7 @@ export default function AdminDashboard() {
     if (!user) return;
     setBusy(entity.id);
     await supabase.from("entities").update({ review_stage: "admin_review", application_status: "under_review", reviewed_by: user.id, reviewed_at: new Date().toISOString() } as any).eq("id", entity.id);
-    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "admin_audit_started", description: `بدأ المشرف تدقيق ملف الكيان ${entity.entity_name}` });
+    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "workflow_audit_started", description: `بدأ المشرف تدقيق ملف الكيان ${entity.entity_name}`, metadata: { entity_id: entity.id, stage: "admin_review" } as any });
     setBusy(null);
     toast.success("تم بدء التدقيق ومراجعة الملف");
     fetchEntities();
@@ -353,7 +358,7 @@ export default function AdminDashboard() {
     if (!user) return;
     setBusy(entity.id);
     await supabase.from("entities").update({ digital_signature_required: true, digital_signature_status: "requested", digital_signature_requested_at: new Date().toISOString(), review_stage: "digital_signature_requested", current_step: 7 } as any).eq("id", entity.id);
-    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "digital_signature_requested", description: `أرسل المشرف ملف الكيان ${entity.entity_name} للعميل لتوقيع الهوية الرقمية` });
+    await supabase.from("user_audit_logs").insert({ user_id: user.id, action: "workflow_signature_requested", description: `أرسل المشرف ملف الكيان ${entity.entity_name} للعميل لتوقيع الهوية الرقمية`, metadata: { entity_id: entity.id, stage: "digital_signature_requested" } as any });
     setBusy(null);
     toast.success("تم إرسال الملف للعميل لتوقيع الهوية الرقمية");
     fetchEntities();
