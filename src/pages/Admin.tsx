@@ -960,6 +960,25 @@ export default function AdminDashboard() {
           </Card>
         )}
 
+        {tab === "finance" && (
+          <Card className="shadow-card">
+            <CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="size-5" /> لوحة المال والمدفوعات</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-md border border-border p-4"><div className="text-xs text-muted-foreground">إجمالي المدفوع</div><div className="mt-1 text-2xl font-bold text-primary">{payments.filter((p) => p.status === "paid").reduce((sum, p) => sum + Number(p.amount || 0), 0).toLocaleString()} AED</div></div>
+                <div className="rounded-md border border-border p-4"><div className="text-xs text-muted-foreground">عمليات ناجحة</div><div className="mt-1 text-2xl font-bold text-success">{payments.filter((p) => p.status === "paid").length}</div></div>
+                <div className="rounded-md border border-border p-4"><div className="text-xs text-muted-foreground">قيد المتابعة</div><div className="mt-1 text-2xl font-bold text-warning">{payments.filter((p) => p.status !== "paid").length}</div></div>
+              </div>
+              <div className="overflow-x-auto rounded-md border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 border-b border-border"><tr><th className="py-3 px-4 text-start">الكيان</th><th className="py-3 px-4 text-start">العميل</th><th className="py-3 px-4 text-start">المبلغ</th><th className="py-3 px-4 text-start">الحالة</th><th className="py-3 px-4 text-start">المرجع</th><th className="py-3 px-4 text-start">التاريخ</th></tr></thead>
+                  <tbody>{payments.length === 0 ? <tr><td colSpan={6} className="py-10 text-center text-muted-foreground">لا توجد مدفوعات</td></tr> : payments.map((p) => <tr key={p.id} className="border-b border-border/60"><td className="py-3 px-4 font-medium">{p.entities?.entity_name ?? "—"}</td><td className="py-3 px-4 text-xs text-muted-foreground">{p.profiles?.email ?? "—"}</td><td className="py-3 px-4 font-mono">{Number(p.amount || 0).toLocaleString()} {p.currency}</td><td className="py-3 px-4"><Badge variant={p.status === "paid" ? "success" : "warning"}>{p.status}</Badge></td><td className="py-3 px-4 text-xs font-mono">{p.reference ?? "—"}</td><td className="py-3 px-4 text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString("ar-AE")}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* ─── TAB: LOGS ─────────────────────────────────────── */}
         {tab === "logs" && (
           <Card className="shadow-card">
