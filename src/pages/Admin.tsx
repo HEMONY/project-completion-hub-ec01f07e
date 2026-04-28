@@ -189,6 +189,7 @@ export default function AdminDashboard() {
       .from("entities")
       .select("*, profiles(full_name, email)")
       .order("created_at", { ascending: false });
+    const rows = data ?? [];
     // جلب حالات توقيعات التدقيق
     const { data: sigs } = await supabase
       .from("audit_signatures")
@@ -196,8 +197,6 @@ export default function AdminDashboard() {
     
     const sigsMap = Object.fromEntries((sigs ?? []).map((s) => [s.entity_id, s]));
     setEntities(rows.map((e) => ({ ...e, auditSig: sigsMap[e.id] ?? null })));
-    const rows = data ?? [];
-    setEntities(rows);
     setStats({
       total: rows.length,
       submitted: rows.filter((r) => r.application_status === "submitted").length,
