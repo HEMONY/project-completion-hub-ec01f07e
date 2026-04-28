@@ -129,7 +129,7 @@ function DocumentPreview({ doc }: { doc: any }) {
   return <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-md bg-muted/40 text-sm text-muted-foreground"><ImageIcon className="size-6" /> لا توجد معاينة لهذا النوع</div>;
 }
 
-type Tab = "overview" | "entities" | "documents" | "sanctions" | "users" | "logs";
+type Tab = "overview" | "entities" | "documents" | "sanctions" | "users" | "finance" | "logs";
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -166,6 +166,7 @@ export default function AdminDashboard() {
 
   // Users state
   const [users, setUsers] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
 
   // Logs state
   const [logs, setLogs] = useState<any[]>([]);
@@ -180,6 +181,7 @@ export default function AdminDashboard() {
     fetchDocuments();
     fetchSanctions();
     fetchUsers();
+    fetchPayments();
     fetchLogs();
   }, [user]);
 
@@ -351,6 +353,7 @@ export default function AdminDashboard() {
   };
 
   const setUserRole = async (userId: string, newRole: string) => {
+    if (role === "manager" && newRole === "admin") return toast.error("المدير لا يمكنه تعيين مشرف أعلى");
     // Delete existing role then insert new one
     await supabase.from("user_roles").delete().eq("user_id", userId);
     if (newRole !== "user") {
@@ -359,6 +362,14 @@ export default function AdminDashboard() {
     }
     toast.success("تم تحديث صلاحية المستخدم");
     fetchUsers();
+  };
+
+  const fetchPayments = async () => {
+    const { data } = await supabase
+      .from("payments")
+      .select("*, entities(entity_name, engagement_number), profiles(full_name, email)")
+      .order("created_at", { ascending: false });
+    setPayments(data ?? []);
   };
 
   // ── Logs ───────────────────────────────────────────────────
