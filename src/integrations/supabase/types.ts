@@ -993,6 +993,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_admin_panel: { Args: { _user_id: string }; Returns: boolean }
       can_manage_staff: { Args: { _user_id: string }; Returns: boolean }
       get_entity_stats: {
         Args: never
