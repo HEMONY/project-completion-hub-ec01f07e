@@ -123,11 +123,18 @@ function KycForm({ entity, onSaved, t }: any) {
     main_activity: entity.main_activity ?? "",
     emirate: entity.emirate ?? "",
     address: entity.address ?? "",
+    telephone: entity.telephone ?? "",
+    contact_email: entity.contact_email ?? "",
+    economic_sector: entity.economic_sector ?? "",
+    source_of_funds: entity.source_of_funds ?? "",
+    employer_name: entity.employer_name ?? "",
     total_turnover: entity.total_turnover ?? 0,
     mainland_company_type: entity.mainland_company_type ?? "",
   });
   const [shareholders, setShareholders] = useState<any[]>(entity.shareholders ?? []);
   const [ubos, setUbos] = useState<any[]>(entity.ubos ?? []);
+  const [pepPersons, setPepPersons] = useState<any[]>(entity.pep_persons ?? []);
+  const [legalDeclarations, setLegalDeclarations] = useState<Record<string, boolean>>(entity.legal_declarations ?? {});
   const [hasUbo, setHasUbo] = useState<string>(
     (entity.ubos ?? []).length > 0 ? "Yes" : ""
   );
@@ -149,6 +156,10 @@ function KycForm({ entity, onSaved, t }: any) {
   const uploadFilesToStorage = async (files: File[], folder: string) => {
     const paths: string[] = [];
     for (const file of files) {
+      if (!ALLOWED_UPLOAD_TYPES.includes(file.type)) {
+        toast.error(`نوع الملف غير مسموح: ${file.name}`);
+        continue;
+      }
       const path = `${user!.id}/${entity.id}/${folder}/${Date.now()}_${file.name}`;
       const { error } = await supabase.storage
         .from("kyc-documents")
@@ -183,6 +194,8 @@ function KycForm({ entity, onSaved, t }: any) {
         ...form,
         shareholders,
         ubos: hasUbo === "Yes" ? ubos : [],
+        pep_persons: pepPersons,
+        legal_declarations: legalDeclarations,
         management_control: managementControl,
         current_step: 2,
       })
