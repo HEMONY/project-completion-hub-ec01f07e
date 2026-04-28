@@ -20,9 +20,9 @@ const validSteps: KycStepKey[] = [
   "financial-year",
   "tax-status",
   "engagement",
+  "financial-analysis",
   "payment",
   "uae-id",
-  "financial-analysis",
 ];
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -36,6 +36,23 @@ function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5"><Label className="text-sm">{label}</Label>{children}</div>;
 }
+
+const ECONOMIC_SECTORS = ["Agriculture, Forestry & Fishing", "Mining & Quarrying", "Manufacturing", "Energy", "Construction, Engineering & Machinery", "Transportation & Logistics", "Technology & Telecom", "Real Estate & Facility Services", "Education", "Health Care", "Hospitality", "Professional Services", "Personal & Community Services", "Media", "Support Services", "General Trading", "Tourism & Travel Services", "Other"];
+const LEGAL_DECLARATIONS = [
+  "أؤكد أن جميع البيانات والمستندات المقدمة صحيحة وحديثة.",
+  "أؤكد أن الأموال المستخدمة في النشاط من مصادر مشروعة.",
+  "أقر بعدم وجود علاقات أو معاملات محظورة مع قوائم العقوبات.",
+  "أوافق على استخدام البيانات للتحقق والامتثال والعناية الواجبة.",
+];
+const ALLOWED_UPLOAD_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+
+const normalizeName = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+const namesMatch = (expected: string, extracted: string) => {
+  const a = normalizeName(expected);
+  const b = normalizeName(extracted);
+  if (!a || !b) return false;
+  return a === b || a.split(" ").filter((part) => part.length > 2 && b.includes(part)).length >= Math.min(2, a.split(" ").length);
+};
 
 export default function KycStep() {
   const { entityId = "", step = "kyc" } = useParams();
