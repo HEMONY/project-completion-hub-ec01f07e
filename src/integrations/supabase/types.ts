@@ -112,62 +112,6 @@ export type Database = {
           },
         ]
       }
-      audit_signatures: {
-        Row: {
-          admin_signed_at: string | null
-          ai_summary: string | null
-          auditor_id: string
-          client_signature: string | null
-          client_signed_at: string | null
-          created_at: string
-          entity_id: string
-          health_score: number | null
-          id: string
-          risks: Json | null
-          sent_at: string | null
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          admin_signed_at?: string | null
-          ai_summary?: string | null
-          auditor_id: string
-          client_signature?: string | null
-          client_signed_at?: string | null
-          created_at?: string
-          entity_id: string
-          health_score?: number | null
-          id?: string
-          risks?: Json | null
-          sent_at?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          admin_signed_at?: string | null
-          ai_summary?: string | null
-          auditor_id?: string
-          client_signature?: string | null
-          client_signed_at?: string | null
-          created_at?: string
-          entity_id?: string
-          health_score?: number | null
-          id?: string
-          risks?: Json | null
-          sent_at?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "audit_signatures_entity_id_fkey"
-            columns: ["entity_id"]
-            isOneToOne: true
-            referencedRelation: "entities"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       cdd_verifications: {
         Row: {
           admin_id: string
@@ -263,7 +207,6 @@ export type Database = {
           application_status: string
           application_type: string
           cdd_completed: boolean | null
-          contact_email: string | null
           created_at: string
           current_step: number
           digital_signature_name: string | null
@@ -271,25 +214,20 @@ export type Database = {
           digital_signature_required: boolean
           digital_signature_signed_at: string | null
           digital_signature_status: string
-          economic_sector: string | null
           emirate: string | null
-          employer_name: string | null
           engagement_number: string | null
           entity_name: string
           financial_analyzed: boolean | null
           has_ubo: boolean | null
           id: string
           ind_completed: boolean | null
-          legal_declarations: Json
           license_expiry_date: string | null
           license_issue_date: string | null
           license_number: string | null
           main_activity: string | null
           mainland_company_type: string | null
           management_control: Json | null
-          ocr_verification: Json
           payment_status: string | null
-          pep_persons: Json
           registration_status: string | null
           rejection_reason: string | null
           review_stage: string
@@ -297,9 +235,7 @@ export type Database = {
           reviewed_by: string | null
           screening_completed: boolean | null
           shareholders: Json | null
-          source_of_funds: string | null
           submitted_at: string | null
-          telephone: string | null
           total_turnover: number | null
           uae_id_verified: boolean | null
           ubos: Json | null
@@ -311,7 +247,6 @@ export type Database = {
           application_status?: string
           application_type?: string
           cdd_completed?: boolean | null
-          contact_email?: string | null
           created_at?: string
           current_step?: number
           digital_signature_name?: string | null
@@ -319,25 +254,20 @@ export type Database = {
           digital_signature_required?: boolean
           digital_signature_signed_at?: string | null
           digital_signature_status?: string
-          economic_sector?: string | null
           emirate?: string | null
-          employer_name?: string | null
           engagement_number?: string | null
           entity_name: string
           financial_analyzed?: boolean | null
           has_ubo?: boolean | null
           id?: string
           ind_completed?: boolean | null
-          legal_declarations?: Json
           license_expiry_date?: string | null
           license_issue_date?: string | null
           license_number?: string | null
           main_activity?: string | null
           mainland_company_type?: string | null
           management_control?: Json | null
-          ocr_verification?: Json
           payment_status?: string | null
-          pep_persons?: Json
           registration_status?: string | null
           rejection_reason?: string | null
           review_stage?: string
@@ -345,9 +275,7 @@ export type Database = {
           reviewed_by?: string | null
           screening_completed?: boolean | null
           shareholders?: Json | null
-          source_of_funds?: string | null
           submitted_at?: string | null
-          telephone?: string | null
           total_turnover?: number | null
           uae_id_verified?: boolean | null
           ubos?: Json | null
@@ -359,7 +287,6 @@ export type Database = {
           application_status?: string
           application_type?: string
           cdd_completed?: boolean | null
-          contact_email?: string | null
           created_at?: string
           current_step?: number
           digital_signature_name?: string | null
@@ -367,25 +294,20 @@ export type Database = {
           digital_signature_required?: boolean
           digital_signature_signed_at?: string | null
           digital_signature_status?: string
-          economic_sector?: string | null
           emirate?: string | null
-          employer_name?: string | null
           engagement_number?: string | null
           entity_name?: string
           financial_analyzed?: boolean | null
           has_ubo?: boolean | null
           id?: string
           ind_completed?: boolean | null
-          legal_declarations?: Json
           license_expiry_date?: string | null
           license_issue_date?: string | null
           license_number?: string | null
           main_activity?: string | null
           mainland_company_type?: string | null
           management_control?: Json | null
-          ocr_verification?: Json
           payment_status?: string | null
-          pep_persons?: Json
           registration_status?: string | null
           rejection_reason?: string | null
           review_stage?: string
@@ -393,9 +315,7 @@ export type Database = {
           reviewed_by?: string | null
           screening_completed?: boolean | null
           shareholders?: Json | null
-          source_of_funds?: string | null
           submitted_at?: string | null
-          telephone?: string | null
           total_turnover?: number | null
           uae_id_verified?: boolean | null
           ubos?: Json | null
