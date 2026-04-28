@@ -1,4 +1,3 @@
-// src/components/KycStepper.tsx  ← استبدل الملف كاملاً
 import { Link } from "react-router-dom";
 import { Check } from "lucide-react";
 import { useI18n, type dict } from "@/lib/i18n";
@@ -14,16 +13,14 @@ export type KycStepKey =
   | "financial-analysis"
   | "payment";
 
-// ⚠️ هذا الترتيب يجب أن يطابق تماماً validSteps في KycStep.tsx
 const stepOrder: KycStepKey[] = [
   "kyc",
-  "uae-id",
   "audit-fee",
   "financial-year",
   "tax-status",
   "engagement",
-  "financial-analysis",
   "payment",
+  "uae-id",
 ];
 
 const labelKeys: Record<KycStepKey, keyof typeof dict> = {
@@ -58,23 +55,29 @@ export function KycStepper({
         {stepOrder.map((step, idx) => {
           const isCompleted = completed.includes(step) || idx < currentIdx;
           const isActive = step === current;
+          const stepNumber = idx + 1;
           const content = (
             <div className="flex items-center gap-3 py-3 relative z-10">
-              <div className={cn(
-                "size-7 rounded-full grid place-items-center text-xs font-semibold border-2 shrink-0 transition-colors",
-                isCompleted && "bg-success border-success text-success-foreground",
-                isActive && !isCompleted && "bg-primary border-primary text-primary-foreground",
-                !isActive && !isCompleted && "bg-muted border-border text-muted-foreground"
-              )}>
-                {isCompleted ? <Check className="size-3.5" /> : idx + 1}
+              <div
+                className={cn(
+                  "size-7 rounded-full grid place-items-center text-xs font-semibold border-2 shrink-0 transition-colors",
+                  isCompleted && "bg-success border-success text-success-foreground",
+                  isActive && !isCompleted && "bg-primary border-primary text-primary-foreground",
+                  !isActive && !isCompleted && "bg-muted border-border text-muted-foreground"
+                )}
+              >
+                {isCompleted ? <Check className="size-3.5" /> : stepNumber}
               </div>
               <div className="min-w-0">
                 <div className={cn("text-sm leading-tight", isActive && "font-semibold")}>
                   {t(labelKeys[step])}
                 </div>
-                <div className={cn("text-[10px] uppercase tracking-wider mt-0.5",
-                  isCompleted ? "text-success" : isActive ? "text-warning" : "text-muted-foreground"
-                )}>
+                <div
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider mt-0.5",
+                    isCompleted ? "text-success" : isActive ? "text-warning" : "text-muted-foreground"
+                  )}
+                >
                   {isCompleted ? t("status_completed") : isActive ? t("status_pending") : t("status_not_started")}
                 </div>
               </div>
@@ -89,7 +92,7 @@ export function KycStepper({
               </li>
             );
           }
-          return <li key={step} className="px-1 opacity-60">{content}</li>;
+          return <li key={step} className="px-1 opacity-70">{content}</li>;
         })}
       </ol>
     </aside>
