@@ -391,7 +391,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (role !== "admin") {
+  if (!["admin", "manager", "moderator"].includes(role)) {
     return (
       <AppShell>
         <div className="max-w-lg mx-auto text-center py-20 space-y-4">
@@ -439,6 +439,7 @@ export default function AdminDashboard() {
     { id: "documents", label: `المستندات (${documents.length})`, icon: FileText },
     { id: "sanctions", label: `قائمة العقوبات (${sanctions.length})`, icon: ScrollText },
     { id: "users", label: `المستخدمون (${users.length})`, icon: Users },
+    { id: "finance", label: `المال (${payments.length})`, icon: BarChart3 },
     { id: "logs", label: "سجل النشاط", icon: Activity },
   ];
 
@@ -457,7 +458,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <Badge variant="outline" className="text-xs px-3 py-1">
-            {role === "admin" ? "مشرف" : role === "auditor" ? "مراجع" : "مشرف وسيط"}
+             {role === "admin" ? "مشرف أعلى" : role === "manager" ? "مدير" : role === "auditor" ? "مراجع" : "مشرف"}
           </Badge>
         </div>
 
