@@ -54,6 +54,14 @@ const namesMatch = (expected: string, extracted: string) => {
   return a === b || a.split(" ").filter((part) => part.length > 2 && b.includes(part)).length >= Math.min(2, a.split(" ").length);
 };
 
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+    reader.onerror = () => reject(new Error("تعذر قراءة الملف"));
+    reader.readAsDataURL(file);
+  });
+
 export default function KycStep() {
   const { entityId = "", step = "kyc" } = useParams();
   const { user, loading } = useAuth();
