@@ -488,7 +488,12 @@ function FileUploadZone({ label, files, onChange, accept }: {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
-    onChange([...files, ...newFiles]);
+    const validFiles = newFiles.filter((file) => {
+      const valid = ALLOWED_UPLOAD_TYPES.includes(file.type);
+      if (!valid) toast.error(`نوع الملف غير مسموح: ${file.name}`);
+      return valid;
+    });
+    onChange([...files, ...validFiles]);
     e.target.value = "";
   };
 
