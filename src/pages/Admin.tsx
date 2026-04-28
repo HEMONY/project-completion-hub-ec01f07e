@@ -380,7 +380,9 @@ export default function AdminDashboard() {
     );
   }
 
-  if (role !== "admin") {
+  const canViewAdminPanel = ["admin", "manager", "moderator", "auditor"].includes(role);
+
+  if (!canViewAdminPanel) {
     return (
       <AppShell>
         <div className="max-w-lg mx-auto text-center py-20 space-y-4">
@@ -446,7 +448,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <Badge variant="outline" className="text-xs px-3 py-1">
-            {role === "admin" ? "مشرف" : role === "auditor" ? "مراجع" : "مشرف وسيط"}
+            {role === "admin" ? "مدير" : role === "manager" ? "مدير فريق" : role === "auditor" ? "مراجع" : "مشرف"}
           </Badge>
         </div>
 
