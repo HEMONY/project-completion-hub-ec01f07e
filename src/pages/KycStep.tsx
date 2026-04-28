@@ -152,6 +152,8 @@ function KycForm({ entity, onSaved, t }: any) {
   const [eidFiles, setEidFiles] = useState<File[]>([]);
   const [tradeFiles, setTradeFiles] = useState<File[]>([]);
   const [authFiles, setAuthFiles] = useState<File[]>([]);
+  const [ocrResult, setOcrResult] = useState<any>(entity.ocr_verification ?? null);
+  const [ocrBusy, setOcrBusy] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // خيارات Management Control تُبنى ديناميكياً من المساهمين + UBOs
@@ -259,6 +261,21 @@ function KycForm({ entity, onSaved, t }: any) {
     }
     toast.success(t("saved"));
     onSaved(data);
+  };
+
+  const runOcr = async () => {
+    const image = eidFiles.find((file) => file.type.startsWith("image/"));
+    if (!image) return toast.error("يرجى اختيار صورة JPG أو PNG للهوية لتشغيل OCR");
+    setOcrBusy(true);
+    const { data, error } = await supabase.functions.invoke("verify-id-ocr", {
+      body: { expectedName: form.entity_name, mimeType: image.type, fileBase64: await fileToBase64(image) },
+    });
+    setOcrBusy(false);
+    if (error) return toast.error(error.message);
+    const result = { ...data, checked_at: new Date().toISOString() };
+    setOcrResult(result);
+    await supabase.from("entities").update({ ocr_verification: result } as any).eq("id", entity.id);
+    toast[data.name_match ? "success" : "error"](data.name_match ? "تم التحقق: الاسم مطابق للهوية" : "تنبيه: الاسم لا يطابق الهوية");
   };
 
   return (
