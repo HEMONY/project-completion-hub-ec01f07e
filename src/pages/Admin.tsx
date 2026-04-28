@@ -194,10 +194,9 @@ export default function AdminDashboard() {
       .from("audit_signatures")
       .select("entity_id, status, client_signature, client_signed_at");
     
+    const rows = data ?? [];
     const sigsMap = Object.fromEntries((sigs ?? []).map((s) => [s.entity_id, s]));
     setEntities(rows.map((e) => ({ ...e, auditSig: sigsMap[e.id] ?? null })));
-    const rows = data ?? [];
-    setEntities(rows);
     setStats({
       total: rows.length,
       submitted: rows.filter((r) => r.application_status === "submitted").length,
