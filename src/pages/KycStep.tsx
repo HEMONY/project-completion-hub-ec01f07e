@@ -20,9 +20,9 @@ const validSteps: KycStepKey[] = [
   "financial-year",
   "tax-status",
   "engagement",
+  "financial-analysis",
   "payment",
   "uae-id",
-  "financial-analysis",
 ];
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -36,6 +36,31 @@ function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5"><Label className="text-sm">{label}</Label>{children}</div>;
 }
+
+const ECONOMIC_SECTORS = ["Agriculture, Forestry & Fishing", "Mining & Quarrying", "Manufacturing", "Energy", "Construction, Engineering & Machinery", "Transportation & Logistics", "Technology & Telecom", "Real Estate & Facility Services", "Education", "Health Care", "Hospitality", "Professional Services", "Personal & Community Services", "Media", "Support Services", "General Trading", "Tourism & Travel Services", "Other"];
+const LEGAL_DECLARATIONS = [
+  "أؤكد أن جميع البيانات والمستندات المقدمة صحيحة وحديثة.",
+  "أؤكد أن الأموال المستخدمة في النشاط من مصادر مشروعة.",
+  "أقر بعدم وجود علاقات أو معاملات محظورة مع قوائم العقوبات.",
+  "أوافق على استخدام البيانات للتحقق والامتثال والعناية الواجبة.",
+];
+const ALLOWED_UPLOAD_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+
+const normalizeName = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+const namesMatch = (expected: string, extracted: string) => {
+  const a = normalizeName(expected);
+  const b = normalizeName(extracted);
+  if (!a || !b) return false;
+  return a === b || a.split(" ").filter((part) => part.length > 2 && b.includes(part)).length >= Math.min(2, a.split(" ").length);
+};
+
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+    reader.onerror = () => reject(new Error("تعذر قراءة الملف"));
+    reader.readAsDataURL(file);
+  });
 
 export default function KycStep() {
   const { entityId = "", step = "kyc" } = useParams();
@@ -106,11 +131,18 @@ function KycForm({ entity, onSaved, t }: any) {
     main_activity: entity.main_activity ?? "",
     emirate: entity.emirate ?? "",
     address: entity.address ?? "",
+    telephone: entity.telephone ?? "",
+    contact_email: entity.contact_email ?? "",
+    economic_sector: entity.economic_sector ?? "",
+    source_of_funds: entity.source_of_funds ?? "",
+    employer_name: entity.employer_name ?? "",
     total_turnover: entity.total_turnover ?? 0,
     mainland_company_type: entity.mainland_company_type ?? "",
   });
   const [shareholders, setShareholders] = useState<any[]>(entity.shareholders ?? []);
   const [ubos, setUbos] = useState<any[]>(entity.ubos ?? []);
+  const [pepPersons, setPepPersons] = useState<any[]>(entity.pep_persons ?? []);
+  const [legalDeclarations, setLegalDeclarations] = useState<Record<string, boolean>>(entity.legal_declarations ?? {});
   const [hasUbo, setHasUbo] = useState<string>(
     (entity.ubos ?? []).length > 0 ? "Yes" : ""
   );
@@ -120,6 +152,8 @@ function KycForm({ entity, onSaved, t }: any) {
   const [eidFiles, setEidFiles] = useState<File[]>([]);
   const [tradeFiles, setTradeFiles] = useState<File[]>([]);
   const [authFiles, setAuthFiles] = useState<File[]>([]);
+  const [ocrResult, setOcrResult] = useState<any>(entity.ocr_verification ?? null);
+  const [ocrBusy, setOcrBusy] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // خيارات Management Control تُبنى ديناميكياً من المساهمين + UBOs
@@ -132,6 +166,10 @@ function KycForm({ entity, onSaved, t }: any) {
   const uploadFilesToStorage = async (files: File[], folder: string) => {
     const paths: string[] = [];
     for (const file of files) {
+      if (!ALLOWED_UPLOAD_TYPES.includes(file.type)) {
+        toast.error(`نوع الملف غير مسموح: ${file.name}`);
+        continue;
+      }
       const path = `${user!.id}/${entity.id}/${folder}/${Date.now()}_${file.name}`;
       const { error } = await supabase.storage
         .from("kyc-documents")
@@ -166,6 +204,8 @@ function KycForm({ entity, onSaved, t }: any) {
         ...form,
         shareholders,
         ubos: hasUbo === "Yes" ? ubos : [],
+        pep_persons: pepPersons,
+        legal_declarations: legalDeclarations,
         management_control: managementControl,
         current_step: 2,
       })
@@ -223,6 +263,21 @@ function KycForm({ entity, onSaved, t }: any) {
     onSaved(data);
   };
 
+  const runOcr = async () => {
+    const image = eidFiles.find((file) => file.type.startsWith("image/"));
+    if (!image) return toast.error("يرجى اختيار صورة JPG أو PNG للهوية لتشغيل OCR");
+    setOcrBusy(true);
+    const { data, error } = await supabase.functions.invoke("verify-id-ocr", {
+      body: { expectedName: form.entity_name, mimeType: image.type, fileBase64: await fileToBase64(image) },
+    });
+    setOcrBusy(false);
+    if (error) return toast.error(error.message);
+    const result = { ...data, checked_at: new Date().toISOString() };
+    setOcrResult(result);
+    await supabase.from("entities").update({ ocr_verification: result } as any).eq("id", entity.id);
+    toast[data.name_match ? "success" : "error"](data.name_match ? "تم التحقق: الاسم مطابق للهوية" : "تنبيه: الاسم لا يطابق الهوية");
+  };
+
   return (
     <Card className="shadow-card">
       <CardHeader><CardTitle>{t("kyc_step1")}</CardTitle></CardHeader>
@@ -273,6 +328,12 @@ function KycForm({ entity, onSaved, t }: any) {
             <Field label={t("kyc_main_activity")}>
               <Input value={form.main_activity} onChange={(e) => setForm({ ...form, main_activity: e.target.value })} />
             </Field>
+            <Field label="القطاع الاقتصادي *">
+              <NativeSelect required value={form.economic_sector} onChange={(e) => setForm({ ...form, economic_sector: e.target.value })}>
+                <option value="">—</option>
+                {ECONOMIC_SECTORS.map((sector) => <option key={sector} value={sector}>{sector}</option>)}
+              </NativeSelect>
+            </Field>
             <Field label={t("kyc_issue_date")}>
               <Input type="date" value={form.license_issue_date ?? ""} onChange={(e) => setForm({ ...form, license_issue_date: e.target.value })} />
             </Field>
@@ -294,6 +355,18 @@ function KycForm({ entity, onSaved, t }: any) {
           <Field label={t("kyc_address") + " *"}>
             <Textarea required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </Field>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="رقم الهاتف *"><Input required type="tel" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></Field>
+            <Field label="البريد الإلكتروني *"><Input required type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} /></Field>
+          </div>
+
+          {form.registration_status === "Unlicensed Natural Person(s)" && (
+            <div className="grid md:grid-cols-2 gap-4 rounded-lg border border-border bg-muted/20 p-4">
+              <Field label="مصدر الأموال *"><Input required value={form.source_of_funds} onChange={(e) => setForm({ ...form, source_of_funds: e.target.value })} /></Field>
+              <Field label="اسم جهة العمل *"><Input required value={form.employer_name} onChange={(e) => setForm({ ...form, employer_name: e.target.value })} /></Field>
+            </div>
+          )}
 
           {/* المساهمون */}
           <PeopleTable title={t("kyc_shareholders")} rows={shareholders} setRows={setShareholders} t={t} />
@@ -333,6 +406,24 @@ function KycForm({ entity, onSaved, t }: any) {
             </NativeSelect>
           </Field>
 
+          <PeopleTable title="الأشخاص السياسيون أو المرتبطون بهم (PEP)" rows={pepPersons} setRows={setPepPersons} t={t} optional />
+
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <Label className="text-base font-semibold">إقرارات الامتثال والقانون</Label>
+            {LEGAL_DECLARATIONS.map((text, index) => (
+              <label key={text} className="flex items-start gap-3 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  required
+                  className="mt-1"
+                  checked={Boolean(legalDeclarations[`decl_${index}`])}
+                  onChange={(e) => setLegalDeclarations({ ...legalDeclarations, [`decl_${index}`]: e.target.checked })}
+                />
+                <span>{text}</span>
+              </label>
+            ))}
+          </div>
+
           {/* رفع الملفات */}
           <div className="space-y-4">
             <h3 className="font-semibold text-base border-t border-border pt-4">المستندات المطلوبة</h3>
@@ -355,6 +446,23 @@ function KycForm({ entity, onSaved, t }: any) {
                 onChange={setAuthFiles}
                 accept=".pdf,.jpg,.jpeg,.png"
               />
+            </div>
+            <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">OCR للتحقق من الاسم في الهوية</div>
+                  <div className="text-xs text-muted-foreground">يتم استخراج الاسم من صورة الهوية ومقارنته باسم الشركة/المالك.</div>
+                </div>
+                <Button type="button" variant="outline" onClick={runOcr} disabled={ocrBusy || !eidFiles.some((file) => file.type.startsWith("image/"))}>
+                  {ocrBusy ? "جاري التحقق..." : "تشغيل OCR"}
+                </Button>
+              </div>
+              {ocrResult?.extracted && (
+                <div className={`rounded-md border p-3 text-sm ${ocrResult.name_match ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+                  <div className="font-medium">{ocrResult.name_match ? "الاسم مطابق" : "الاسم غير مطابق"}</div>
+                  <div className="mt-1 text-xs opacity-80">الاسم المستخرج: {ocrResult.extracted.full_name || "غير واضح"}</div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -380,7 +488,12 @@ function FileUploadZone({ label, files, onChange, accept }: {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
-    onChange([...files, ...newFiles]);
+    const validFiles = newFiles.filter((file) => {
+      const valid = ALLOWED_UPLOAD_TYPES.includes(file.type);
+      if (!valid) toast.error(`نوع الملف غير مسموح: ${file.name}`);
+      return valid;
+    });
+    onChange([...files, ...validFiles]);
     e.target.value = "";
   };
 

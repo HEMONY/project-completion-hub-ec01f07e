@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Languages } from "lucide-react";
 
 export default function AuthPage() {
-  const { user, signIn, signUp, resetPassword, loading } = useAuth();
+  const { user, signIn, signInWithGoogle, signUp, resetPassword, loading } = useAuth();
   const { t, dir, lang, setLang } = useI18n();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
@@ -35,6 +35,13 @@ export default function AuthPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const onGoogle = async () => {
+    setBusy(true);
+    const { error } = await signInWithGoogle();
+    setBusy(false);
+    if (error) toast.error(error);
   };
 
   return (
@@ -71,6 +78,14 @@ export default function AuthPage() {
               {busy ? t("loading") : mode === "forgot" ? t("auth_reset_password") : mode === "login" ? t("auth_login") : t("auth_signup")}
             </Button>
           </form>
+          {mode !== "forgot" && (
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" /> أو <span className="h-px flex-1 bg-border" /></div>
+              <Button type="button" variant="outline" className="w-full" size="lg" disabled={busy} onClick={onGoogle}>
+                المتابعة باستخدام Google
+              </Button>
+            </div>
+          )}
           <div className="mt-4 text-center text-sm text-muted-foreground">
             {mode === "login" ? t("auth_no_account") : t("auth_have_account")}{" "}
             <button type="button" className="text-primary font-medium underline-offset-4 hover:underline" onClick={() => setMode(mode === "login" ? "signup" : "login")}>
