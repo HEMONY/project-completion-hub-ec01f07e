@@ -303,6 +303,12 @@ function KycForm({ entity, onSaved, t }: any) {
             <Field label={t("kyc_main_activity")}>
               <Input value={form.main_activity} onChange={(e) => setForm({ ...form, main_activity: e.target.value })} />
             </Field>
+            <Field label="القطاع الاقتصادي *">
+              <NativeSelect required value={form.economic_sector} onChange={(e) => setForm({ ...form, economic_sector: e.target.value })}>
+                <option value="">—</option>
+                {ECONOMIC_SECTORS.map((sector) => <option key={sector} value={sector}>{sector}</option>)}
+              </NativeSelect>
+            </Field>
             <Field label={t("kyc_issue_date")}>
               <Input type="date" value={form.license_issue_date ?? ""} onChange={(e) => setForm({ ...form, license_issue_date: e.target.value })} />
             </Field>
@@ -324,6 +330,18 @@ function KycForm({ entity, onSaved, t }: any) {
           <Field label={t("kyc_address") + " *"}>
             <Textarea required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </Field>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="رقم الهاتف *"><Input required type="tel" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} /></Field>
+            <Field label="البريد الإلكتروني *"><Input required type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} /></Field>
+          </div>
+
+          {form.registration_status === "Unlicensed Natural Person(s)" && (
+            <div className="grid md:grid-cols-2 gap-4 rounded-lg border border-border bg-muted/20 p-4">
+              <Field label="مصدر الأموال *"><Input required value={form.source_of_funds} onChange={(e) => setForm({ ...form, source_of_funds: e.target.value })} /></Field>
+              <Field label="اسم جهة العمل *"><Input required value={form.employer_name} onChange={(e) => setForm({ ...form, employer_name: e.target.value })} /></Field>
+            </div>
+          )}
 
           {/* المساهمون */}
           <PeopleTable title={t("kyc_shareholders")} rows={shareholders} setRows={setShareholders} t={t} />
@@ -362,6 +380,24 @@ function KycForm({ entity, onSaved, t }: any) {
               ))}
             </NativeSelect>
           </Field>
+
+          <PeopleTable title="الأشخاص السياسيون أو المرتبطون بهم (PEP)" rows={pepPersons} setRows={setPepPersons} t={t} optional />
+
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <Label className="text-base font-semibold">إقرارات الامتثال والقانون</Label>
+            {LEGAL_DECLARATIONS.map((text, index) => (
+              <label key={text} className="flex items-start gap-3 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  required
+                  className="mt-1"
+                  checked={Boolean(legalDeclarations[`decl_${index}`])}
+                  onChange={(e) => setLegalDeclarations({ ...legalDeclarations, [`decl_${index}`]: e.target.checked })}
+                />
+                <span>{text}</span>
+              </label>
+            ))}
+          </div>
 
           {/* رفع الملفات */}
           <div className="space-y-4">
