@@ -447,6 +447,23 @@ function KycForm({ entity, onSaved, t }: any) {
                 accept=".pdf,.jpg,.jpeg,.png"
               />
             </div>
+            <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">OCR للتحقق من الاسم في الهوية</div>
+                  <div className="text-xs text-muted-foreground">يتم استخراج الاسم من صورة الهوية ومقارنته باسم الشركة/المالك.</div>
+                </div>
+                <Button type="button" variant="outline" onClick={runOcr} disabled={ocrBusy || !eidFiles.some((file) => file.type.startsWith("image/"))}>
+                  {ocrBusy ? "جاري التحقق..." : "تشغيل OCR"}
+                </Button>
+              </div>
+              {ocrResult?.extracted && (
+                <div className={`rounded-md border p-3 text-sm ${ocrResult.name_match ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>
+                  <div className="font-medium">{ocrResult.name_match ? "الاسم مطابق" : "الاسم غير مطابق"}</div>
+                  <div className="mt-1 text-xs opacity-80">الاسم المستخرج: {ocrResult.extracted.full_name || "غير واضح"}</div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end pt-4 border-t border-border">
