@@ -112,6 +112,62 @@ export type Database = {
           },
         ]
       }
+      audit_signatures: {
+        Row: {
+          admin_signed_at: string | null
+          ai_summary: string | null
+          auditor_id: string
+          client_signature: string | null
+          client_signed_at: string | null
+          created_at: string
+          entity_id: string
+          health_score: number | null
+          id: string
+          risks: Json | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_signed_at?: string | null
+          ai_summary?: string | null
+          auditor_id: string
+          client_signature?: string | null
+          client_signed_at?: string | null
+          created_at?: string
+          entity_id: string
+          health_score?: number | null
+          id?: string
+          risks?: Json | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_signed_at?: string | null
+          ai_summary?: string | null
+          auditor_id?: string
+          client_signature?: string | null
+          client_signed_at?: string | null
+          created_at?: string
+          entity_id?: string
+          health_score?: number | null
+          id?: string
+          risks?: Json | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_signatures_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cdd_verifications: {
         Row: {
           admin_id: string
