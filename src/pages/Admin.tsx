@@ -189,6 +189,7 @@ export default function AdminDashboard() {
       .from("entities")
       .select("*, profiles(full_name, email)")
       .order("created_at", { ascending: false });
+    const rows = data ?? [];
     // جلب حالات توقيعات التدقيق
     const { data: sigs } = await supabase
       .from("audit_signatures")
@@ -196,8 +197,6 @@ export default function AdminDashboard() {
     
     const sigsMap = Object.fromEntries((sigs ?? []).map((s) => [s.entity_id, s]));
     setEntities(rows.map((e) => ({ ...e, auditSig: sigsMap[e.id] ?? null })));
-    const rows = data ?? [];
-    setEntities(rows);
     setStats({
       total: rows.length,
       submitted: rows.filter((r) => r.application_status === "submitted").length,
@@ -381,7 +380,9 @@ export default function AdminDashboard() {
     );
   }
 
-  if (role !== "admin") {
+  const canViewAdminPanel = ["admin", "manager", "moderator", "auditor"].includes(role);
+
+  if (!canViewAdminPanel) {
     return (
       <AppShell>
         <div className="max-w-lg mx-auto text-center py-20 space-y-4">
@@ -447,7 +448,7 @@ export default function AdminDashboard() {
             </p>
           </div>
           <Badge variant="outline" className="text-xs px-3 py-1">
-            {role === "admin" ? "مشرف" : role === "auditor" ? "مراجع" : "مشرف وسيط"}
+            {role === "admin" ? "مدير" : role === "manager" ? "مدير فريق" : role === "auditor" ? "مراجع" : "مشرف"}
           </Badge>
         </div>
 
