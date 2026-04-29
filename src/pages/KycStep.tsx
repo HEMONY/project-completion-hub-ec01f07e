@@ -10,10 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, FileText, X } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 
-//const validSteps: KycStepKey[] = ["kyc", "audit-fee", "financial-year", "tax-status", "engagement"];
+// Steps match exactly the HTML sections:
+// S1: Entity Info + Contact + Shareholders + UBOs + Management + PEP + Declarations = "kyc"
+// S2: Audit Fee = "audit-fee"
+// S3: Financial Year = "financial-year"
+// S4: Tax Status = "tax-status"
+// S5: Engagement Letter = "engagement"
+// S6: Payment = "payment"
 const validSteps: KycStepKey[] = [
   "kyc",
   "audit-fee",
@@ -21,389 +28,127 @@ const validSteps: KycStepKey[] = [
   "tax-status",
   "engagement",
   "payment",
-  "uae-id",
-  "financial-analysis",
 ];
+
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
     />
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label className="text-sm">{label}</Label>{children}</div>;
+function Field({ label, children, required }: { label: string; children: React.ReactNode; required?: boolean }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm font-semibold">{label}{required && <span className="text-destructive ms-1">*</span>}</Label>
+      {children}
+    </div>
+  );
 }
 
-export default function KycStep() {
-  const { entityId = "", step = "kyc" } = useParams();
-  const { user, loading } = useAuth();
-  const { t, dir } = useI18n();
-  const navigate = useNavigate();
-  const stepKey = (validSteps.includes(step as KycStepKey) ? step : "kyc") as KycStepKey;
-
-  const [entity, setEntity] = useState<any | null>(null);
-  const [loadingData, setLoadingData] = useState(true);
-
-  useEffect(() => { if (!loading && !user) navigate("/auth"); }, [user, loading, navigate]);
-
-  useEffect(() => {
-    if (!user || !entityId) return;
-    setLoadingData(true);
-    supabase.from("entities").select("*").eq("id", entityId).single().then(({ data, error }) => {
-      if (error) toast.error(error.message);
-      setEntity(data);
-      setLoadingData(false);
-    });
-  }, [user, entityId]);
-
-  if (!user || loadingData) return <AppShell><div className="text-center py-20 text-muted-foreground">{t("loading")}</div></AppShell>;
-  if (!entity) return <AppShell><div className="text-center py-20 text-muted-foreground">Not found</div></AppShell>;
-
-  const goNext = () => {
-    const next = validSteps[validSteps.indexOf(stepKey) + 1];
-    if (next) navigate(`/kyc/${entityId}/${next}`);
-    else navigate("/entities");
-  };
-  const goBack = () => {
-    const prev = validSteps[validSteps.indexOf(stepKey) - 1];
-    if (prev) navigate(`/kyc/${entityId}/${prev}`);
-  };
-
-  const completed = validSteps.slice(0, Math.max(0, (entity.current_step || 1) - 1));
-
+function SectionTitle({ number, title }: { number: number; title: string }) {
   return (
-    <AppShell>
-      <div className="max-w-7xl mx-auto grid md:grid-cols-[280px_1fr] gap-6" dir={dir}>
-        <KycStepper current={stepKey} entityId={entityId} completed={completed} />
-        <div className="min-w-0">
-          {stepKey === "kyc" && <KycForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} t={t} />}
-          {stepKey === "audit-fee" && <AuditFeeForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
-          {stepKey === "financial-year" && <FinancialYearForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
-          {stepKey === "tax-status" && <TaxStatusForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
-          {stepKey === "engagement" && <EngagementForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
-          {stepKey === "financial-analysis" && <FinancialAnalysisForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />}
-          {stepKey === "payment" && <PaymentForm entity={entity} onBack={goBack} t={t} />}
-          {stepKey === "uae-id" && <UaeIdForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} onBack={goBack} t={t} />}
-        </div>
+    <div className="flex items-center gap-3 mt-8 mb-5 pb-3 border-b-2 border-border">
+      <div className="size-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-sm font-bold shrink-0">
+        {number}
       </div>
-    </AppShell>
+      <h3 className="text-base font-bold uppercase tracking-wide">{title}</h3>
+    </div>
   );
 }
 
-// STEP 1
-// STEP 1
-function KycForm({ entity, onSaved, t }: any) {
-  const { user } = useAuth();
-  const [form, setForm] = useState({
-    entity_name: entity.entity_name === "Untitled Entity" ? "" : entity.entity_name,
-    registration_status: entity.registration_status ?? "",
-    license_number: entity.license_number ?? "",
-    license_issue_date: entity.license_issue_date ?? "",
-    license_expiry_date: entity.license_expiry_date ?? "",
-    main_activity: entity.main_activity ?? "",
-    emirate: entity.emirate ?? "",
-    address: entity.address ?? "",
-    total_turnover: entity.total_turnover ?? 0,
-    mainland_company_type: entity.mainland_company_type ?? "",
+// ── OCR Name Verification ─────────────────────────────────────────────────
+async function verifyNameWithOCR(
+  imageFile: File,
+  enteredName: string
+): Promise<{ match: boolean; extractedName: string; confidence: string }> {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? "";
+  if (!apiKey) return { match: false, extractedName: "", confidence: "no_api_key" };
+
+  const reader = new FileReader();
+  const b64 = await new Promise<string>((res) => {
+    reader.onload = () => res((reader.result as string).split(",")[1]);
+    reader.readAsDataURL(imageFile);
   });
-  const [shareholders, setShareholders] = useState<any[]>(entity.shareholders ?? []);
-  const [ubos, setUbos] = useState<any[]>(entity.ubos ?? []);
-  const [hasUbo, setHasUbo] = useState<string>(
-    (entity.ubos ?? []).length > 0 ? "Yes" : ""
-  );
-  const [managementControl, setManagementControl] = useState<string>(
-    entity.management_control ?? ""
-  );
-  const [eidFiles, setEidFiles] = useState<File[]>([]);
-  const [tradeFiles, setTradeFiles] = useState<File[]>([]);
-  const [authFiles, setAuthFiles] = useState<File[]>([]);
-  const [busy, setBusy] = useState(false);
 
-  // خيارات Management Control تُبنى ديناميكياً من المساهمين + UBOs
-  const mgmtOptions = [
-    ...shareholders.map((s) => s.name).filter(Boolean),
-    ...( hasUbo === "Yes" ? ubos.map((u) => u.name).filter(Boolean) : []),
-    "Other",
-  ];
+  const mime = imageFile.type || "image/jpeg";
 
-  const uploadFilesToStorage = async (files: File[], folder: string) => {
-    const paths: string[] = [];
-    for (const file of files) {
-      const path = `${user!.id}/${entity.id}/${folder}/${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage
-        .from("kyc-documents")
-        .upload(path, file, { upsert: true });
-      if (!error) paths.push(path);
-    }
-    return paths;
-  };
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (Number(form.total_turnover) > 50_000_000) {
-      return toast.error(t("kyc_turnover_max"));
-    }
-    setBusy(true);
-
-    // رفع الملفات
-    const eidPaths = eidFiles.length > 0
-      ? await uploadFilesToStorage(eidFiles, "eid")
-      : [];
-    const tradePaths = tradeFiles.length > 0
-      ? await uploadFilesToStorage(tradeFiles, "trade")
-      : [];
-    const authPaths = authFiles.length > 0
-      ? await uploadFilesToStorage(authFiles, "auth")
-      : [];
-
-    // حفظ بيانات الكيان
-    const { data, error } = await supabase
-      .from("entities")
-      .update({
-        ...form,
-        shareholders,
-        ubos: hasUbo === "Yes" ? ubos : [],
-        management_control: managementControl,
-        current_step: 2,
-      })
-      .eq("id", entity.id)
-      .select()
-      .single();
-
-    // حفظ الملفات في kyc_documents
-    if (user && (eidPaths.length || tradePaths.length || authPaths.length)) {
-      const docRecords: any[] = [];
-      eidFiles.forEach((f, i) => {
-        if (eidPaths[i]) docRecords.push({
-          entity_id: entity.id,
-          user_id: user.id,
-          document_type: "eid_passport",
-          file_name: f.name,
-          storage_path: eidPaths[i],
-          mime_type: f.type,
-          size_bytes: f.size,
-        });
-      });
-      tradeFiles.forEach((f, i) => {
-        if (tradePaths[i]) docRecords.push({
-          entity_id: entity.id,
-          user_id: user.id,
-          document_type: "trade_license",
-          file_name: f.name,
-          storage_path: tradePaths[i],
-          mime_type: f.type,
-          size_bytes: f.size,
-        });
-      });
-      authFiles.forEach((f, i) => {
-        if (authPaths[i]) docRecords.push({
-          entity_id: entity.id,
-          user_id: user.id,
-          document_type: "authorization_letter",
-          file_name: f.name,
-          storage_path: authPaths[i],
-          mime_type: f.type,
-          size_bytes: f.size,
-        });
-      });
-      if (docRecords.length > 0) {
-        await supabase.from("kyc_documents").insert(docRecords);
-      }
-    }
-
-    setBusy(false);
-    if (error) {
-      const msg = /turnover/i.test(error.message) ? t("kyc_turnover_max") : error.message;
-      return toast.error(msg);
-    }
-    toast.success(t("saved"));
-    onSaved(data);
-  };
-
-  return (
-    <Card className="shadow-card">
-      <CardHeader><CardTitle>{t("kyc_step1")}</CardTitle></CardHeader>
-      <CardContent>
-        <form onSubmit={submit} className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label={t("kyc_owner_name") + " *"}>
-              <Input required value={form.entity_name} onChange={(e) => setForm({ ...form, entity_name: e.target.value })} />
-            </Field>
-            <Field label={t("kyc_business_registration") + " *"}>
-              <NativeSelect
-                required
-                value={form.registration_status}
-                onChange={(e) => {
-                  setForm({ ...form, registration_status: e.target.value, mainland_company_type: "" });
-                }}
-              >
-                <option value="">—</option>
-                <option value="Unlicensed Natural Person(s)">Unlicensed Natural Person(s)</option>
-                <option value="Free Zone Licensed">Free Zone Licensed</option>
-                <option value="Mainland Licensed-Multiple Owners">Mainland Licensed-Multiple Owners</option>
-                <option value="Mainland Licensed-Sole Owner">Mainland Licensed-Sole Owner</option>
-              </NativeSelect>
-            </Field>
-
-            {/* حقل نوع الشركة — يظهر فقط للشركات الـ Mainland */}
-            {form.registration_status === "Mainland Licensed-Multiple Owners" && (
-              <Field label="Mainland Company Type *">
-                <NativeSelect
-                  required
-                  value={form.mainland_company_type}
-                  onChange={(e) => setForm({ ...form, mainland_company_type: e.target.value })}
-                >
-                  <option value="">—</option>
-                  <option value="Civil Company">Civil Company</option>
-                  <option value="Limited Liability Company">Limited Liability Company</option>
-                  <option value="General Partnership Company">General Partnership Company</option>
-                  <option value="Limited Partnership Company">Limited Partnership Company</option>
-                  <option value="Branch of Local Company">Branch of Local Company</option>
-                  <option value="Branch of Foreign Company">Branch of Foreign Company</option>
-                </NativeSelect>
-              </Field>
-            )}
-
-            <Field label={t("kyc_license_number")}>
-              <Input value={form.license_number} onChange={(e) => setForm({ ...form, license_number: e.target.value })} />
-            </Field>
-            <Field label={t("kyc_main_activity")}>
-              <Input value={form.main_activity} onChange={(e) => setForm({ ...form, main_activity: e.target.value })} />
-            </Field>
-            <Field label={t("kyc_issue_date")}>
-              <Input type="date" value={form.license_issue_date ?? ""} onChange={(e) => setForm({ ...form, license_issue_date: e.target.value })} />
-            </Field>
-            <Field label={t("kyc_expiry_date")}>
-              <Input type="date" value={form.license_expiry_date ?? ""} onChange={(e) => setForm({ ...form, license_expiry_date: e.target.value })} />
-            </Field>
-            <Field label={t("kyc_emirate")}>
-              <NativeSelect value={form.emirate} onChange={(e) => setForm({ ...form, emirate: e.target.value })}>
-                <option value="">—</option>
-                {["Abu Dhabi","Dubai","Sharjah","Ajman","Umm Al Quwain","Ras Al Khaimah","Fujairah"].map(x => <option key={x}>{x}</option>)}
-              </NativeSelect>
-            </Field>
-            <Field label={t("kyc_turnover") + " *"}>
-              <Input required type="number" min={0} max={50000000} step="0.01" value={form.total_turnover}
-                onChange={(e) => setForm({ ...form, total_turnover: parseFloat(e.target.value || "0") })} />
-            </Field>
-          </div>
-
-          <Field label={t("kyc_address") + " *"}>
-            <Textarea required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-          </Field>
-
-          {/* المساهمون */}
-          <PeopleTable title={t("kyc_shareholders")} rows={shareholders} setRows={setShareholders} t={t} />
-
-          {/* سؤال UBO */}
-          <div className="space-y-3">
-            <Field label="هل يوجد مستفيد فعلي (UBO) يملك 25% أو أكثر بشكل غير مباشر؟ *">
-              <NativeSelect
-                required
-                value={hasUbo}
-                onChange={(e) => {
-                  setHasUbo(e.target.value);
-                  if (e.target.value === "No") setUbos([]);
-                }}
-              >
-                <option value="">—</option>
-                <option value="Yes">نعم</option>
-                <option value="No">لا</option>
-              </NativeSelect>
-            </Field>
-            {hasUbo === "Yes" && (
-              <PeopleTable title="المستفيدون الفعليون (UBOs)" rows={ubos} setRows={setUbos} t={t} />
-            )}
-          </div>
-
-          {/* المسؤول عن الإدارة */}
-          <Field label="من المسؤول عن الإدارة والسيطرة الفعلية؟ *">
-            <NativeSelect
-              required
-              value={managementControl}
-              onChange={(e) => setManagementControl(e.target.value)}
-            >
-              <option value="">—</option>
-              {mgmtOptions.map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </NativeSelect>
-          </Field>
-
-          {/* رفع الملفات */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-base border-t border-border pt-4">المستندات المطلوبة</h3>
-            <div className="grid md:grid-cols-3 gap-3">
-              <FileUploadZone
-                label="هوية / جواز السفر"
-                files={eidFiles}
-                onChange={setEidFiles}
-                accept=".pdf,.jpg,.jpeg,.png"
-              />
-              <FileUploadZone
-                label="الرخصة التجارية"
-                files={tradeFiles}
-                onChange={setTradeFiles}
-                accept=".pdf,.jpg,.jpeg,.png"
-              />
-              <FileUploadZone
-                label="خطاب التفويض"
-                files={authFiles}
-                onChange={setAuthFiles}
-                accept=".pdf,.jpg,.jpeg,.png"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-4 border-t border-border">
-            <Button type="submit" variant="premium" disabled={busy}>
-              {busy ? t("saving") : t("btn_next")}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 200,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
+            {
+              type: "text",
+              text: `Extract the full name from this Emirates ID or passport image. Reply with JSON only:
+{"name": "extracted full name here", "confidence": "high|medium|low"}
+If you cannot read the name, use {"name": "", "confidence": "low"}`,
+            },
+          ],
+        }],
+      }),
+    });
+    if (!resp.ok) return { match: false, extractedName: "", confidence: "api_error" };
+    const data = await resp.json();
+    const text = data.content?.[0]?.text ?? "";
+    const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
+    const extracted = (parsed.name ?? "").toLowerCase().trim();
+    const entered = enteredName.toLowerCase().trim();
+    const match = extracted.length > 0 && (
+      extracted === entered ||
+      extracted.includes(entered) ||
+      entered.includes(extracted) ||
+      extracted.split(" ").some((w: string) => w.length > 3 && entered.includes(w))
+    );
+    return { match, extractedName: parsed.name ?? "", confidence: parsed.confidence ?? "low" };
+  } catch {
+    return { match: false, extractedName: "", confidence: "error" };
+  }
 }
 
-// مكوّن رفع الملفات
-function FileUploadZone({ label, files, onChange, accept }: {
-  label: string;
-  files: File[];
-  onChange: (files: File[]) => void;
-  accept: string;
+// ── File Upload Zone ────────────────────────────────────────────────────────
+function FileUploadZone({
+  label, files, onChange, accept, single,
+}: {
+  label: string; files: File[]; onChange: (f: File[]) => void; accept: string; single?: boolean;
 }) {
   const ref = useRef<HTMLInputElement>(null);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
-    onChange([...files, ...newFiles]);
+    onChange(single ? newFiles.slice(0, 1) : [...files, ...newFiles]);
     e.target.value = "";
   };
-
   const remove = (i: number) => onChange(files.filter((_, idx) => idx !== i));
-
   return (
     <div className="space-y-2">
-      <label
-        className="group rounded-lg border-2 border-dashed border-border hover:border-primary hover:bg-accent/20 transition-colors p-4 cursor-pointer flex flex-col items-center justify-center text-center min-h-24"
+      <div
         onClick={() => ref.current?.click()}
+        className="border-2 border-dashed border-border hover:border-primary hover:bg-accent/20 transition-colors rounded-lg p-4 text-center cursor-pointer group"
       >
-        <Upload className="size-5 text-muted-foreground group-hover:text-primary mb-1.5" />
-        <span className="text-xs font-medium text-muted-foreground group-hover:text-primary">{label}</span>
-        <span className="text-[10px] text-muted-foreground mt-0.5">PDF, JPG, PNG (max 5MB)</span>
-        <input ref={ref} type="file" multiple accept={accept} className="hidden" onChange={handleChange} />
-      </label>
+        <Upload className="size-5 text-muted-foreground group-hover:text-primary mx-auto mb-1.5" />
+        <div className="text-xs font-medium text-muted-foreground group-hover:text-primary">{label}</div>
+        <div className="text-[10px] text-muted-foreground mt-0.5">PDF, JPG, PNG</div>
+        <input ref={ref} type="file" multiple={!single} accept={accept} className="hidden" onChange={handleChange} />
+      </div>
       {files.length > 0 && (
         <ul className="space-y-1">
           {files.map((f, i) => (
-            <li key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+            <li key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1.5">
               <FileText className="size-3 shrink-0 text-muted-foreground" />
               <span className="truncate flex-1">{f.name}</span>
-              <button type="button" onClick={() => remove(i)} className="text-destructive shrink-0">
+              <button type="button" onClick={() => remove(i)} className="text-destructive shrink-0 hover:opacity-80">
                 <X className="size-3" />
               </button>
             </li>
@@ -414,304 +159,877 @@ function FileUploadZone({ label, files, onChange, accept }: {
   );
 }
 
-// ── UAE ID VERIFICATION FORM ────────────────────────────────────────────────
-function UaeIdForm({ entity, onSaved, onBack, t }: any) {
-  const { user } = useAuth();
-  const [form, setForm] = useState({
-    digital_signature_name: entity.digital_signature_name ?? "",
-  });
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.digital_signature_name.trim()) return toast.error("اسم الموقّع مطلوب");
-    if (!entity.digital_signature_required) return toast.error("لم يرسل المشرف ملفًا للتوقيع بعد");
-    setBusy(true);
-    const { error } = await supabase.from("entities").update({
-      digital_signature_status: "signed",
-      digital_signature_signed_at: new Date().toISOString(),
-      digital_signature_name: form.digital_signature_name,
-      uae_id_verified: true,
-      review_stage: "returned_to_admin",
-      current_step: 8,
-    } as any).eq("id", entity.id);
-    await supabase.from("user_audit_logs").insert({
-      user_id: user!.id,
-      action: "digital_identity_signed",
-      description: `وقّع العميل الهوية الرقمية للكيان ${entity.entity_name}`,
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("تم توقيع الهوية الرقمية وإرجاع الملف للمشرف");
-    onSaved({ ...entity, digital_signature_status: "signed", digital_signature_name: form.digital_signature_name });
-  };
-
-  return (
-    <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          التحقق من الهوية الإماراتية
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={submit} className="space-y-6">
-          <div className="rounded-lg border border-border bg-muted/30 p-5 text-sm text-muted-foreground">
-            يتم توقيع الملف المُرسل من المشرف بالهوية الرقمية الإماراتية بدون رفع صور أو ملفات إضافية.
-          </div>
-          <Field label="اسم الموقّع كما يظهر في الهوية الرقمية *">
-            <Input required value={form.digital_signature_name} onChange={(e) => setForm({ digital_signature_name: e.target.value })} />
-          </Field>
-
-          <div className="flex justify-between pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
-            <Button type="submit" variant="premium" disabled={busy || entity.digital_signature_status === "signed"}>
-              {busy ? t("saving") : entity.digital_signature_status === "signed" ? "تم التوقيع" : "توقيع الهوية الرقمية"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+// ── OCR Badge ───────────────────────────────────────────────────────────────
+function OcrBadge({ status, extractedName }: { status: "idle"|"checking"|"match"|"mismatch"|"no_key"; extractedName?: string }) {
+  if (status === "idle") return null;
+  if (status === "checking") return (
+    <div className="flex items-center gap-1.5 text-xs text-primary">
+      <Loader2 className="size-3.5 animate-spin" /> Verifying name against ID...
+    </div>
   );
-}
-function PeopleTable({ title, rows, setRows, t }: any) {
-  const add = () => setRows([...rows, { name: "", capital_percentage: 0, nationality: "", emirates_id: "", pep_status: "No" }]);
-  const remove = (i: number) => setRows(rows.filter((_: any, idx: number) => idx !== i));
-  const update = (i: number, k: string, v: any) => setRows(rows.map((r: any, idx: number) => (idx === i ? { ...r, [k]: v } : r)));
+  if (status === "no_key") return (
+    <div className="text-xs text-muted-foreground">OCR verification unavailable (no API key)</div>
+  );
+  if (status === "match") return (
+    <div className="flex items-center gap-1.5 text-xs text-green-600">
+      <CheckCircle2 className="size-3.5" /> Name matches ID: "<span className="font-medium">{extractedName}</span>"
+    </div>
+  );
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label className="text-base font-semibold">{title}</Label>
-        <Button type="button" size="sm" variant="outline" onClick={add}>
-          <Plus className="size-3.5" /> {t("kyc_add_row")}
-        </Button>
-      </div>
-      {rows.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          {t("kyc_no_entries")}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {rows.map((r: any, i: number) => (
-            <div key={i} className="rounded-lg border border-border bg-card p-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t("kyc_person_n")} {i + 1}
-                </span>
-                <Button type="button" size="sm" variant="ghost" onClick={() => remove(i)} className="text-destructive hover:text-destructive">
-                  <Trash2 className="size-4" /> <span className="ms-1">{t("kyc_remove")}</span>
-                </Button>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                <Field label={t("kyc_name")}>
-                  <Input value={r.name} onChange={(e) => update(i, "name", e.target.value)} />
-                </Field>
-                <Field label={t("kyc_capital")}>
-                  <Input type="number" min={0} max={100} step="0.01" value={r.capital_percentage} onChange={(e) => update(i, "capital_percentage", parseFloat(e.target.value || "0"))} />
-                </Field>
-                <Field label={t("kyc_nationality")}>
-                  <Input value={r.nationality} onChange={(e) => update(i, "nationality", e.target.value)} />
-                </Field>
-                <Field label={t("kyc_emirates_id")}>
-                  <Input value={r.emirates_id} onChange={(e) => update(i, "emirates_id", e.target.value)} />
-                </Field>
-                <Field label={t("kyc_pep")}>
-                  <NativeSelect value={r.pep_status} onChange={(e) => update(i, "pep_status", e.target.value)}>
-                    <option value="No">{t("no")}</option>
-                    <option value="Yes">{t("yes")}</option>
-                  </NativeSelect>
-                </Field>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="flex items-center gap-1.5 text-xs text-destructive">
+      <AlertTriangle className="size-3.5" />
+      Name mismatch! ID shows: "<span className="font-medium">{extractedName || "unreadable"}</span>"
     </div>
   );
 }
 
-// STEP 2
-function calculateAuditFee(turnover: number) {
-  if (turnover <= 0) return 0;
-  if (turnover <= 1_000_000) return 1000;
-  if (turnover <= 10_000_000) return 2000;
-  if (turnover <= 20_000_000) return 3000;
-  const blocks = Math.ceil((turnover - 20_000_000) / 5_000_000);
-  return 3000 + blocks * 500;
-}
+// ── Person Card (Shareholder / UBO / Manager) ───────────────────────────────
+type Person = {
+  name: string;
+  capital: string;
+  nationality: string;
+  dob_place: string;
+  emirates_id: string;
+  address: string;
+  id_files: File[];
+  passport_files: File[];
+  ocr_status: "idle"|"checking"|"match"|"mismatch"|"no_key";
+  ocr_extracted: string;
+};
 
-function AuditFeeForm({ entity, onSaved, onBack, t }: any) {
-  const fee = calculateAuditFee(Number(entity.total_turnover) || 0);
-  const [agreed, setAgreed] = useState(false);
-  const [signerName, setSignerName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!agreed) return toast.error(t("required"));
-    setBusy(true);
-    const { error } = await supabase.from("audit_fees").upsert(
-      {
-        entity_id: entity.id,
-        user_id: entity.user_id,
-        turnover: entity.total_turnover,
-        calculated_fee: fee,
-        agreed: true,
-        digital_signature_name: signerName,
-        digital_signature_date: new Date().toISOString(),
-      },
-      { onConflict: "entity_id" }
-    );
-    await supabase.from("entities").update({ current_step: 3 }).eq("id", entity.id);
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(t("saved"));
-    onSaved();
+function PersonCard({
+  person, index, onChange, onRemove, showCapital, canRemove, label,
+}: {
+  person: Person;
+  index: number;
+  onChange: (p: Person) => void;
+  onRemove: () => void;
+  showCapital?: boolean;
+  canRemove: boolean;
+  label: string;
+}) {
+  const set = (k: keyof Person, v: any) => onChange({ ...person, [k]: v });
+
+  const runOCR = async (files: File[]) => {
+    if (files.length === 0 || !person.name.trim()) return;
+    set("ocr_status", "checking");
+    const result = await verifyNameWithOCR(files[0], person.name);
+    onChange({
+      ...person,
+      id_files: files,
+      ocr_status: result.confidence === "no_api_key" ? "no_key" : result.match ? "match" : "mismatch",
+      ocr_extracted: result.extractedName,
+    });
   };
+
   return (
-    <Card className="shadow-card">
-      <CardHeader><CardTitle>{t("audit_fee_title")}</CardTitle></CardHeader>
-      <CardContent>
-        <form onSubmit={submit} className="space-y-6">
-          <p className="text-sm text-muted-foreground">{t("audit_fee_desc")}</p>
-          <div className="rounded-lg border border-border p-6 bg-gradient-to-br from-accent/30 to-transparent">
-            <div className="text-sm text-muted-foreground">{t("audit_fee_calculated")}</div>
-            <div className="mt-1 text-4xl font-bold text-primary">
-              {fee.toLocaleString()} <span className="text-base text-muted-foreground font-normal">{t("audit_fee_aed")}</span>
-            </div>
-          </div>
-          <Field label="اسم الموقِّع الرقمي *">
+    <div className="border border-border rounded-xl bg-card p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          {label} {index + 1}
+        </span>
+        {canRemove && (
+          <Button type="button" size="sm" variant="ghost" onClick={onRemove} className="text-destructive hover:text-destructive h-7">
+            <Trash2 className="size-3.5" /> <span className="ms-1 text-xs">Remove</span>
+          </Button>
+        )}
+      </div>
+      <div className="grid md:grid-cols-2 gap-3">
+        <Field label="Full Name" required>
+          <Input
+            required
+            value={person.name}
+            placeholder="Full legal name"
+            onChange={(e) => set("name", e.target.value)}
+          />
+        </Field>
+        {showCapital && (
+          <Field label="Capital (%)" required>
             <Input
-              required
-              placeholder="الاسم الكامل"
-              value={signerName}
-              onChange={(e) => setSignerName(e.target.value)}
+              required type="number" min={0} max={100} step="0.01"
+              value={person.capital}
+              placeholder="e.g. 50"
+              onChange={(e) => set("capital", e.target.value)}
             />
           </Field>
-          <label className="flex items-start gap-3 text-sm cursor-pointer">
-            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1" />
-            <span>{t("audit_fee_agree")}</span>
-          </label>
-          <div className="flex justify-between pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
-            <Button type="submit" variant="premium" disabled={busy || !agreed}>{busy ? t("saving") : t("btn_next")}</Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-// STEP 3
-function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
-  const [form, setForm] = useState<any>({ is_first_year: true, first_start_date: "", first_end_date: "", current_start_date: "", current_end_date: "", previous_audited: "" });
-  const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    supabase.from("financial_years").select("*").eq("entity_id", entity.id).maybeSingle().then(({ data }) => data && setForm((f: any) => ({ ...f, ...data })));
-  }, [entity.id]);
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    const { error } = await supabase.from("financial_years").upsert({
-      entity_id: entity.id, user_id: entity.user_id,
-      is_first_year: form.is_first_year,
-      first_start_date: form.first_start_date || null, first_end_date: form.first_end_date || null,
-      current_start_date: form.current_start_date || null, current_end_date: form.current_end_date || null,
-      previous_audited: form.previous_audited || null,
-    }, { onConflict: "entity_id" });
-    await supabase.from("entities").update({ current_step: 4 }).eq("id", entity.id);
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(t("saved")); onSaved();
-  };
-  return (
-    <Card className="shadow-card">
-      <CardHeader><CardTitle>{t("fy_title")}</CardTitle></CardHeader>
-      <CardContent>
-        <form onSubmit={submit} className="space-y-5">
-          <Field label={t("fy_first_question")}>
-            <NativeSelect value={form.is_first_year ? "yes" : "no"} onChange={(e) => setForm({ ...form, is_first_year: e.target.value === "yes" })}>
-              <option value="yes">{t("yes")}</option><option value="no">{t("no")}</option>
-            </NativeSelect>
-          </Field>
-          {form.is_first_year ? (
-            <div className="grid md:grid-cols-2 gap-4">
-              <Field label={t("fy_first_start")}><Input type="date" value={form.first_start_date || ""} onChange={(e) => setForm({ ...form, first_start_date: e.target.value })} /></Field>
-              <Field label={t("fy_first_end")}><Input type="date" value={form.first_end_date || ""} onChange={(e) => setForm({ ...form, first_end_date: e.target.value })} /></Field>
-            </div>
-          ) : (
-            <>
-              <div className="grid md:grid-cols-2 gap-4">
-                <Field label={t("fy_current_start")}><Input type="date" value={form.current_start_date || ""} onChange={(e) => setForm({ ...form, current_start_date: e.target.value })} /></Field>
-                <Field label={t("fy_current_end")}><Input type="date" value={form.current_end_date || ""} onChange={(e) => setForm({ ...form, current_end_date: e.target.value })} /></Field>
-              </div>
-              <Field label={t("fy_previous_audited")}>
-                <NativeSelect value={form.previous_audited || ""} onChange={(e) => setForm({ ...form, previous_audited: e.target.value })}>
-                  <option value="">—</option><option value="yes">{t("yes")}</option><option value="no">{t("no")}</option>
-                </NativeSelect>
-              </Field>
-            </>
+        )}
+        <Field label="Nationality" required>
+          <Input required value={person.nationality} placeholder="Nationality" onChange={(e) => set("nationality", e.target.value)} />
+        </Field>
+        <Field label="Date & Place of Birth" required>
+          <Input required value={person.dob_place} placeholder="DD/MM/YYYY, City, Country" onChange={(e) => set("dob_place", e.target.value)} />
+        </Field>
+        <Field label="Emirates ID Number (15 digits)" required>
+          <Input
+            required
+            value={person.emirates_id}
+            placeholder="784XXXXXXXXXX"
+            maxLength={15}
+            onChange={(e) => set("emirates_id", e.target.value.replace(/\D/g, "").slice(0, 15))}
+          />
+          {person.emirates_id && person.emirates_id.length !== 15 && (
+            <div className="text-xs text-destructive mt-1">Must be exactly 15 digits</div>
           )}
-          <div className="flex justify-between pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
-            <Button type="submit" variant="premium" disabled={busy}>{busy ? t("saving") : t("btn_next")}</Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        </Field>
+        <Field label="Residential Address" required>
+          <Input required value={person.address} placeholder="Full residential address" onChange={(e) => set("address", e.target.value)} />
+        </Field>
+      </div>
+
+      {/* Document Upload with OCR */}
+      <div className="grid md:grid-cols-2 gap-3 pt-2 border-t border-border">
+        <div className="space-y-2">
+          <FileUploadZone
+            label="Upload Emirates ID *"
+            files={person.id_files}
+            onChange={(files) => {
+              set("id_files", files);
+              if (files.length > 0 && person.name.trim()) runOCR(files);
+            }}
+            accept="image/*,.pdf"
+            single
+          />
+          <OcrBadge status={person.ocr_status} extractedName={person.ocr_extracted} />
+          {person.ocr_status === "mismatch" && (
+            <div className="text-xs text-destructive bg-destructive/10 rounded p-2">
+              ⚠️ The name entered does not match the Emirates ID. Please verify and correct.
+            </div>
+          )}
+        </div>
+        <FileUploadZone
+          label="Upload Passport *"
+          files={person.passport_files}
+          onChange={(files) => set("passport_files", files)}
+          accept="image/*,.pdf"
+          single
+        />
+      </div>
+    </div>
   );
 }
 
-// STEP 4
-function TaxStatusForm({ entity, onSaved, onBack, t }: any) {
-  const [form, setForm] = useState<any>({ vat_status: "", vat_registration_number: "", excise_tax_status: "", corporate_tax_status: "", corporate_tax_registration_number: "", corporate_tax_treatment: "", small_business_relief: "" });
-  const [busy, setBusy] = useState(false);
+function emptyPerson(): Person {
+  return { name: "", capital: "", nationality: "", dob_place: "", emirates_id: "", address: "", id_files: [], passport_files: [], ocr_status: "idle", ocr_extracted: "" };
+}
+
+// ── LEGAL DECLARATIONS (15 items from HTML) ─────────────────────────────────
+const DECLARATIONS = [
+  "The entity hereby declares and confirms that it maintains proper accounting records and statutory books that accurately reflect its financial position and enable the traceability of all transactions in compliance with applicable laws.",
+  "The entity hereby confirms that its prior period financial statements (if any) were audited by a licensed auditor, and no material reservations or audit findings were issued that would necessitate an adjustment to the opening balances or a restatement of previous financial data.",
+  "The entity hereby declares that, if it is not currently registered with the Federal Tax Authority (FTA), such non-registration is based on valid legal and commercial grounds in compliance with applicable tax laws.",
+  "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE) or the General Directorate of Residency and Foreigners Affairs (GDRFA), as applicable.",
+  "The entity hereby declares that all generated income is derived from genuine and legitimate economic activities, and confirms that it possesses the necessary infrastructure and resources to generate such income.",
+  "The entity hereby confirms that its total annual revenue (both operating and non-operating), for the current financial year and any prior years (if applicable), has not exceeded AED 50 million for any single financial period.",
+  "The entity hereby confirms that any remarks, fines, or penalties issued by the Federal Tax Authority (FTA) against it (if any) are strictly related to outstanding tax liabilities or technical/procedural errors, and do not involve any matters related to integrity or intentional tax evasion.",
+  "The entity hereby confirms that it maintains no business or financial relationships with prohibited, suspicious, or shell entities.",
+  "The entity hereby confirms that any changes occurred during the current financial year — whether regarding partners, Ultimate Beneficial Owners (UBOs), business activities, or the entity's legal name — were implemented for legitimate commercial reasons.",
+  "The entity hereby confirms that there are no ongoing legal disputes or pending litigations among its partners/owners.",
+  "The entity hereby confirms that there are no confirmed, suspected, or alleged instances of fraud or embezzlement during the current financial year.",
+  "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods.",
+  "The entity specifically affirms that the management of its activities, including strategic and operational decision-making, is not conducted outside the United Arab Emirates.",
+  "The entity hereby confirms that there is no intention, plan, or decision to liquidate the entity, dispose of its material assets, or sell the business.",
+  "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data.",
+];
+
+const BLACKLISTED = ["iran", "myanmar", "north korea", "korea north", "islamic republic of iran", "burma"];
+
+function isBlacklisted(nationality: string) {
+  const n = nationality.toLowerCase();
+  return BLACKLISTED.some((b) => n.includes(b));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN KycStep router
+// ═══════════════════════════════════════════════════════════════════
+export default function KycStep() {
+  const { entityId, step } = useParams<{ entityId: string; step: string }>();
+  const { t } = useI18n();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const [entity, setEntity] = useState<any>(null);
+
+  const stepKey = (validSteps.includes(step as KycStepKey) ? step : "kyc") as KycStepKey;
+
   useEffect(() => {
-    supabase.from("tax_status").select("*").eq("entity_id", entity.id).maybeSingle().then(({ data }) => data && setForm((f: any) => ({ ...f, ...data })));
-  }, [entity.id]);
+    if (!loading && !user) navigate("/auth");
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (!entityId || !user) return;
+    supabase.from("entities").select("*").eq("id", entityId).eq("user_id", user.id).single()
+      .then(({ data, error }) => {
+        if (error || !data) navigate("/entities");
+        else setEntity(data);
+      });
+  }, [entityId, user]);
+
+  if (!entity) return <AppShell><div className="py-20 text-center text-muted-foreground">{t("loading")}</div></AppShell>;
+
+  const goNext = () => {
+    const next = validSteps[validSteps.indexOf(stepKey) + 1];
+    if (next) navigate(`/kyc/${entityId}/${next}`);
+    else navigate("/entities");
+  };
+  const goBack = () => {
+    const prev = validSteps[validSteps.indexOf(stepKey) - 1];
+    if (prev) navigate(`/kyc/${entityId}/${prev}`);
+    else navigate("/entities");
+  };
+
+  const completedSteps = validSteps.slice(0, Math.max(0, (entity.current_step || 1) - 1));
+
+  return (
+    <AppShell>
+      <div className="max-w-6xl mx-auto">
+        <div className="grid lg:grid-cols-[260px_1fr] gap-6 items-start">
+          <KycStepper current={stepKey} entityId={entityId} completed={completedSteps} />
+          <div className="min-w-0">
+            {stepKey === "kyc" && (
+              <KycForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} t={t} />
+            )}
+            {stepKey === "audit-fee" && (
+              <AuditFeeForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
+            )}
+            {stepKey === "financial-year" && (
+              <FinancialYearForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
+            )}
+            {stepKey === "tax-status" && (
+              <TaxStatusForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
+            )}
+            {stepKey === "engagement" && (
+              <EngagementForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
+            )}
+            {stepKey === "payment" && (
+              <PaymentForm entity={entity} onBack={goBack} t={t} />
+            )}
+          </div>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STEP 1 — KYC Form (7 sections matching HTML exactly)
+// ═══════════════════════════════════════════════════════════════════
+function KycForm({ entity, onSaved, t }: any) {
+  const { user } = useAuth();
+  const [busy, setBusy] = useState(false);
+
+  // § Section 1 — Entity Information
+  const [registrationStatus, setRegistrationStatus] = useState(entity.registration_status ?? "");
+  const [entityName, setEntityName] = useState(entity.entity_name === "Untitled Entity" ? "" : entity.entity_name);
+  const [sourceOfFunds, setSourceOfFunds] = useState(entity.source_of_funds ?? "");
+  const [employerName, setEmployerName] = useState(entity.employer_name ?? "");
+  const [licenseNumber, setLicenseNumber] = useState(entity.license_number ?? "");
+  const [licenseDate, setLicenseDate] = useState(entity.license_issue_date ?? "");
+  const [legalType, setLegalType] = useState(entity.legal_type ?? "");
+  const [principalActivity, setPrincipalActivity] = useState(entity.principal_activity ?? entity.main_activity ?? "");
+  const [economicSector, setEconomicSector] = useState(entity.economic_sector ?? "");
+  const [licenseFiles, setLicenseFiles] = useState<File[]>([]);
+
+  // § Section 2 — Contact Details
+  const [emirate, setEmirate] = useState(entity.emirate ?? "");
+  const [address, setAddress] = useState(entity.address ?? "");
+  const [telephone, setTelephone] = useState(entity.telephone ?? "");
+  const [email, setEmail] = useState(entity.email ?? "");
+
+  // § Section 3 — Shareholders
+  const [shareholders, setShareholders] = useState<Person[]>(
+    (entity.shareholders ?? []).length > 0
+      ? entity.shareholders.map((s: any) => ({ ...emptyPerson(), ...s, id_files: [], passport_files: [] }))
+      : [emptyPerson()]
+  );
+
+  // § Section 4 — UBOs
+  const [hasUbo, setHasUbo] = useState<"yes"|"no"|"">(entity.ubos?.length > 0 ? "yes" : "");
+  const [ubos, setUbos] = useState<Person[]>(
+    (entity.ubos ?? []).length > 0
+      ? entity.ubos.map((u: any) => ({ ...emptyPerson(), ...u, id_files: [], passport_files: [] }))
+      : []
+  );
+
+  // § Section 5 — Management
+  const [managementSelect, setManagementSelect] = useState(entity.management_control ?? "");
+  const [managers, setManagers] = useState<Person[]>([emptyPerson()]);
+  const [poaFiles, setPoaFiles] = useState<File[]>([]);
+
+  // § Section 6 — PEP
+  const [hasPep, setHasPep] = useState<"yes"|"no"|"">(entity.pep_exists ? "yes" : "");
+  const [pepPersons, setPepPersons] = useState<{ name: string; file: File | null }[]>(
+    entity.pep_persons?.length > 0 ? entity.pep_persons.map((p: any) => ({ name: p.name ?? "", file: null })) : [{ name: "", file: null }]
+  );
+
+  // § Section 7 — Declarations
+  const [declarations, setDeclarations] = useState<boolean[]>(
+    Array(DECLARATIONS.length).fill(false)
+  );
+
+  // Dynamic options
+  const isUnlicensed = registrationStatus === "unlicensed" || registrationStatus === "sole";
+  const isLicensed = ["multiple", "freezone", "branch"].includes(registrationStatus);
+  const managementOptions = [
+    ...shareholders.map((s) => s.name).filter(Boolean),
+    ...ubos.map((u) => u.name).filter(Boolean),
+    "Other",
+  ];
+
+  // Legal type options per status
+  const legalTypeOptions: Record<string, string[]> = {
+    multiple: ["Civil Company", "Limited Liability Company", "General Partnership Company", "Limited Partnership Company", "Branch of Local Company", "Branch of Foreign Company"],
+    freezone: ["FZ-LLC", "Branch of Foreign Company (FZ)", "FZ Establishment"],
+    branch: ["Branch of Local Company", "Branch of Foreign Company"],
+  };
+
+  // Upload files
+  const uploadFiles = async (files: File[], folder: string): Promise<string[]> => {
+    const paths: string[] = [];
+    for (const file of files) {
+      const p = `${user!.id}/${entity.id}/${folder}/${Date.now()}_${file.name}`;
+      const { data } = await supabase.storage.from("kyc-documents").upload(p, file, { upsert: true });
+      if (data) paths.push(data.path);
+    }
+    return paths;
+  };
+
+  // Validation
+  const validate = (): string[] => {
+    const errs: string[] = [];
+    if (!registrationStatus) errs.push("Entity Registration Status is required");
+    if (!entityName.trim()) errs.push("Owner/Company name is required");
+    if (isLicensed && !licenseNumber.trim()) errs.push("License number is required");
+    if (isLicensed && !licenseDate) errs.push("License issue date is required");
+    if (!principalActivity.trim()) errs.push("Principal Activity is required");
+    if (!economicSector) errs.push("Economic Sector is required");
+    if (!emirate) errs.push("Emirate is required");
+    if (!address.trim()) errs.push("Address is required");
+    if (!telephone.trim()) errs.push("Telephone is required");
+    if (telephone && !/^\+971[0-9]{7,12}$/.test(telephone.replace(/\s/g, ""))) {
+      errs.push("Telephone must start with +971 followed by 7-12 digits");
+    }
+    if (!email.trim()) errs.push("Email is required");
+
+    // Shareholders
+    if (shareholders.length === 0) errs.push("At least one shareholder is required");
+    let totalCapital = 0;
+    shareholders.forEach((sh, i) => {
+      if (!sh.name.trim()) errs.push(`Shareholder ${i + 1}: Full name required`);
+      if (!sh.capital) errs.push(`Shareholder ${i + 1}: Capital % required`);
+      if (!sh.nationality.trim()) errs.push(`Shareholder ${i + 1}: Nationality required`);
+      if (!sh.dob_place.trim()) errs.push(`Shareholder ${i + 1}: Date and place of birth required`);
+      if (!sh.emirates_id || sh.emirates_id.length !== 15) errs.push(`Shareholder ${i + 1}: Emirates ID must be 15 digits`);
+      if (!sh.address.trim()) errs.push(`Shareholder ${i + 1}: Address required`);
+      if (sh.id_files.length === 0) errs.push(`Shareholder ${i + 1}: Emirates ID document required`);
+      if (sh.passport_files.length === 0) errs.push(`Shareholder ${i + 1}: Passport document required`);
+      if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
+      if (sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Name does not match Emirates ID document`);
+      totalCapital += parseFloat(sh.capital) || 0;
+    });
+    if (shareholders.length > 0 && Math.abs(totalCapital - 100) > 0.01) {
+      errs.push(`Total shareholder capital must equal 100% (currently ${totalCapital.toFixed(2)}%)`);
+    }
+
+    // UBOs
+    if (hasUbo === "yes") {
+      if (ubos.length === 0) errs.push("At least one UBO is required");
+      ubos.forEach((u, i) => {
+        if (!u.name.trim()) errs.push(`UBO ${i + 1}: Full name required`);
+        if (!u.nationality.trim()) errs.push(`UBO ${i + 1}: Nationality required`);
+        if (!u.dob_place.trim()) errs.push(`UBO ${i + 1}: Date and place of birth required`);
+        if (!u.emirates_id || u.emirates_id.length !== 15) errs.push(`UBO ${i + 1}: Emirates ID must be 15 digits`);
+        if (!u.address.trim()) errs.push(`UBO ${i + 1}: Address required`);
+        if (u.id_files.length === 0) errs.push(`UBO ${i + 1}: Emirates ID document required`);
+        if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
+        if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
+        if (u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Name does not match Emirates ID document`);
+      });
+    }
+
+    // Management
+    if (!managementSelect) errs.push("Please select who is responsible for management");
+    if (managementSelect === "Other") {
+      managers.forEach((m, i) => {
+        if (!m.name.trim()) errs.push(`Manager ${i + 1}: Name required`);
+        if (m.ocr_status === "mismatch") errs.push(`Manager ${i + 1}: Name does not match Emirates ID`);
+      });
+      if (poaFiles.length === 0) errs.push("Power of Attorney (POA) document is required");
+    }
+
+    // PEP
+    if (hasPep === "yes") {
+      pepPersons.forEach((p, i) => {
+        if (!p.name.trim()) errs.push(`PEP ${i + 1}: Name required`);
+        if (!p.file) errs.push(`PEP ${i + 1}: Declaration document required`);
+      });
+    }
+
+    // Declarations
+    DECLARATIONS.forEach((_, i) => {
+      if (!declarations[i]) errs.push(`You must confirm declaration number ${i + 1}`);
+    });
+
+    return errs;
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs = validate();
+    if (errs.length > 0) {
+      toast.error(errs[0] + (errs.length > 1 ? ` (+${errs.length - 1} more)` : ""));
+      return;
+    }
     setBusy(true);
-    const { error } = await supabase.from("tax_status").upsert({ entity_id: entity.id, user_id: entity.user_id, ...form }, { onConflict: "entity_id" });
-    await supabase.from("entities").update({ current_step: 5 }).eq("id", entity.id);
+
+    // Upload license
+    const licensePaths = licenseFiles.length > 0 ? await uploadFiles(licenseFiles, "trade") : [];
+
+    // Upload shareholder docs
+    for (const sh of shareholders) {
+      if (sh.id_files.length > 0) await uploadFiles(sh.id_files, `shareholders/${sh.name}/eid`);
+      if (sh.passport_files.length > 0) await uploadFiles(sh.passport_files, `shareholders/${sh.name}/passport`);
+    }
+
+    // Upload UBO docs
+    for (const u of ubos) {
+      if (u.id_files.length > 0) await uploadFiles(u.id_files, `ubos/${u.name}/eid`);
+      if (u.passport_files.length > 0) await uploadFiles(u.passport_files, `ubos/${u.name}/passport`);
+    }
+
+    // Upload POA
+    if (poaFiles.length > 0) await uploadFiles(poaFiles, "poa");
+
+    const payload: any = {
+      entity_name: entityName,
+      registration_status: registrationStatus,
+      legal_type: legalType,
+      license_number: licenseNumber,
+      license_issue_date: licenseDate || null,
+      principal_activity: principalActivity,
+      main_activity: principalActivity,
+      economic_sector: economicSector,
+      emirate,
+      address,
+      telephone,
+      email,
+      source_of_funds: sourceOfFunds,
+      employer_name: employerName,
+      shareholders: shareholders.map(({ id_files, passport_files, ocr_status, ocr_extracted, ...s }) => s),
+      ubos: hasUbo === "yes" ? ubos.map(({ id_files, passport_files, ocr_status, ocr_extracted, ...u }) => u) : [],
+      pep_exists: hasPep === "yes",
+      pep_persons: hasPep === "yes" ? pepPersons.map((p) => ({ name: p.name })) : [],
+      management_control: managementSelect,
+      declarations_signed: declarations,
+      current_step: 2,
+    };
+
+    const { data, error } = await supabase.from("entities").update(payload).eq("id", entity.id).select().single();
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success(t("saved")); onSaved();
+    toast.success("Saved successfully");
+    onSaved(data);
   };
+
   return (
     <Card className="shadow-card">
-      <CardHeader><CardTitle>{t("tax_title")}</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle className="text-xl uppercase tracking-wide text-center border-b border-border pb-4">
+          Entity Onboarding
+        </CardTitle>
+      </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="space-y-5">
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label={t("tax_vat_status")}>
-              <NativeSelect value={form.vat_status} onChange={(e) => setForm({ ...form, vat_status: e.target.value })}>
-                <option value="">—</option><option value="registered">{t("registered")}</option><option value="not_registered">{t("not_registered")}</option>
+        <form onSubmit={submit} className="space-y-2">
+
+          {/* ── SECTION 1: Entity Information ── */}
+          <SectionTitle number={1} title="Entity Information" />
+          <div className="space-y-4">
+            <Field label="Entity Registration Status" required>
+              <NativeSelect required value={registrationStatus} onChange={(e) => setRegistrationStatus(e.target.value)}>
+                <option value="">-- Select --</option>
+                <option value="unlicensed">Unlicensed Entity</option>
+                <option value="sole">Mainland Licensed Entity - Sole Owner</option>
+                <option value="multiple">Mainland Licensed Entity - Multiple Owners</option>
+                <option value="freezone">Free Zone Licensed Entity</option>
+                <option value="branch">Mainland Licensed Entity - Branch</option>
               </NativeSelect>
             </Field>
-            {form.vat_status === "registered" && (
-              <Field label={t("tax_vat_number")}><Input value={form.vat_registration_number} onChange={(e) => setForm({ ...form, vat_registration_number: e.target.value })} /></Field>
-            )}
-            <Field label={t("tax_excise_status")}>
-              <NativeSelect value={form.excise_tax_status} onChange={(e) => setForm({ ...form, excise_tax_status: e.target.value })}>
-                <option value="">—</option><option value="registered">{t("registered")}</option><option value="not_registered">{t("not_registered")}</option>
-              </NativeSelect>
+
+            <Field label={isUnlicensed ? "Owner Name" : "Company Name"} required>
+              <Input required value={entityName} placeholder="Enter name" onChange={(e) => setEntityName(e.target.value)} />
             </Field>
-            <Field label={t("tax_corporate_status")}>
-              <NativeSelect value={form.corporate_tax_status} onChange={(e) => setForm({ ...form, corporate_tax_status: e.target.value })}>
-                <option value="">—</option><option value="registered">{t("registered")}</option><option value="not_registered">{t("not_registered")}</option>
-              </NativeSelect>
-            </Field>
-            {form.corporate_tax_status === "registered" && (
+
+            {isUnlicensed && (
               <>
-                <Field label={t("tax_corporate_number")}><Input value={form.corporate_tax_registration_number} onChange={(e) => setForm({ ...form, corporate_tax_registration_number: e.target.value })} /></Field>
-                <Field label={t("tax_corporate_treatment")}><Input value={form.corporate_tax_treatment} onChange={(e) => setForm({ ...form, corporate_tax_treatment: e.target.value })} /></Field>
-                <Field label={t("tax_sbr")}>
-                  <NativeSelect value={form.small_business_relief} onChange={(e) => setForm({ ...form, small_business_relief: e.target.value })}>
-                    <option value="">—</option><option value="yes">{t("yes")}</option><option value="no">{t("no")}</option>
-                  </NativeSelect>
+                <Field label="Source of Funds" required>
+                  <Input required value={sourceOfFunds} placeholder="e.g., Salary, Business, Investment" onChange={(e) => setSourceOfFunds(e.target.value)} />
+                </Field>
+                <Field label="Name of Employer" required>
+                  <Input required value={employerName} placeholder="e.g., Employer name, Self employed" onChange={(e) => setEmployerName(e.target.value)} />
                 </Field>
               </>
             )}
+
+            {isLicensed && (
+              <div className="space-y-4 border border-border rounded-lg p-4 bg-muted/10">
+                <Field label="License Number" required>
+                  <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => setLicenseNumber(e.target.value)} />
+                </Field>
+                <Field label="License Issue Date" required>
+                  <Input required type="date" value={licenseDate} onChange={(e) => setLicenseDate(e.target.value)} />
+                </Field>
+                {legalTypeOptions[registrationStatus] && (
+                  <Field label="Legal Structure">
+                    <NativeSelect value={legalType} onChange={(e) => setLegalType(e.target.value)}>
+                      <option value="">-- Select --</option>
+                      {legalTypeOptions[registrationStatus].map((o) => <option key={o}>{o}</option>)}
+                    </NativeSelect>
+                  </Field>
+                )}
+                <FileUploadZone label="Upload Trade License *" files={licenseFiles} onChange={setLicenseFiles} accept="image/*,.pdf" single />
+              </div>
+            )}
+
+            <Field label="Principal Activity" required>
+              <Input required value={principalActivity} placeholder="Enter principal activity" onChange={(e) => setPrincipalActivity(e.target.value)} />
+            </Field>
+
+            <Field label="Economic Sector" required>
+              <NativeSelect required value={economicSector} onChange={(e) => setEconomicSector(e.target.value)}>
+                <option value="">-- Select --</option>
+                {["Agriculture, Forestry & Fishing","Mining & Quarrying","Manufacturing","Energy","Construction, Engineering & Machinery","Transportation & Logistics","Technology & Telecom","Real Estate & Facility Services","Education","Health Care","Hospitality","Professional Services","Personal & Community Services","Media","Support Services","General Trading","Tourism & Travel Services","Other"].map((s) => <option key={s} value={s}>{s}</option>)}
+              </NativeSelect>
+            </Field>
           </div>
+
+          {/* ── SECTION 2: Contact Details ── */}
+          <SectionTitle number={2} title="Contact Details" />
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="Emirate" required>
+              <NativeSelect required value={emirate} onChange={(e) => setEmirate(e.target.value)}>
+                <option value="">-- Select Emirate --</option>
+                {["Abu Dhabi","Dubai","Sharjah","Ajman","Ras Al Khaimah","Fujairah","Umm Al Quwain"].map((e) => <option key={e}>{e}</option>)}
+              </NativeSelect>
+            </Field>
+            <Field label="Telephone Number" required>
+              <Input required value={telephone} placeholder="+971 xx xxx xxxx" onChange={(e) => setTelephone(e.target.value)} />
+            </Field>
+            <div className="md:col-span-2">
+              <Field label="Address" required>
+                <Textarea required value={address} placeholder="Enter full address" onChange={(e) => setAddress(e.target.value)} />
+              </Field>
+            </div>
+            <div className="md:col-span-2">
+              <Field label="Email" required>
+                <Input required type="email" value={email} placeholder="Enter email address" onChange={(e) => setEmail(e.target.value)} />
+              </Field>
+            </div>
+          </div>
+
+          {/* ── SECTION 3: Shareholders ── */}
+          <SectionTitle number={3} title="Shareholders / Proprietors" />
+          <div className="space-y-4">
+            {shareholders.map((sh, i) => (
+              <PersonCard
+                key={i} person={sh} index={i} label="Shareholder"
+                showCapital canRemove={shareholders.length > 1}
+                onChange={(p) => setShareholders(shareholders.map((s, idx) => idx === i ? p : s))}
+                onRemove={() => setShareholders(shareholders.filter((_, idx) => idx !== i))}
+              />
+            ))}
+            {/* Capital total */}
+            {shareholders.length > 1 && (
+              <div className="text-sm font-medium text-right">
+                Total Capital: {shareholders.reduce((a, s) => a + (parseFloat(s.capital) || 0), 0).toFixed(2)}%
+                {Math.abs(shareholders.reduce((a, s) => a + (parseFloat(s.capital) || 0), 0) - 100) > 0.01 && (
+                  <span className="text-destructive ms-2">⚠️ Must equal 100%</span>
+                )}
+              </div>
+            )}
+            <Button type="button" variant="outline" size="sm" onClick={() => setShareholders([...shareholders, emptyPerson()])}>
+              <Plus className="size-3.5" /> Add Shareholder
+            </Button>
+          </div>
+
+          {/* ── SECTION 4: Beneficial Owners ── */}
+          <SectionTitle number={4} title="Beneficial Owners" />
+          <div className="space-y-4">
+            <Field label="Is there any individual who directly or indirectly owns 25% or more?" required>
+              <div className="flex gap-6 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                  <input type="radio" name="ubo" value="yes" checked={hasUbo === "yes"} onChange={() => { setHasUbo("yes"); if (ubos.length === 0) setUbos([emptyPerson()]); }} />
+                  Yes
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                  <input type="radio" name="ubo" value="no" checked={hasUbo === "no"} onChange={() => { setHasUbo("no"); setUbos([]); }} />
+                  No
+                </label>
+              </div>
+            </Field>
+            {hasUbo === "yes" && (
+              <>
+                {ubos.map((u, i) => (
+                  <PersonCard
+                    key={i} person={u} index={i} label="Beneficial Owner"
+                    canRemove={ubos.length > 1}
+                    onChange={(p) => setUbos(ubos.map((x, idx) => idx === i ? p : x))}
+                    onRemove={() => setUbos(ubos.filter((_, idx) => idx !== i))}
+                  />
+                ))}
+                {ubos.length < 4 && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => setUbos([...ubos, emptyPerson()])}>
+                    <Plus className="size-3.5" /> Add Beneficial Owner
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* ── SECTION 5: Management ── */}
+          <SectionTitle number={5} title="Management & Effective Control" />
+          <div className="space-y-4">
+            <Field label="Who is responsible for management and effective control?" required>
+              <NativeSelect required value={managementSelect} onChange={(e) => setManagementSelect(e.target.value)}>
+                <option value="">-- Select --</option>
+                {managementOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+              </NativeSelect>
+            </Field>
+            {managementSelect === "Other" && (
+              <>
+                {managers.map((m, i) => (
+                  <PersonCard
+                    key={i} person={m} index={i} label="Manager"
+                    canRemove={managers.length > 1}
+                    onChange={(p) => setManagers(managers.map((x, idx) => idx === i ? p : x))}
+                    onRemove={() => setManagers(managers.filter((_, idx) => idx !== i))}
+                  />
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => setManagers([...managers, emptyPerson()])}>
+                  <Plus className="size-3.5" /> Add Manager
+                </Button>
+                <FileUploadZone label="Upload Power of Attorney (POA) *" files={poaFiles} onChange={setPoaFiles} accept="image/*,.pdf" single />
+              </>
+            )}
+          </div>
+
+          {/* ── SECTION 6: PEP ── */}
+          <SectionTitle number={6} title="Politically Exposed Persons (PEP)" />
+          <div className="space-y-4">
+            <Field label="Is any person classified as a Politically Exposed Person (PEP)?" required>
+              <div className="flex gap-6 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                  <input type="radio" name="pep" value="yes" checked={hasPep === "yes"} onChange={() => { setHasPep("yes"); if (pepPersons.length === 0) setPepPersons([{ name: "", file: null }]); }} />
+                  Yes
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                  <input type="radio" name="pep" value="no" checked={hasPep === "no"} onChange={() => setHasPep("no")} />
+                  No
+                </label>
+              </div>
+            </Field>
+            {hasPep === "yes" && (
+              <div className="space-y-3">
+                {pepPersons.map((p, i) => (
+                  <div key={i} className="border border-border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-muted-foreground">PEP {i + 1}</span>
+                      {pepPersons.length > 1 && (
+                        <Button type="button" size="sm" variant="ghost" className="text-destructive h-7"
+                          onClick={() => setPepPersons(pepPersons.filter((_, idx) => idx !== i))}>
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                    <Field label="PEP Name" required>
+                      <Input required value={p.name} placeholder="Full name" onChange={(e) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x))} />
+                    </Field>
+                    <FileUploadZone
+                      label="PEP Declaration Document *"
+                      files={p.file ? [p.file] : []}
+                      onChange={(files) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, file: files[0] ?? null } : x))}
+                      accept="image/*,.pdf" single
+                    />
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => setPepPersons([...pepPersons, { name: "", file: null }])}>
+                  <Plus className="size-3.5" /> Add PEP Name
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* ── SECTION 7: Compliance & Legal Declarations ── */}
+          <SectionTitle number={7} title="Compliance & Legal Declarations" />
+          <div className="space-y-3">
+            {DECLARATIONS.map((text, i) => (
+              <div
+                key={i}
+                className={`border rounded-lg p-4 flex gap-4 items-start transition-colors ${declarations[i] ? "border-green-300 bg-green-50 dark:bg-green-950/20" : "border-border bg-card"}`}
+              >
+                <div className="flex-1 text-sm leading-relaxed text-foreground">
+                  <span className="font-semibold text-muted-foreground me-2">{i + 1}.</span>
+                  {text}
+                </div>
+                <label className="flex items-center gap-2 shrink-0 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={declarations[i]}
+                    onChange={(e) => setDeclarations(declarations.map((d, idx) => idx === i ? e.target.checked : d))}
+                    className="size-4 rounded"
+                  />
+                  <span className="text-sm font-medium">Confirm</span>
+                </label>
+              </div>
+            ))}
+            <div className="text-xs text-muted-foreground text-center pt-2">
+              {declarations.filter(Boolean).length} / {DECLARATIONS.length} confirmed
+            </div>
+          </div>
+
+          {/* Submit */}
+          <div className="flex justify-end pt-6 border-t border-border">
+            <Button type="submit" variant="premium" disabled={busy} size="lg">
+              {busy ? <><Loader2 className="size-4 animate-spin" /> Saving...</> : "Save & Continue →"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STEP 2 — Audit Fee
+// ═══════════════════════════════════════════════════════════════════
+function calculateAuditFee(turnover: number): number {
+  if (turnover <= 100000) return 0;
+  if (turnover <= 250000) return 1500;
+  if (turnover <= 500000) return 2000;
+  if (turnover <= 1000000) return 2500;
+  if (turnover <= 2000000) return 3000;
+  if (turnover <= 5000000) return 4000;
+  if (turnover <= 10000000) return 5000;
+  if (turnover <= 20000000) return 7000;
+  if (turnover <= 30000000) return 9000;
+  if (turnover <= 50000000) return 12000;
+  return 12000;
+}
+
+function AuditFeeForm({ entity, onSaved, onBack, t }: any) {
+  const fee = calculateAuditFee(entity.total_turnover ?? 0);
+  const [agreed, setAgreed] = useState(false);
+  const [signerName, setSignerName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agreed) return toast.error("Please agree to the audit fee");
+    if (!signerName.trim()) return toast.error("Signer name is required");
+    setBusy(true);
+    await supabase.from("audit_fees").upsert({
+      entity_id: entity.id, user_id: entity.user_id,
+      turnover: entity.total_turnover, calculated_fee: fee, agreed: true,
+      digital_signature_name: signerName,
+      digital_signature_date: new Date().toISOString(),
+    }, { onConflict: "entity_id" });
+    await supabase.from("entities").update({ current_step: 3 }).eq("id", entity.id);
+    setBusy(false);
+    toast.success(t("saved"));
+    onSaved();
+  };
+
+  return (
+    <Card className="shadow-card">
+      <CardHeader><CardTitle>Audit Fee Acknowledgement</CardTitle></CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-6">
+          <div className="rounded-xl border border-border bg-muted/20 p-5 space-y-3">
+            <div className="text-sm text-muted-foreground">Total Turnover</div>
+            <div className="text-2xl font-bold">AED {(entity.total_turnover ?? 0).toLocaleString()}</div>
+            <div className="h-px bg-border" />
+            <div className="text-sm text-muted-foreground">Calculated Audit Fee</div>
+            <div className="text-3xl font-bold text-primary">AED {fee.toLocaleString()}</div>
+          </div>
+          <Field label="Digital Signer Name *">
+            <Input required value={signerName} placeholder="Full name as on Emirates ID" onChange={(e) => setSignerName(e.target.value)} />
+          </Field>
+          <label className="flex items-start gap-3 text-sm cursor-pointer border border-border rounded-lg p-4">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 size-4" />
+            <span>I agree to the audit fee of AED {fee.toLocaleString()} and the payment terms stated above.</span>
+          </label>
+          <div className="flex justify-between pt-4 border-t border-border">
+            <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
+            <Button type="submit" variant="premium" disabled={busy || !agreed}>
+              {busy ? t("saving") : t("btn_next")}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STEP 3 — Financial Year
+// ═══════════════════════════════════════════════════════════════════
+function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
+  const [form, setForm] = useState({
+    is_first_year: entity.is_first_year ?? "",
+    first_year_start: entity.first_year_start ?? "",
+    first_year_end: entity.first_year_end ?? "",
+    current_year_start: entity.current_year_start ?? "",
+    current_year_end: entity.current_year_end ?? "",
+    previous_year_audited: entity.previous_year_audited ?? "",
+  });
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    await supabase.from("financial_years").upsert({ entity_id: entity.id, ...form }, { onConflict: "entity_id" });
+    await supabase.from("entities").update({ current_step: 4 }).eq("id", entity.id);
+    setBusy(false);
+    toast.success(t("saved"));
+    onSaved();
+  };
+
+  const set = (k: string, v: string) => setForm({ ...form, [k]: v });
+
+  return (
+    <Card className="shadow-card">
+      <CardHeader><CardTitle>Financial Year Details</CardTitle></CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-5">
+          <Field label="Is this the first financial year?" required>
+            <div className="flex gap-6 pt-1">
+              {["Yes", "No"].map((v) => (
+                <label key={v} className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                  <input type="radio" name="first_year" value={v} checked={form.is_first_year === v} onChange={() => set("is_first_year", v)} />
+                  {v}
+                </label>
+              ))}
+            </div>
+          </Field>
+          {form.is_first_year === "Yes" && (
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field label="First Year Start Date" required><Input required type="date" value={form.first_year_start} onChange={(e) => set("first_year_start", e.target.value)} /></Field>
+              <Field label="First Year End Date" required><Input required type="date" value={form.first_year_end} onChange={(e) => set("first_year_end", e.target.value)} /></Field>
+            </div>
+          )}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="Current Year Start" required><Input required type="date" value={form.current_year_start} onChange={(e) => set("current_year_start", e.target.value)} /></Field>
+            <Field label="Current Year End" required><Input required type="date" value={form.current_year_end} onChange={(e) => set("current_year_end", e.target.value)} /></Field>
+          </div>
+          {form.is_first_year === "No" && (
+            <Field label="Was the previous year audited?" required>
+              <div className="flex gap-6 pt-1">
+                {["Yes", "No"].map((v) => (
+                  <label key={v} className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                    <input type="radio" name="prev_audited" value={v} checked={form.previous_year_audited === v} onChange={() => set("previous_year_audited", v)} />
+                    {v}
+                  </label>
+                ))}
+              </div>
+            </Field>
+          )}
           <div className="flex justify-between pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
             <Button type="submit" variant="premium" disabled={busy}>{busy ? t("saving") : t("btn_next")}</Button>
@@ -722,400 +1040,100 @@ function TaxStatusForm({ entity, onSaved, onBack, t }: any) {
   );
 }
 
-// ── FINANCIAL ANALYSIS FORM ─────────────────────────────────────────────────
-function FinancialAnalysisForm({ entity, onSaved, onBack, t }: any) {
-  const { user } = useAuth();
-  const [files, setFiles] = useState<File[]>([]);
-  const [manualData, setManualData] = useState({
-    total_assets: "",
-    total_liabilities: "",
-    equity: "",
-    revenue: "",
-    net_profit: "",
-    operating_expenses: "",
-    cash: "",
-    accounts_receivable: "",
+// ═══════════════════════════════════════════════════════════════════
+// STEP 4 — Tax Status
+// ═══════════════════════════════════════════════════════════════════
+function TaxStatusForm({ entity, onSaved, onBack, t }: any) {
+  const [form, setForm] = useState({
+    vat_status: entity.vat_status ?? "",
+    vat_number: entity.vat_number ?? "",
+    not_registered_reason: entity.not_registered_reason ?? "",
+    corporate_tax_status: entity.corporate_tax_status ?? "",
+    corporate_tax_number: entity.corporate_tax_number ?? "",
+    corporate_tax_treatment: entity.corporate_tax_treatment ?? "",
+    small_business_relief: entity.small_business_relief ?? "",
+    excise_status: entity.excise_status ?? "",
   });
-  const [inputMode, setInputMode] = useState<"file" | "manual">("file");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const set = (k: string, v: string) => setForm({ ...form, [k]: v });
 
-  const labels: Record<string, string> = {
-    total_assets: "إجمالي الأصول (AED)",
-    total_liabilities: "إجمالي الخصوم (AED)",
-    equity: "حقوق الملكية (AED)",
-    revenue: "الإيرادات (AED)",
-    net_profit: "صافي الربح (AED)",
-    operating_expenses: "مصاريف التشغيل (AED)",
-    cash: "النقد وما يعادله (AED)",
-    accounts_receivable: "الذمم المدينة (AED)",
-  };
-
-  const readFileAsText = (file: File): Promise<string> =>
-    new Promise((res) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result as string);
-      r.readAsText(file, "UTF-8");
-    });
-
-  const buildPrompt = (dataText: string) => `
-أنت محلل مالي متخصص. بناءً على البيانات التالية أصدر تحليلاً مالياً شاملاً بالعربية:
-
-${dataText}
-
-أجب بـ JSON فقط بهذا الشكل:
-{
-  "balance_sheet": {
-    "total_assets": رقم,
-    "total_liabilities": رقم,
-    "equity": رقم
-  },
-  "income_stmt": {
-    "revenue": رقم,
-    "net_profit": رقم,
-    "operating_expenses": رقم,
-    "profit_margin": رقم بالنسبة المئوية
-  },
-  "ratios": {
-    "current_ratio": رقم,
-    "debt_to_equity": رقم,
-    "return_on_equity": رقم بالنسبة المئوية,
-    "return_on_assets": رقم بالنسبة المئوية
-  },
-  "health_score": رقم من 0 إلى 100,
-  "risks": ["خطر 1", "خطر 2"],
-  "summary": "ملخص تنفيذي 3 جمل باللغة العربية"
-}`.trim();
-
-  const runAnalysis = async () => {
-    setBusy(true);
-    setResult(null);
-    let dataText = "";
-
-    if (inputMode === "file" && files.length > 0) {
-      // قراءة الملفات ورفعها
-      const uploadedPaths: string[] = [];
-      for (const file of files) {
-        const p = `${user!.id}/${entity.id}/fin-${Date.now()}-${file.name}`;
-        await supabase.storage.from("financial-files").upload(p, file, { upsert: true });
-        uploadedPaths.push(p);
-        // قراءة CSV/نص
-        if (file.type.includes("csv") || file.type.includes("text")) {
-          const text = await readFileAsText(file);
-          dataText += `\n=== ${file.name} ===\n${text.slice(0, 3000)}`;
-        }
-      }
-      if (!dataText) {
-        dataText = `ملفات تم رفعها: ${files.map((f) => f.name).join(", ")}. لا يمكن قراءة محتوى الملفات الثنائية (Excel/PDF) مباشرة — يرجى استخدام وضع الإدخال اليدوي.`;
-      }
-    } else {
-      const vals = manualData;
-      dataText = `
-الميزانية العمومية:
-- إجمالي الأصول: ${vals.total_assets} AED
-- إجمالي الخصوم: ${vals.total_liabilities} AED
-- حقوق الملكية: ${vals.equity} AED
-- النقد وما يعادله: ${vals.cash} AED
-- الذمم المدينة: ${vals.accounts_receivable} AED
-
-قائمة الدخل:
-- الإيرادات: ${vals.revenue} AED
-- صافي الربح: ${vals.net_profit} AED
-- مصاريف التشغيل: ${vals.operating_expenses} AED
-
-اسم الكيان: ${entity.entity_name}
-القطاع: ${entity.main_activity ?? "غير محدد"}
-دوران الأعمال المُصرَّح: ${entity.total_turnover?.toLocaleString() ?? "غير محدد"} AED
-`.trim();
-    }
-
-    let parsed: any = null;
-
-    // محاولة Claude API
-    try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY ?? "",
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1200,
-          messages: [{ role: "user", content: buildPrompt(dataText) }],
-        }),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const text = (data.content?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
-        parsed = JSON.parse(text);
-      }
-    } catch { /* fallback */ }
-
-    // Fallback: حساب محلي من البيانات اليدوية
-    if (!parsed && inputMode === "manual") {
-      const a = parseFloat(manualData.total_assets) || 0;
-      const l = parseFloat(manualData.total_liabilities) || 0;
-      const eq = parseFloat(manualData.equity) || (a - l);
-      const rev = parseFloat(manualData.revenue) || 0;
-      const np = parseFloat(manualData.net_profit) || 0;
-      const opex = parseFloat(manualData.operating_expenses) || 0;
-      const cash = parseFloat(manualData.cash) || 0;
-      const ar = parseFloat(manualData.accounts_receivable) || 0;
-      const currentRatio = l > 0 ? parseFloat(((cash + ar) / l).toFixed(2)) : 0;
-      const d2e = eq > 0 ? parseFloat((l / eq).toFixed(2)) : 0;
-      const roe = eq > 0 ? parseFloat(((np / eq) * 100).toFixed(1)) : 0;
-      const roa = a > 0 ? parseFloat(((np / a) * 100).toFixed(1)) : 0;
-      const margin = rev > 0 ? parseFloat(((np / rev) * 100).toFixed(1)) : 0;
-      const risks: string[] = [];
-      if (currentRatio < 1) risks.push("نسبة السيولة أقل من 1 — خطر على الملاءة قصيرة المدى");
-      if (d2e > 2) risks.push("نسبة الدين إلى حقوق الملكية مرتفعة");
-      if (margin < 5) risks.push("هامش الربح منخفض — مراجعة هيكل التكاليف");
-      if (np < 0) risks.push("الكيان يُحقق خسائر");
-      let score = 60;
-      if (currentRatio >= 1.5) score += 10;
-      if (d2e <= 1) score += 10;
-      if (margin >= 15) score += 10;
-      if (roe >= 10) score += 10;
-      parsed = {
-        balance_sheet: { total_assets: a, total_liabilities: l, equity: eq },
-        income_stmt: { revenue: rev, net_profit: np, operating_expenses: opex, profit_margin: margin },
-        ratios: { current_ratio: currentRatio, debt_to_equity: d2e, return_on_equity: roe, return_on_assets: roa },
-        health_score: Math.min(100, Math.max(0, score)),
-        risks,
-        summary: `الكيان ${entity.entity_name} لديه إيرادات ${rev.toLocaleString()} AED وصافي ربح ${np.toLocaleString()} AED بهامش ربح ${margin}%. درجة الصحة المالية الإجمالية ${score}/100.`,
-        source: "local",
-      };
-    }
-
-    if (parsed) {
-      setResult(parsed);
-      // حفظ في قاعدة البيانات
-      await supabase.from("financial_analyses").insert({
-        entity_id: entity.id,
-        user_id: user!.id,
-        source_files: files.map((f) => f.name),
-        raw_data: inputMode === "manual" ? manualData : {},
-        balance_sheet: parsed.balance_sheet,
-        income_stmt: parsed.income_stmt,
-        ratios: parsed.ratios,
-        ai_summary: parsed.summary,
-        ai_risks: parsed.risks,
-        health_score: parsed.health_score,
-      });
-      await supabase.from("entities").update({ financial_analyzed: true, current_step: 7 }).eq("id", entity.id);
-    } else {
-      toast.error("لم يتمكن النظام من إجراء التحليل");
-    }
-    setBusy(false);
-  };
-
-  const fmt = (n: any) => Number(n || 0).toLocaleString("ar-AE");
-
-  return (
-    <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle>التحليل المالي وميزانية الكيان</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* اختيار وضع الإدخال */}
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant={inputMode === "file" ? "premium" : "outline"}
-            size="sm"
-            onClick={() => setInputMode("file")}
-          >
-            رفع ملفات
-          </Button>
-          <Button
-            type="button"
-            variant={inputMode === "manual" ? "premium" : "outline"}
-            size="sm"
-            onClick={() => setInputMode("manual")}
-          >
-            إدخال يدوي
-          </Button>
-        </div>
-
-        {/* وضع رفع الملفات */}
-        {inputMode === "file" && (
-          <div className="space-y-3">
-            <div className="text-sm text-muted-foreground">
-              ارفع ملفات Excel أو CSV أو PDF المالية. ملفات CSV سيتم قراءتها تلقائياً.
-            </div>
-            <FileUploadZone
-              label="الملفات المالية (Excel · CSV · PDF)"
-              files={files}
-              onChange={setFiles}
-              accept=".xlsx,.xls,.csv,.pdf"
-            />
-          </div>
-        )}
-
-        {/* وضع الإدخال اليدوي */}
-        {inputMode === "manual" && (
-          <div className="grid md:grid-cols-2 gap-4">
-            {Object.entries(labels).map(([key, lbl]) => (
-              <Field key={key} label={lbl}>
-                <Input
-                  type="number"
-                  min={0}
-                  placeholder="0"
-                  value={(manualData as any)[key]}
-                  onChange={(e) => setManualData({ ...manualData, [key]: e.target.value })}
-                />
-              </Field>
-            ))}
-          </div>
-        )}
-
-        <div className="flex gap-3 flex-wrap">
-          <Button
-            type="button"
-            variant="premium"
-            onClick={runAnalysis}
-            disabled={busy || (inputMode === "file" && files.length === 0)}
-          >
-            {busy ? "جاري التحليل..." : "تشغيل التحليل المالي"}
-          </Button>
-          {result && (
-            <Button type="button" variant="outline" onClick={() => { onSaved(entity); }}>
-              {t("btn_next")}
-            </Button>
-          )}
-        </div>
-
-        {/* نتائج التحليل */}
-        {busy && (
-          <div className="rounded-xl border border-border bg-muted/20 p-8 text-center animate-pulse">
-            الذكاء الاصطناعي يحلل البيانات المالية...
-          </div>
-        )}
-        {result && !busy && (
-          <div className="space-y-4 animate-fade-in">
-            {/* درجة الصحة */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl font-bold text-primary">{result.health_score}/100</div>
-                <div>
-                  <div className="font-semibold">درجة الصحة المالية</div>
-                  {result.source === "local" && (
-                    <div className="text-xs text-muted-foreground">تحليل محلي (بدون AI)</div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* الميزانية العمومية */}
-            <div className="rounded-xl border border-border p-4 space-y-2">
-              <div className="font-semibold text-sm">الميزانية العمومية</div>
-              <div className="grid grid-cols-3 gap-3 text-sm">
-                <div><div className="text-muted-foreground text-xs">الأصول</div><div className="font-mono">{fmt(result.balance_sheet?.total_assets)}</div></div>
-                <div><div className="text-muted-foreground text-xs">الخصوم</div><div className="font-mono">{fmt(result.balance_sheet?.total_liabilities)}</div></div>
-                <div><div className="text-muted-foreground text-xs">حقوق الملكية</div><div className="font-mono">{fmt(result.balance_sheet?.equity)}</div></div>
-              </div>
-            </div>
-
-            {/* قائمة الدخل */}
-            <div className="rounded-xl border border-border p-4 space-y-2">
-              <div className="font-semibold text-sm">قائمة الدخل</div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div><div className="text-muted-foreground text-xs">الإيرادات</div><div className="font-mono">{fmt(result.income_stmt?.revenue)}</div></div>
-                <div><div className="text-muted-foreground text-xs">صافي الربح</div><div className="font-mono">{fmt(result.income_stmt?.net_profit)}</div></div>
-                <div><div className="text-muted-foreground text-xs">المصاريف</div><div className="font-mono">{fmt(result.income_stmt?.operating_expenses)}</div></div>
-                <div><div className="text-muted-foreground text-xs">هامش الربح</div><div className="font-mono">{result.income_stmt?.profit_margin}%</div></div>
-              </div>
-            </div>
-
-            {/* النسب المالية */}
-            <div className="rounded-xl border border-border p-4 space-y-2">
-              <div className="font-semibold text-sm">النسب المالية الرئيسية</div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                <div><div className="text-muted-foreground text-xs">نسبة السيولة</div><div className="font-mono">{result.ratios?.current_ratio}</div></div>
-                <div><div className="text-muted-foreground text-xs">دين/ملكية</div><div className="font-mono">{result.ratios?.debt_to_equity}</div></div>
-                <div><div className="text-muted-foreground text-xs">العائد على الملكية</div><div className="font-mono">{result.ratios?.return_on_equity}%</div></div>
-                <div><div className="text-muted-foreground text-xs">العائد على الأصول</div><div className="font-mono">{result.ratios?.return_on_assets}%</div></div>
-              </div>
-            </div>
-
-            {/* المخاطر */}
-            {result.risks?.length > 0 && (
-              <div className="rounded-xl border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20 p-4 space-y-2">
-                <div className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">نقاط المخاطر</div>
-                <ul className="space-y-1">
-                  {result.risks.map((r: string, i: number) => (
-                    <li key={i} className="text-xs text-yellow-700 dark:text-yellow-400">• {r}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* الملخص التنفيذي */}
-            {result.summary && (
-              <div className="rounded-xl border border-border bg-muted/10 p-4 text-sm leading-relaxed">
-                <div className="font-semibold mb-1">الملخص التنفيذي</div>
-                {result.summary}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex justify-between pt-4 border-t border-border">
-          <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
-          {result && (
-            <Button type="button" variant="premium" onClick={() => onSaved(entity)}>
-              {t("btn_next")}
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// STEP 5
-function EngagementForm({ entity, onSaved, onBack, t }: any) {
-  const [accepted, setAccepted] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const engagementNumber = `ENG-${entity.id.slice(0, 8).toUpperCase()}-${new Date().getFullYear()}`;
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accepted) return toast.error(t("required"));
     setBusy(true);
-    await supabase.from("engagement_letters").upsert({
-      entity_id: entity.id, user_id: entity.user_id, engagement_number: engagementNumber,
-      accepted: true, accepted_at: new Date().toISOString(),
-    }, { onConflict: "entity_id" });
-    await supabase.from("entities").update({
-      engagement_number: engagementNumber, application_status: "submitted",
-      submitted_at: new Date().toISOString(), current_step: 5,
-    }).eq("id", entity.id);
+    await supabase.from("tax_status").upsert({ entity_id: entity.id, ...form }, { onConflict: "entity_id" });
+    await supabase.from("entities").update({ current_step: 5 }).eq("id", entity.id);
     setBusy(false);
     toast.success(t("saved"));
     onSaved();
   };
+
   return (
     <Card className="shadow-card">
-      <CardHeader><CardTitle>{t("engagement_title")}</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Tax Status Disclosure</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={submit} className="space-y-5">
-          <p className="text-sm text-muted-foreground">{t("engagement_intro")}</p>
-          <div className="rounded-lg border border-border bg-muted/30 p-6 space-y-3">
-            <div className="font-mono text-sm">Engagement #: <span className="font-bold text-primary">{engagementNumber}</span></div>
-            <div className="text-sm">Entity: <strong>{entity.entity_name}</strong></div>
-            <div className="text-sm text-muted-foreground leading-relaxed">
-              This engagement letter confirms our understanding of the terms of our engagement and the nature and limitations of the audit services we will provide. Our audit will be conducted in accordance with International Standards on Auditing (ISAs).
-            </div>
-          </div>
-          <label className="flex items-start gap-3 text-sm cursor-pointer">
-            <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-1" />
-            <span>{t("engagement_accept")}</span>
-          </label>
+          <Field label="VAT Status" required>
+            <NativeSelect required value={form.vat_status} onChange={(e) => set("vat_status", e.target.value)}>
+              <option value="">-- Select --</option>
+              <option value="registered">Registered</option>
+              <option value="not_registered">Not Registered</option>
+              <option value="exempt">Exempt</option>
+            </NativeSelect>
+          </Field>
+          {form.vat_status === "registered" && (
+            <Field label="VAT Registration Number"><Input value={form.vat_number} onChange={(e) => set("vat_number", e.target.value)} /></Field>
+          )}
+          {form.vat_status === "not_registered" && (
+            <Field label="Reason for Non-Registration">
+              <NativeSelect value={form.not_registered_reason} onChange={(e) => set("not_registered_reason", e.target.value)}>
+                <option value="">-- Select --</option>
+                <option value="below_threshold">Below Threshold</option>
+                <option value="exempt_activity">Exempt Activity</option>
+                <option value="other">Other</option>
+              </NativeSelect>
+            </Field>
+          )}
+          <Field label="Corporate Tax Status" required>
+            <NativeSelect required value={form.corporate_tax_status} onChange={(e) => set("corporate_tax_status", e.target.value)}>
+              <option value="">-- Select --</option>
+              <option value="registered">Registered</option>
+              <option value="not_registered">Not Registered</option>
+              <option value="exempt">Exempt</option>
+            </NativeSelect>
+          </Field>
+          {form.corporate_tax_status === "registered" && (
+            <>
+              <Field label="Corporate Tax Number"><Input value={form.corporate_tax_number} onChange={(e) => set("corporate_tax_number", e.target.value)} /></Field>
+              <Field label="Tax Treatment">
+                <NativeSelect value={form.corporate_tax_treatment} onChange={(e) => set("corporate_tax_treatment", e.target.value)}>
+                  <option value="">-- Select --</option>
+                  <option value="standard">Standard Rate (9%)</option>
+                  <option value="free_zone_qualifying">Free Zone Qualifying Income (0%)</option>
+                  <option value="small_business_relief">Small Business Relief</option>
+                </NativeSelect>
+              </Field>
+              <Field label="Small Business Relief">
+                <div className="flex gap-6 pt-1">
+                  {["Yes", "No"].map((v) => (
+                    <label key={v} className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                      <input type="radio" name="sbr" value={v} checked={form.small_business_relief === v} onChange={() => set("small_business_relief", v)} />
+                      {v}
+                    </label>
+                  ))}
+                </div>
+              </Field>
+            </>
+          )}
+          <Field label="Excise Tax Status">
+            <NativeSelect value={form.excise_status} onChange={(e) => set("excise_status", e.target.value)}>
+              <option value="">-- Select --</option>
+              <option value="registered">Registered</option>
+              <option value="not_registered">Not Registered</option>
+            </NativeSelect>
+          </Field>
           <div className="flex justify-between pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
-            <Button type="submit" variant="success" disabled={busy || !accepted}>{busy ? t("saving") : t("engagement_complete")}</Button>
+            <Button type="submit" variant="premium" disabled={busy}>{busy ? t("saving") : t("btn_next")}</Button>
           </div>
         </form>
       </CardContent>
@@ -1123,214 +1141,170 @@ function EngagementForm({ entity, onSaved, onBack, t }: any) {
   );
 }
 
-// ── PAYMENT FORM ─────────────────────────────────────────────────────────────
-function PaymentForm({ entity, onBack, t }: any) {
+// ═══════════════════════════════════════════════════════════════════
+// STEP 5 — Engagement Letter
+// ═══════════════════════════════════════════════════════════════════
+function EngagementForm({ entity, onSaved, onBack, t }: any) {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [method, setMethod] = useState<"card" | "bank_transfer" | "apple_pay" | "google_pay" | "">("");
+  const [agreed, setAgreed] = useState(false);
+  const [signerName, setSignerName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [paid, setPaid] = useState(false);
-  const [cardForm, setCardForm] = useState({ number: "", expiry: "", cvv: "", name: "" });
 
-  // جلب الرسوم من audit_fees
-  const [fee, setFee] = useState(0);
-  useEffect(() => {
-    supabase.from("audit_fees").select("calculated_fee").eq("entity_id", entity.id).maybeSingle()
-      .then(({ data }) => setFee(data?.calculated_fee ?? 0));
-    // تحقق من الدفع السابق
-    supabase.from("payments").select("status").eq("entity_id", entity.id).eq("status", "paid").maybeSingle()
-      .then(({ data }) => { if (data) setPaid(true); });
-  }, [entity.id]);
-
-  const processPayment = async () => {
-    if (!method) return toast.error("اختر طريقة الدفع");
-    if (method === "card" && (!cardForm.number || !cardForm.expiry || !cardForm.cvv))
-      return toast.error("أدخل بيانات البطاقة");
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agreed) return toast.error("Please accept the engagement letter");
+    if (!signerName.trim()) return toast.error("Signer name is required");
     setBusy(true);
-
-    // محاكاة بوابة الدفع (في الإنتاج يُستبدل بـ Stripe/PayTabs/Telr)
-    await new Promise((r) => setTimeout(r, 2000));
-
-    const ref = `PAY-${entity.id.slice(0, 8).toUpperCase()}-${Date.now()}`;
-    const { error } = await supabase.from("payments").insert({
-      entity_id: entity.id,
-      user_id: user!.id,
-      amount: fee,
-      currency: "AED",
-      status: "paid",
-      method,
-      reference: ref,
-      gateway_ref: `GATEWAY-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
-      paid_at: new Date().toISOString(),
+    await supabase.from("engagement_letters").upsert({
+      entity_id: entity.id, user_id: entity.user_id,
+      agreed: true, signer_name: signerName,
+      signed_at: new Date().toISOString(),
+    }, { onConflict: "entity_id" });
+    await supabase.from("entities").update({
+      application_status: "submitted",
+      submitted_at: new Date().toISOString(),
+      current_step: 6,
+    }).eq("id", entity.id);
+    await supabase.from("user_audit_logs").insert({
+      user_id: user!.id, action: "application_submitted",
+      description: `Submitted application for entity: ${entity.entity_name}`,
     });
-    if (!error) {
-      await supabase.from("entities").update({ payment_status: "paid", application_status: "submitted", review_stage: "admin_review_ready", current_step: 7 } as any).eq("id", entity.id);
-      await supabase.from("user_audit_logs").insert({
-        user_id: user!.id,
-        action: "payment_completed",
-        description: `دفع رسوم المراجعة ${fee.toLocaleString()} AED للكيان ${entity.entity_name} — المرجع: ${ref}`,
-      });
-      setPaid(true);
-      toast.success(`✅ تمت عملية الدفع بنجاح — المرجع: ${ref}`);
-    } else {
-      toast.error("فشل في معالجة الدفع — حاول مرة أخرى");
-    }
     setBusy(false);
+    toast.success("Application submitted successfully!");
+    onSaved();
   };
-
-  if (paid) {
-    return (
-      <Card className="shadow-card">
-        <CardContent className="py-16 text-center space-y-5">
-          <div className="size-20 rounded-full bg-green-100 dark:bg-green-900/30 grid place-items-center mx-auto">
-            <span className="text-4xl">✅</span>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-green-600">تمت عملية الدفع</div>
-            <div className="text-muted-foreground mt-1">طلبك مكتمل وسيتم مراجعته قريباً</div>
-          </div>
-          <Button variant="premium" onClick={() => navigate("/entities")}>
-            العودة إلى كياناتي
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const methods = [
-    { id: "card", label: "بطاقة ائتمانية / مدين", icon: "💳" },
-    { id: "bank_transfer", label: "تحويل بنكي", icon: "🏦" },
-    { id: "apple_pay", label: "Apple Pay", icon: "" },
-    { id: "google_pay", label: "Google Pay", icon: "" },
-  ] as const;
 
   return (
     <Card className="shadow-card">
-      <CardHeader>
-        <CardTitle>الدفع وإتمام الطلب</CardTitle>
-      </CardHeader>
+      <CardHeader><CardTitle>Engagement Letter Acceptance</CardTitle></CardHeader>
+      <CardContent>
+        <form onSubmit={submit} className="space-y-6">
+          <div className="rounded-xl border border-border bg-muted/10 p-5 text-sm leading-relaxed space-y-3 max-h-64 overflow-y-auto">
+            <p className="font-semibold">Terms of Engagement — Muhasba Accounting</p>
+            <p>This engagement letter confirms the terms under which Muhasba Accounting LLC will provide audit and assurance services to <strong>{entity.entity_name}</strong>.</p>
+            <p>The audit will be conducted in accordance with International Standards on Auditing (ISA) and UAE regulatory requirements. Our fees are as agreed in the Audit Fee Acknowledgement step.</p>
+            <p>By accepting this letter, you confirm that all information provided is accurate and complete, and that the entity authorizes Muhasba Accounting LLC to proceed with the engagement.</p>
+            <p className="text-muted-foreground text-xs">This submission will be authenticated via UAE PASS. An authentication request will be sent to the person responsible for the management and effective control of the entity.</p>
+          </div>
+          <Field label="Name of Authorized Signatory *">
+            <Input required value={signerName} placeholder="Full name" onChange={(e) => setSignerName(e.target.value)} />
+          </Field>
+          <label className="flex items-start gap-3 text-sm cursor-pointer border border-border rounded-lg p-4">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 size-4" />
+            <span>I accept the terms of the engagement letter and confirm that all submitted information is accurate and complete.</span>
+          </label>
+          <div className="flex justify-between pt-4 border-t border-border">
+            <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
+            <Button type="submit" variant="premium" disabled={busy || !agreed}>
+              {busy ? "Submitting..." : "Submit Application"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STEP 6 — Payment
+// ═══════════════════════════════════════════════════════════════════
+function PaymentForm({ entity, onBack, t }: any) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [method, setMethod] = useState<"card"|"bank_transfer"|"apple_pay"|"google_pay"|"">("");
+  const [busy, setBusy] = useState(false);
+  const [paid, setPaid] = useState(entity.payment_status === "paid");
+  const [cardForm, setCardForm] = useState({ number: "", expiry: "", cvv: "", name: "" });
+  const [fee, setFee] = useState(0);
+
+  useEffect(() => {
+    supabase.from("audit_fees").select("calculated_fee").eq("entity_id", entity.id).maybeSingle()
+      .then(({ data }) => setFee(data?.calculated_fee ?? 0));
+  }, [entity.id]);
+
+  const processPayment = async () => {
+    if (!method) return toast.error("Please select a payment method");
+    if (method === "card" && (!cardForm.number || !cardForm.expiry || !cardForm.cvv || !cardForm.name))
+      return toast.error("Please fill all card details");
+    setBusy(true);
+    await new Promise((r) => setTimeout(r, 2000));
+    const ref = `PAY-${entity.id.slice(0, 8).toUpperCase()}-${Date.now()}`;
+    await supabase.from("payments").insert({
+      entity_id: entity.id, user_id: user!.id,
+      amount: fee, currency: "AED", status: "paid",
+      method, reference: ref, paid_at: new Date().toISOString(),
+    });
+    await supabase.from("entities").update({ payment_status: "paid" }).eq("id", entity.id);
+    setPaid(true);
+    setBusy(false);
+    toast.success(`Payment successful — Ref: ${ref}`);
+  };
+
+  if (paid) return (
+    <Card className="shadow-card">
+      <CardContent className="py-20 text-center space-y-5">
+        <div className="size-20 rounded-full bg-green-100 dark:bg-green-900/30 grid place-items-center mx-auto">
+          <CheckCircle2 className="size-10 text-green-600" />
+        </div>
+        <div className="text-2xl font-bold text-green-600">Payment Complete</div>
+        <div className="text-muted-foreground">Your application has been submitted and paid successfully.</div>
+        <Button variant="premium" onClick={() => navigate("/entities")}>Go to My Entities</Button>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <Card className="shadow-card">
+      <CardHeader><CardTitle>Payment</CardTitle></CardHeader>
       <CardContent className="space-y-6">
-        {/* ملخص المبلغ */}
-        <div className="rounded-xl border border-border bg-gradient-to-br from-accent/20 to-transparent p-5">
-          <div className="text-sm text-muted-foreground">المبلغ المستحق</div>
+        <div className="rounded-xl border border-border bg-muted/20 p-5">
+          <div className="text-sm text-muted-foreground">Amount Due</div>
           <div className="text-4xl font-bold text-primary mt-1">
             {fee.toLocaleString()} <span className="text-base font-normal text-muted-foreground">AED</span>
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            رسوم مراجعة — الكيان: {entity.entity_name}
-          </div>
+          <div className="text-xs text-muted-foreground mt-1">Audit fee — {entity.entity_name}</div>
         </div>
 
-        {/* اختيار طريقة الدفع */}
-        <div className="space-y-2">
-          <div className="text-sm font-medium">طريقة الدفع</div>
-          <div className="grid grid-cols-2 gap-3">
-            {methods.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMethod(m.id)}
-                className={`flex items-center gap-3 rounded-xl border-2 p-3 text-sm text-start transition-colors ${
-                  method === m.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50 hover:bg-accent/20"
-                }`}
-              >
-                <span className="text-xl">{m.icon}</span>
-                <span>{m.label}</span>
-              </button>
-            ))}
-          </div>
+        <div className="grid grid-cols-2 gap-3">
+          {(["card","bank_transfer","apple_pay","google_pay"] as const).map((m) => (
+            <button key={m} type="button" onClick={() => setMethod(m)}
+              className={`border-2 rounded-xl p-3 text-sm font-medium transition-colors ${method === m ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
+              {m === "card" ? "💳 Credit / Debit Card" : m === "bank_transfer" ? "🏦 Bank Transfer" : m === "apple_pay" ? " Apple Pay" : " Google Pay"}
+            </button>
+          ))}
         </div>
 
-        {/* بيانات البطاقة */}
         {method === "card" && (
-          <div className="space-y-3 rounded-xl border border-border p-4">
-            <div className="text-sm font-medium">بيانات البطاقة</div>
-            <Field label="رقم البطاقة">
-              <Input
-                placeholder="XXXX XXXX XXXX XXXX"
-                value={cardForm.number}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/\D/g, "").slice(0, 16);
-                  const spaced = v.replace(/(\d{4})/g, "$1 ").trim();
-                  setCardForm({ ...cardForm, number: spaced });
-                }}
-                dir="ltr"
-                maxLength={19}
-              />
-            </Field>
+          <div className="space-y-3 border border-border rounded-xl p-4">
+            <Field label="Card Number"><Input value={cardForm.number} placeholder="XXXX XXXX XXXX XXXX" maxLength={19} onChange={(e) => setCardForm({ ...cardForm, number: e.target.value })} dir="ltr" /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="تاريخ الانتهاء">
-                <Input
-                  placeholder="MM/YY"
-                  value={cardForm.expiry}
-                  onChange={(e) => {
-                    let v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                    if (v.length >= 2) v = v.slice(0, 2) + "/" + v.slice(2);
-                    setCardForm({ ...cardForm, expiry: v });
-                  }}
-                  dir="ltr"
-                  maxLength={5}
-                />
-              </Field>
-              <Field label="CVV">
-                <Input
-                  placeholder="XXX"
-                  type="password"
-                  value={cardForm.cvv}
-                  onChange={(e) => setCardForm({ ...cardForm, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) })}
-                  dir="ltr"
-                  maxLength={4}
-                />
-              </Field>
+              <Field label="Expiry (MM/YY)"><Input value={cardForm.expiry} placeholder="MM/YY" maxLength={5} onChange={(e) => setCardForm({ ...cardForm, expiry: e.target.value })} dir="ltr" /></Field>
+              <Field label="CVV"><Input type="password" value={cardForm.cvv} placeholder="XXX" maxLength={4} onChange={(e) => setCardForm({ ...cardForm, cvv: e.target.value })} dir="ltr" /></Field>
             </div>
-            <Field label="اسم حامل البطاقة">
-              <Input
-                placeholder="NAME AS ON CARD"
-                value={cardForm.name}
-                onChange={(e) => setCardForm({ ...cardForm, name: e.target.value.toUpperCase() })}
-                dir="ltr"
-              />
-            </Field>
+            <Field label="Cardholder Name"><Input value={cardForm.name} placeholder="NAME AS ON CARD" onChange={(e) => setCardForm({ ...cardForm, name: e.target.value.toUpperCase() })} dir="ltr" /></Field>
           </div>
         )}
 
-        {/* تحويل بنكي */}
         {method === "bank_transfer" && (
-          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2 text-sm">
-            <div className="font-semibold">تفاصيل الحساب البنكي</div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="text-muted-foreground">اسم البنك:</div><div>Emirates NBD</div>
-              <div className="text-muted-foreground">اسم الحساب:</div><div>Muhasba Accounting LLC</div>
-              <div className="text-muted-foreground">رقم الحساب:</div><div dir="ltr">1234-5678-9012</div>
-              <div className="text-muted-foreground">IBAN:</div><div dir="ltr">AE07 0331 2345 6789 0123 456</div>
-              <div className="text-muted-foreground">Swift:</div><div>EBILAEAD</div>
-              <div className="text-muted-foreground">المرجع:</div>
-              <div className="font-mono font-bold">{entity.engagement_number ?? entity.id.slice(0, 8).toUpperCase()}</div>
-            </div>
-            <div className="text-xs text-muted-foreground mt-2">
-              ⚠️ يُرجى ذكر رقم المرجع عند التحويل. سيتم تأكيد استلام الدفع خلال 1-2 يوم عمل.
+          <div className="rounded-xl border border-border bg-muted/10 p-4 space-y-2 text-sm">
+            <div className="font-semibold">Bank Transfer Details</div>
+            <div className="grid grid-cols-2 gap-1 text-xs">
+              <span className="text-muted-foreground">Bank:</span><span>Emirates NBD</span>
+              <span className="text-muted-foreground">Account Name:</span><span>Muhasba Accounting LLC</span>
+              <span className="text-muted-foreground">IBAN:</span><span dir="ltr">AE07 0331 2345 6789 0123 456</span>
+              <span className="text-muted-foreground">Reference:</span><span className="font-mono font-bold">{entity.engagement_number ?? entity.id.slice(0, 8).toUpperCase()}</span>
             </div>
           </div>
         )}
 
-        {/* ملاحظة أمان */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>🔒</span>
-          <span>جميع معاملاتك محمية بتشفير SSL 256-bit</span>
+          🔒 All transactions are secured with SSL 256-bit encryption
         </div>
 
         <div className="flex justify-between pt-4 border-t border-border">
           <Button type="button" variant="outline" onClick={onBack}>{t("btn_back")}</Button>
-          <Button
-            type="button"
-            variant="premium"
-            disabled={busy || !method}
-            onClick={processPayment}
-            className="min-w-32"
-          >
-            {busy ? "جاري المعالجة..." : `ادفع ${fee.toLocaleString()} AED`}
+          <Button variant="premium" disabled={busy || !method} onClick={processPayment}>
+            {busy ? <><Loader2 className="size-4 animate-spin" /> Processing...</> : `Pay AED ${fee.toLocaleString()}`}
           </Button>
         </div>
       </CardContent>
