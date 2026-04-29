@@ -83,7 +83,13 @@ async function verifyNameWithOCR(
     const resp = await fetch("http://168.231.109.195:5000/verify-id", {
       method: "POST",
       body: formData,
+      // إذا كان المشروع على HTTPS، يجب أن يكون السيرفر أيضاً على HTTPS
     });
+
+    if (!resp.ok) {
+      console.error("OCR server error:", resp.status);
+      return { match: false, extractedName: "", confidence: "api_error" };
+    }
 
     if (!resp.ok) {
       return { match: false, extractedName: "", confidence: "api_error" };
@@ -515,7 +521,9 @@ function KycForm({ entity, onSaved, t }: any) {
       if (sh.id_files.length === 0) errs.push(`Shareholder ${i + 1}: Emirates ID document required`);
       if (sh.passport_files.length === 0) errs.push(`Shareholder ${i + 1}: Passport document required`);
       if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
+      if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
       if (sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Name does not match Emirates ID document`);
+      if (sh.id_files.length > 0 && sh.ocr_status === "idle") errs.push(`Shareholder ${i + 1}: ID verification did not run, please re-upload the document`);
       totalCapital += parseFloat(sh.capital) || 0;
     });
     if (shareholders.length > 0 && Math.abs(totalCapital - 100) > 0.01) {
@@ -534,7 +542,9 @@ function KycForm({ entity, onSaved, t }: any) {
         if (u.id_files.length === 0) errs.push(`UBO ${i + 1}: Emirates ID document required`);
         if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
+        if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
         if (u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Name does not match Emirates ID document`);
+        if (u.id_files.length > 0 && u.ocr_status === "idle") errs.push(`UBO ${i + 1}: ID verification did not run, please re-upload the document`);
       });
     }
 
