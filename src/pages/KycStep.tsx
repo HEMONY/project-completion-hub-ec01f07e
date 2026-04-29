@@ -421,6 +421,10 @@ function KycForm({ entity, onSaved, t }: any) {
   const [entityName, setEntityName] = useState(entity.entity_name === "Untitled Entity" ? "" : entity.entity_name);
   const [sourceOfFunds, setSourceOfFunds] = useState(entity.source_of_funds ?? "");
   const [employerName, setEmployerName] = useState(entity.employer_name ?? "");
+  const [employerEmiratesId, setEmployerEmiratesId] = useState(entity.employer_emirates_id ?? "");
+  const [employerIdFiles, setEmployerIdFiles] = useState<File[]>([]);
+  const [employerOcrStatus, setEmployerOcrStatus] = useState<"idle"|"checking"|"match"|"mismatch"|"no_key">("idle");
+  const [employerOcrExtracted, setEmployerOcrExtracted] = useState("");
   const [licenseNumber, setLicenseNumber] = useState(entity.license_number ?? "");
   const [licenseDate, setLicenseDate] = useState(entity.license_issue_date ?? "");
   const [legalType, setLegalType] = useState(entity.legal_type ?? "");
@@ -508,6 +512,12 @@ function KycForm({ entity, onSaved, t }: any) {
       errs.push("Telephone must start with +971 followed by 7-12 digits");
     }
     if (!email.trim()) errs.push("Email is required");
+    if (employerName.trim()) {
+      if (!employerEmiratesId || employerEmiratesId.length !== 15) errs.push("Employer Emirates ID must be 15 digits");
+      if (employerIdFiles.length === 0) errs.push("Employer Emirates ID document is required when employer name is provided");
+      if (employerOcrStatus === "checking") errs.push("Employer ID verification is still in progress");
+      if (employerOcrStatus === "mismatch") errs.push(`Employer name does not match Emirates ID document. Extracted: ${employerOcrExtracted || "unreadable"}`);
+    }
 
     // Shareholders
     if (shareholders.length === 0) errs.push("At least one shareholder is required");
@@ -595,6 +605,9 @@ function KycForm({ entity, onSaved, t }: any) {
       if (u.passport_files.length > 0) await uploadFiles(u.passport_files, `ubos/${u.name}/passport`);
     }
 
+    // Upload Employer ID doc
+    if (employerIdFiles.length > 0) await uploadFiles(employerIdFiles, `employer/${employerName || "unknown"}/eid`);
+
     // Upload POA
     if (poaFiles.length > 0) await uploadFiles(poaFiles, "poa");
 
@@ -613,6 +626,7 @@ function KycForm({ entity, onSaved, t }: any) {
       email,
       source_of_funds: sourceOfFunds,
       employer_name: employerName,
+      employer_emirates_id: employerEmiratesId || null,
       shareholders: shareholders.map(({ id_files, passport_files, ocr_status, ocr_extracted, ...s }) => s),
       ubos: hasUbo === "yes" ? ubos.map(({ id_files, passport_files, ocr_status, ocr_extracted, ...u }) => u) : [],
       pep_exists: hasPep === "yes",
@@ -665,6 +679,37 @@ function KycForm({ entity, onSaved, t }: any) {
                 <Field label="Name of Employer" required>
                   <Input required value={employerName} placeholder="e.g., Employer name, Self employed" onChange={(e) => setEmployerName(e.target.value)} />
                 </Field>
+                <Field label="Employer Emirates ID Number (15 digits)" required>
+                  <Input
+                    required
+                    value={employerEmiratesId}
+                    placeholder="784XXXXXXXXXX"
+                    maxLength={15}
+                    onChange={(e) => setEmployerEmiratesId(e.target.value.replace(/\D/g, "").slice(0, 15))}
+                  />
+                </Field>
+                <FileUploadZone
+                  label="Upload Employer Emirates ID"
+                  files={employerIdFiles}
+                  onChange={(files) => {
+                    setEmployerIdFiles(files);
+                    if (files.length > 0 && employerName.trim()) {
+                      setEmployerOcrStatus("checking");
+                      verifyNameWithOCR(files[0], employerName).then((result) => {
+                        setEmployerOcrStatus(result.confidence === "no_key" ? "no_key" : result.match ? "match" : "mismatch");
+                        setEmployerOcrExtracted(result.extractedName);
+                      });
+                    }
+                  }}
+                  accept="image/*,.pdf"
+                  single
+                />
+                <OcrBadge status={employerOcrStatus} extractedName={employerOcrExtracted} />
+                {employerOcrStatus === "mismatch" && (
+                  <div className="text-xs text-destructive bg-destructive/10 rounded p-2">
+                    ⚠️ The employer name entered does not match the Emirates ID. Please verify and correct.
+                  </div>
+                )}
               </>
             )}
 
