@@ -185,13 +185,18 @@ function PersonCard({
 }) {
   const set = (k: keyof Person, v: any) => onChange({ ...person, [k]: v });
 
-  const runOCR = async (files: File[]) => {
-    if (files.length === 0 || !person.name.trim()) return;
-    set("ocr_status", "checking");
-    const result = await verifyNameWithOCR(files[0], person.name);
+  const runOCR = async (files?: File[]) => {
+    const filesToUse = files ?? person.id_files;
+    if (filesToUse.length === 0) return;
+    if (!person.name.trim()) {
+      toast.error("Please enter the full name before verifying the ID");
+      return;
+    }
+    onChange({ ...person, id_files: filesToUse, ocr_status: "checking" });
+    const result = await verifyNameWithOCR(filesToUse[0], person.name);
     onChange({
       ...person,
-      id_files: files,
+      id_files: filesToUse,
       ocr_status: result.confidence === "no_api_key" ? "no_key" : result.match ? "match" : "mismatch",
       ocr_extracted: result.extractedName,
     });
@@ -258,12 +263,25 @@ function PersonCard({
             label="Upload Emirates ID *"
             files={person.id_files}
             onChange={(files) => {
-              set("id_files", files);
-              if (files.length > 0 && person.name.trim()) runOCR(files);
+              onChange({ ...person, id_files: files, ocr_status: "idle" });
             }}
-            accept="image/png,image/jpeg,image/jpg"
+            accept="image/*,.pdf"
             single
           />
+          {person.id_files.length > 0 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full mt-1"
+              disabled={person.ocr_status === "checking"}
+              onClick={() => runOCR()}
+            >
+              {person.ocr_status === "checking"
+                ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
+                : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Name against ID</>}
+            </Button>
+          )}
           <OcrBadge status={person.ocr_status} extractedName={person.ocr_extracted} />
           {person.ocr_status === "mismatch" && (
             <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
