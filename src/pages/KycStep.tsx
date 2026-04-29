@@ -72,7 +72,7 @@ async function verifyWithOCR(
     formData.append("name", enteredName);
 
     const endpoint = type === "license" ? "/verify-license" : "/verify-id";
-    const resp = await fetch(`http://168.231.109.195:5000${endpoint}`, {
+    const resp = await fetch(`https://server.muhasba.com${endpoint}`, {
       method: "POST",
       body: formData,
     });
