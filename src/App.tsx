@@ -7,7 +7,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { AuthProvider } from "@/lib/auth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Home from "./pages/Home";          // ← أضف هذا
+import Home from "./pages/Home";
 import Entities from "./pages/Entities";
 import KycStart from "./pages/KycStart";
 import KycStep from "./pages/KycStep";
@@ -16,7 +16,7 @@ import Sanctions from "./pages/Sanctions";
 import Audits from "./pages/Audits";
 import CddVerification from "./pages/CddVerification";
 import Admin from "./pages/Admin";
-import AuditResult from "./pages/AuditResult";  // ← أضف هذا
+import AuditResult from "./pages/AuditResult";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
