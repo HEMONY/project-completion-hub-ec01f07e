@@ -261,7 +261,7 @@ function PersonCard({
               set("id_files", files);
               if (files.length > 0 && person.name.trim()) runOCR(files);
             }}
-            accept="image/*,.pdf"
+            accept="image/png,image/jpeg,image/jpg"
             single
           />
           <OcrBadge status={person.ocr_status} extractedName={person.ocr_extracted} />
@@ -683,7 +683,7 @@ function KycForm({ entity, onSaved, t }: any) {
                       });
                     }
                   }}
-                  accept="image/*,.pdf"
+                  accept="image/png,image/jpeg,image/jpg"
                   single
                 />
                 <OcrBadge status={employerOcrStatus} extractedName={employerOcrExtracted} />
@@ -875,7 +875,7 @@ function KycForm({ entity, onSaved, t }: any) {
                       label="PEP Declaration Document *"
                       files={p.file ? [p.file] : []}
                       onChange={(files) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, file: files[0] ?? null } : x))}
-                      accept="image/*,.pdf" single
+                      accept="image/png,image/jpeg,image/jpg" single
                     />
                   </div>
                 ))}
