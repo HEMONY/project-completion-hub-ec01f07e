@@ -61,35 +61,33 @@ function SectionTitle({ number, title }: { number: number; title: string }) {
 
 // ── OCR Name Verification ─────────────────────────────────────────────────
 // ── OCR Name Verification ─────────────────────────────────────────────────
-async function verifyNameWithOCR(
+async function verifyWithOCR(
   imageFile: File,
-  enteredName: string
-): Promise<{ match: boolean; extractedName: string; confidence: string }> {
+  enteredName: string,
+  type: "id" | "license" = "id"
+): Promise<{ match: boolean; extractedName: string; dates: Record<string, string>; confidence: string }> {
   try {
     const formData = new FormData();
     formData.append("image", imageFile);
     formData.append("name", enteredName);
 
-    const resp = await fetch("http://168.231.109.195:5000/verify-id", {
+    const endpoint = type === "license" ? "/verify-license" : "/verify-id";
+    const resp = await fetch(`http://168.231.109.195:5000${endpoint}`, {
       method: "POST",
       body: formData,
     });
 
-    if (!resp.ok) {
-      console.error("OCR server error:", resp.status);
-      return { match: false, extractedName: "", confidence: "api_error" };
-    }
+    if (!resp.ok) return { match: false, extractedName: "", dates: {}, confidence: "api_error" };
 
     const data = await resp.json();
-
     return {
       match: data.match,
       extractedName: data.extractedName ?? "",
+      dates: data.dates ?? {},
       confidence: data.match ? "high" : "low",
     };
-  } catch (err) {
-    console.error("OCR fetch error:", err);
-    return { match: false, extractedName: "", confidence: "error" };
+  } catch {
+    return { match: false, extractedName: "", dates: {}, confidence: "error" };
   }
 }
 
@@ -189,15 +187,15 @@ function PersonCard({
     const filesToUse = files ?? person.id_files;
     if (filesToUse.length === 0) return;
     if (!person.name.trim()) {
-      toast.error("Please enter the full name before verifying the ID");
+      toast.error("Please enter the full name before verifying");
       return;
     }
     onChange({ ...person, id_files: filesToUse, ocr_status: "checking" });
-    const result = await verifyNameWithOCR(filesToUse[0], person.name);
+    const result = await verifyWithOCR(filesToUse[0], person.name, "id");//const result = await verifyWithOCR(filesToUse[0], person.name, "id");
     onChange({
       ...person,
       id_files: filesToUse,
-      ocr_status: result.confidence === "no_api_key" ? "no_key" : result.match ? "match" : "mismatch",
+      ocr_status: result.match ? "match" : "mismatch",
       ocr_extracted: result.extractedName,
     });
   };
@@ -262,18 +260,13 @@ function PersonCard({
           <FileUploadZone
             label="Upload Emirates ID *"
             files={person.id_files}
-            onChange={(files) => {
-              onChange({ ...person, id_files: files, ocr_status: "idle" });
-            }}
-            accept="image/*,.pdf"
+            onChange={(files) => onChange({ ...person, id_files: files, ocr_status: "idle" })}
+            accept="image/png,image/jpeg,image/jpg,.pdf"
             single
           />
           {person.id_files.length > 0 && (
             <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="w-full mt-1"
+              type="button" size="sm" variant="outline" className="w-full"
               disabled={person.ocr_status === "checking"}
               onClick={() => runOCR()}
             >
@@ -288,7 +281,7 @@ function PersonCard({
               <div className="font-semibold">⚠️ Name Mismatch — Cannot Proceed</div>
               <div>Name you entered: <span className="font-bold">{person.name}</span></div>
               <div>Name on Emirates ID: <span className="font-bold">{person.ocr_extracted || "Could not be read"}</span></div>
-              <div className="text-xs text-muted-foreground mt-1">Please correct the name above to match exactly what appears on the ID.</div>
+              <div className="text-xs text-muted-foreground mt-1">Please correct the name to match exactly what appears on the ID.</div>
             </div>
           )}
         </div>
@@ -695,8 +688,8 @@ function KycForm({ entity, onSaved, t }: any) {
                     setEmployerIdFiles(files);
                     if (files.length > 0 && employerName.trim()) {
                       setEmployerOcrStatus("checking");
-                      verifyNameWithOCR(files[0], employerName).then((result) => {
-                        setEmployerOcrStatus(result.confidence === "no_key" ? "no_key" : result.match ? "match" : "mismatch");
+                      verifyWithOCR(files[0], employerName, "id").then((result) => {
+                        setEmployerOcrStatus(result.match ? "match" : "mismatch");
                         setEmployerOcrExtracted(result.extractedName);
                       });
                     }
@@ -874,35 +867,46 @@ function KycForm({ entity, onSaved, t }: any) {
               </div>
             </Field>
             {hasPep === "yes" && (
-              <div className="space-y-3">
-                {pepPersons.map((p, i) => (
-                  <div key={i} className="border border-border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted-foreground">PEP {i + 1}</span>
-                      {pepPersons.length > 1 && (
-                        <Button type="button" size="sm" variant="ghost" className="text-destructive h-7"
-                          onClick={() => setPepPersons(pepPersons.filter((_, idx) => idx !== i))}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      )}
+                <div className="space-y-3">
+                  {pepPersons.map((p, i) => (
+                    <div key={i} className="border border-border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-muted-foreground">PEP {i + 1}</span>
+                        {pepPersons.length > 1 && (
+                          <Button type="button" size="sm" variant="ghost" className="text-destructive h-7"
+                            onClick={() => setPepPersons(pepPersons.filter((_, idx) => idx !== i))}>
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                      <Field label="PEP Name" required>
+                        <Input required value={p.name} placeholder="Full name" onChange={(e) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x))} />
+                      </Field>
+                      <div className="space-y-2">
+                        <FileUploadZone
+                          label="PEP Declaration Document *"
+                          files={p.file ? [p.file] : []}
+                          onChange={(files) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, file: files[0] ?? null } : x))}
+                          accept="image/png,image/jpeg,image/jpg,.pdf,.docx"
+                          single
+                        />
+                        
+                        <a  href="/Declaration_of_Source_of_Funds.docx"
+                          download
+                          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                        >
+                          <FileText className="size-3.5" />
+                          Download PEP Declaration Template
+                        </a>
+                      </div>
                     </div>
-                    <Field label="PEP Name" required>
-                      <Input required value={p.name} placeholder="Full name" onChange={(e) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x))} />
-                    </Field>
-                    <FileUploadZone
-                      label="PEP Declaration Document *"
-                      files={p.file ? [p.file] : []}
-                      onChange={(files) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, file: files[0] ?? null } : x))}
-                      accept="image/png,image/jpeg,image/jpg" single
-                    />
-                  </div>
-                ))}
-                <Button type="button" variant="outline" size="sm" onClick={() => setPepPersons([...pepPersons, { name: "", file: null }])}>
-                  <Plus className="size-3.5" /> Add PEP Name
-                </Button>
-              </div>
-            )}
-          </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={() => setPepPersons([...pepPersons, { name: "", file: null }])}>
+                    <Plus className="size-3.5" /> Add PEP Name
+                  </Button>
+                </div>
+              )}
+            </div>
 
           {/* ── SECTION 7: Compliance & Legal Declarations ── */}
           <SectionTitle number={7} title="Compliance & Legal Declarations" />
