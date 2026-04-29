@@ -64,55 +64,38 @@ async function verifyNameWithOCR(
   imageFile: File,
   enteredName: string
 ): Promise<{ match: boolean; extractedName: string; confidence: string }> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? "";
+  /*onst apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? "";
   if (!apiKey) return { match: false, extractedName: "", confidence: "no_api_key" };
 
   const reader = new FileReader();
   const b64 = await new Promise<string>((res) => {
     reader.onload = () => res((reader.result as string).split(",")[1]);
     reader.readAsDataURL(imageFile);
-  });
+  });*/
 
   const mime = imageFile.type || "image/jpeg";
 
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+    formData.append("name", enteredName);
+
+    const resp = await fetch("http://168.231.109.195:5000/verify-id", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 200,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
-            {
-              type: "text",
-              text: `Extract the full name from this Emirates ID or passport image. Reply with JSON only:
-{"name": "extracted full name here", "confidence": "high|medium|low"}
-If you cannot read the name, use {"name": "", "confidence": "low"}`,
-            },
-          ],
-        }],
-      }),
+      body: formData,
     });
-    if (!resp.ok) return { match: false, extractedName: "", confidence: "api_error" };
+
+    if (!resp.ok) {
+      return { match: false, extractedName: "", confidence: "api_error" };
+    }
+
     const data = await resp.json();
-    const text = data.content?.[0]?.text ?? "";
-    const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-    const extracted = (parsed.name ?? "").toLowerCase().trim();
-    const entered = enteredName.toLowerCase().trim();
-    const match = extracted.length > 0 && (
-      extracted === entered ||
-      extracted.includes(entered) ||
-      entered.includes(extracted) ||
-      extracted.split(" ").some((w: string) => w.length > 3 && entered.includes(w))
-    );
-    return { match, extractedName: parsed.name ?? "", confidence: parsed.confidence ?? "low" };
+
+    return {
+      match: data.match,
+      extractedName: data.extractedName ?? "",
+      confidence: data.match ? "high" : "low",
+    };
   } catch {
     return { match: false, extractedName: "", confidence: "error" };
   }
