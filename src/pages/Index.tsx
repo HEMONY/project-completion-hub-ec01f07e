@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,7 @@ export default function Index() {
   const { user, loading } = useAuth();
   const { t, dir } = useI18n();
   const navigate = useNavigate();
+  if (!loading && !user) return <Navigate to="/home" />;
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [stats, setStats] = useState({ submitted: 0, approved: 0, rejected: 0, draft: 0 });
 
