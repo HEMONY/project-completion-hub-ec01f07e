@@ -60,21 +60,11 @@ function SectionTitle({ number, title }: { number: number; title: string }) {
 }
 
 // ── OCR Name Verification ─────────────────────────────────────────────────
+// ── OCR Name Verification ─────────────────────────────────────────────────
 async function verifyNameWithOCR(
   imageFile: File,
   enteredName: string
 ): Promise<{ match: boolean; extractedName: string; confidence: string }> {
-  /*onst apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? "";
-  if (!apiKey) return { match: false, extractedName: "", confidence: "no_api_key" };
-
-  const reader = new FileReader();
-  const b64 = await new Promise<string>((res) => {
-    reader.onload = () => res((reader.result as string).split(",")[1]);
-    reader.readAsDataURL(imageFile);
-  });*/
-
-  const mime = imageFile.type || "image/jpeg";
-
   try {
     const formData = new FormData();
     formData.append("image", imageFile);
@@ -83,15 +73,10 @@ async function verifyNameWithOCR(
     const resp = await fetch("http://168.231.109.195:5000/verify-id", {
       method: "POST",
       body: formData,
-      // إذا كان المشروع على HTTPS، يجب أن يكون السيرفر أيضاً على HTTPS
     });
 
     if (!resp.ok) {
       console.error("OCR server error:", resp.status);
-      return { match: false, extractedName: "", confidence: "api_error" };
-    }
-
-    if (!resp.ok) {
       return { match: false, extractedName: "", confidence: "api_error" };
     }
 
@@ -102,7 +87,8 @@ async function verifyNameWithOCR(
       extractedName: data.extractedName ?? "",
       confidence: data.match ? "high" : "low",
     };
-  } catch {
+  } catch (err) {
+    console.error("OCR fetch error:", err);
     return { match: false, extractedName: "", confidence: "error" };
   }
 }
@@ -280,8 +266,11 @@ function PersonCard({
           />
           <OcrBadge status={person.ocr_status} extractedName={person.ocr_extracted} />
           {person.ocr_status === "mismatch" && (
-            <div className="text-xs text-destructive bg-destructive/10 rounded p-2">
-              ⚠️ The name entered does not match the Emirates ID. Please verify and correct.
+            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+              <div className="font-semibold">⚠️ Name Mismatch — Cannot Proceed</div>
+              <div>Name you entered: <span className="font-bold">{person.name}</span></div>
+              <div>Name on Emirates ID: <span className="font-bold">{person.ocr_extracted || "Could not be read"}</span></div>
+              <div className="text-xs text-muted-foreground mt-1">Please correct the name above to match exactly what appears on the ID.</div>
             </div>
           )}
         </div>
@@ -699,8 +688,11 @@ function KycForm({ entity, onSaved, t }: any) {
                 />
                 <OcrBadge status={employerOcrStatus} extractedName={employerOcrExtracted} />
                 {employerOcrStatus === "mismatch" && (
-                  <div className="text-xs text-destructive bg-destructive/10 rounded p-2">
-                    ⚠️ The employer name entered does not match the Emirates ID. Please verify and correct.
+                  <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+                    <div className="font-semibold">⚠️ Employer Name Mismatch — Cannot Proceed</div>
+                    <div>Name you entered: <span className="font-bold">{employerName}</span></div>
+                    <div>Name on Emirates ID: <span className="font-bold">{employerOcrExtracted || "Could not be read"}</span></div>
+                    <div className="text-xs text-muted-foreground mt-1">Please correct the employer name to match exactly what appears on the ID.</div>
                   </div>
                 )}
               </>
