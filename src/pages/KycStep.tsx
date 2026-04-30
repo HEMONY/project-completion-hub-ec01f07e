@@ -66,9 +66,8 @@ async function verifyWithOCR(
   enteredName: string,
   type: "id" | "license" = "id"
 ): Promise<{ match: boolean; extractedName: string; dates: Record<string, string>; confidence: string }> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? "";
-  if (!apiKey) return { match: false, extractedName: "", dates: {}, confidence: "no_api_key" };
-
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   // Convert file to base64
   const b64 = await new Promise<string>((res, rej) => {
     const reader = new FileReader();
@@ -108,34 +107,23 @@ Extract ALL of the following fields and return ONLY a valid JSON object — no m
 }`;
 
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const resp = await fetch(`${supabaseUrl}/functions/v1/ocr-verify`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        "apikey": supabaseKey,
+        "Authorization": `Bearer ${supabaseKey}`,
       },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 512,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
-            { type: "text", text: prompt },
-          ],
-        }],
-      }),
+      body: JSON.stringify({ imageB64: b64, imageMime: mime, enteredName, type }),
     });
 
     if (!resp.ok) {
-      console.error("Claude API error:", resp.status, await resp.text());
+      console.error("OCR error:", resp.status, await resp.text());
       return { match: false, extractedName: "", dates: {}, confidence: "api_error" };
     }
 
     const data = await resp.json();
-    const raw = (data.content?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(raw);
+    const parsed = data;
 
     return {
       match: parsed.match === true,
