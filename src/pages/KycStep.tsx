@@ -60,33 +60,99 @@ function SectionTitle({ number, title }: { number: number; title: string }) {
 }
 
 // ── OCR Name Verification ─────────────────────────────────────────────────
-// ── OCR Name Verification ─────────────────────────────────────────────────
+// ── OCR Name Verification via Claude Vision API ────────────────────────────
 async function verifyWithOCR(
   imageFile: File,
   enteredName: string,
   type: "id" | "license" = "id"
 ): Promise<{ match: boolean; extractedName: string; dates: Record<string, string>; confidence: string }> {
-  try {
-    const formData = new FormData();
-    formData.append("image", imageFile);
-    formData.append("name", enteredName);
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? "";
+  if (!apiKey) return { match: false, extractedName: "", dates: {}, confidence: "no_api_key" };
 
-    const endpoint = type === "license" ? "/verify-license" : "/verify-id";
-    const resp = await fetch(`https://server.muhasba.com${endpoint}`, {
+  // Convert file to base64
+  const b64 = await new Promise<string>((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => res((reader.result as string).split(",")[1]);
+    reader.onerror = () => rej(new Error("File read failed"));
+    reader.readAsDataURL(imageFile);
+  });
+
+  // Claude Vision only supports image types — PDFs must be sent as image/jpeg
+  const mime: "image/jpeg" | "image/png" | "image/gif" | "image/webp" =
+    imageFile.type === "image/png"  ? "image/png"  :
+    imageFile.type === "image/gif"  ? "image/gif"  :
+    imageFile.type === "image/webp" ? "image/webp" :
+    "image/jpeg";
+
+  const prompt = type === "license"
+    ? `This is a UAE Trade License / Professional License document.
+Extract ALL of the following fields and return ONLY a valid JSON object — no markdown, no extra text:
+{
+  "extractedName": "<Trade Name exactly as printed>",
+  "licenseNumber": "<License No value>",
+  "issueDate": "<Issue Date as DD/MM/YYYY>",
+  "expiryDate": "<Expiry Date as DD/MM/YYYY>",
+  "legalType": "<Legal Type e.g. Sole Establishment, LLC>",
+  "match": <true if extractedName matches "${enteredName}" ignoring case/spaces/punctuation, otherwise false>
+}`
+    : `This is a UAE Emirates ID (front and back) or passport.
+Extract ALL of the following fields and return ONLY a valid JSON object — no markdown, no extra text:
+{
+  "extractedName": "<Full Name in English exactly as printed>",
+  "idNumber": "<ID Number>",
+  "dateOfBirth": "<Date of Birth as DD/MM/YYYY>",
+  "expiryDate": "<Expiry Date as DD/MM/YYYY>",
+  "issuingDate": "<Issuing Date as DD/MM/YYYY>",
+  "nationality": "<Nationality>",
+  "match": <true if extractedName matches "${enteredName}" — consider a match if all words in the entered name appear in the extracted name ignoring case/spaces, otherwise false>
+}`;
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 512,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
+            { type: "text", text: prompt },
+          ],
+        }],
+      }),
     });
 
-    if (!resp.ok) return { match: false, extractedName: "", dates: {}, confidence: "api_error" };
+    if (!resp.ok) {
+      console.error("Claude API error:", resp.status, await resp.text());
+      return { match: false, extractedName: "", dates: {}, confidence: "api_error" };
+    }
 
     const data = await resp.json();
+    const raw = (data.content?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(raw);
+
     return {
-      match: data.match,
-      extractedName: data.extractedName ?? "",
-      dates: data.dates ?? {},
-      confidence: data.match ? "high" : "low",
+      match: parsed.match === true,
+      extractedName: parsed.extractedName ?? "",
+      dates: {
+        ...(parsed.issueDate     && { issue_date:      parsed.issueDate }),
+        ...(parsed.issuingDate   && { issuing_date:    parsed.issuingDate }),
+        ...(parsed.expiryDate    && { expiry_date:     parsed.expiryDate }),
+        ...(parsed.dateOfBirth   && { dob:             parsed.dateOfBirth }),
+        ...(parsed.licenseNumber && { license_number:  parsed.licenseNumber }),
+        ...(parsed.idNumber      && { id_number:       parsed.idNumber }),
+        ...(parsed.legalType     && { legal_type:      parsed.legalType }),
+      },
+      confidence: parsed.match ? "high" : "low",
     };
-  } catch {
+  } catch (err) {
+    console.error("OCR error:", err);
     return { match: false, extractedName: "", dates: {}, confidence: "error" };
   }
 }
@@ -191,7 +257,7 @@ function PersonCard({
       return;
     }
     onChange({ ...person, id_files: filesToUse, ocr_status: "checking" });
-    const result = await verifyWithOCR(filesToUse[0], person.name, "id");//const result = await verifyWithOCR(filesToUse[0], person.name, "id");
+    const result = await verifyWithOCR(filesToUse[0], person.name, "id");
     onChange({
       ...person,
       id_files: filesToUse,
@@ -420,6 +486,9 @@ function KycForm({ entity, onSaved, t }: any) {
   const [principalActivity, setPrincipalActivity] = useState(entity.principal_activity ?? entity.main_activity ?? "");
   const [economicSector, setEconomicSector] = useState(entity.economic_sector ?? "");
   const [licenseFiles, setLicenseFiles] = useState<File[]>([]);
+  const [licenseOcrStatus, setLicenseOcrStatus] = useState<"idle"|"checking"|"match"|"mismatch"|"no_key">("idle");
+  const [licenseOcrExtracted, setLicenseOcrExtracted] = useState("");
+  const [licenseOcrDates, setLicenseOcrDates] = useState<Record<string, string>>({});
 
   // § Section 2 — Contact Details
   const [emirate, setEmirate] = useState(entity.emirate ?? "");
@@ -492,6 +561,8 @@ function KycForm({ entity, onSaved, t }: any) {
     if (!entityName.trim()) errs.push("Owner/Company name is required");
     if (isLicensed && !licenseNumber.trim()) errs.push("License number is required");
     if (isLicensed && !licenseDate) errs.push("License issue date is required");
+    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "checking") errs.push("Trade License verification still in progress, please wait");
+    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "mismatch") errs.push(`Company name does not match Trade License. License shows: "${licenseOcrExtracted || "unreadable"}"`);
     if (!principalActivity.trim()) errs.push("Principal Activity is required");
     if (!economicSector) errs.push("Economic Sector is required");
     if (!emirate) errs.push("Emirate is required");
@@ -523,7 +594,6 @@ function KycForm({ entity, onSaved, t }: any) {
       if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
       if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
       if (sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Name does not match Emirates ID document`);
-      if (sh.id_files.length > 0 && sh.ocr_status === "idle") errs.push(`Shareholder ${i + 1}: ID verification did not run, please re-upload the document`);
       totalCapital += parseFloat(sh.capital) || 0;
     });
     if (shareholders.length > 0 && Math.abs(totalCapital - 100) > 0.01) {
@@ -544,7 +614,6 @@ function KycForm({ entity, onSaved, t }: any) {
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
         if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
         if (u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Name does not match Emirates ID document`);
-        if (u.id_files.length > 0 && u.ocr_status === "idle") errs.push(`UBO ${i + 1}: ID verification did not run, please re-upload the document`);
       });
     }
 
@@ -681,31 +750,44 @@ function KycForm({ entity, onSaved, t }: any) {
                     onChange={(e) => setEmployerEmiratesId(e.target.value.replace(/\D/g, "").slice(0, 15))}
                   />
                 </Field>
-                <FileUploadZone
-                  label="Upload Employer Emirates ID"
-                  files={employerIdFiles}
-                  onChange={(files) => {
-                    setEmployerIdFiles(files);
-                    if (files.length > 0 && employerName.trim()) {
-                      setEmployerOcrStatus("checking");
-                      verifyWithOCR(files[0], employerName, "id").then((result) => {
+                <div className="space-y-2">
+                  <FileUploadZone
+                    label="Upload Employer Emirates ID"
+                    files={employerIdFiles}
+                    onChange={(files) => {
+                      setEmployerIdFiles(files);
+                      setEmployerOcrStatus("idle");
+                    }}
+                    accept="image/png,image/jpeg,image/jpg,.pdf"
+                    single
+                  />
+                  {employerIdFiles.length > 0 && (
+                    <Button
+                      type="button" size="sm" variant="outline" className="w-full"
+                      disabled={employerOcrStatus === "checking"}
+                      onClick={async () => {
+                        if (!employerName.trim()) { toast.error("Please enter employer name first"); return; }
+                        setEmployerOcrStatus("checking");
+                        const result = await verifyWithOCR(employerIdFiles[0], employerName, "id");
                         setEmployerOcrStatus(result.match ? "match" : "mismatch");
                         setEmployerOcrExtracted(result.extractedName);
-                      });
-                    }
-                  }}
-                  accept="image/png,image/jpeg,image/jpg"
-                  single
-                />
-                <OcrBadge status={employerOcrStatus} extractedName={employerOcrExtracted} />
-                {employerOcrStatus === "mismatch" && (
-                  <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
-                    <div className="font-semibold">⚠️ Employer Name Mismatch — Cannot Proceed</div>
-                    <div>Name you entered: <span className="font-bold">{employerName}</span></div>
-                    <div>Name on Emirates ID: <span className="font-bold">{employerOcrExtracted || "Could not be read"}</span></div>
-                    <div className="text-xs text-muted-foreground mt-1">Please correct the employer name to match exactly what appears on the ID.</div>
-                  </div>
-                )}
+                      }}
+                    >
+                      {employerOcrStatus === "checking"
+                        ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
+                        : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Employer ID</>}
+                    </Button>
+                  )}
+                  <OcrBadge status={employerOcrStatus} extractedName={employerOcrExtracted} />
+                  {employerOcrStatus === "mismatch" && (
+                    <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+                      <div className="font-semibold">⚠️ Employer Name Mismatch — Cannot Proceed</div>
+                      <div>Name you entered: <span className="font-bold">{employerName}</span></div>
+                      <div>Name on Emirates ID: <span className="font-bold">{employerOcrExtracted || "Could not be read"}</span></div>
+                      <div className="text-xs text-muted-foreground mt-1">Please correct the employer name to match the ID.</div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -725,7 +807,54 @@ function KycForm({ entity, onSaved, t }: any) {
                     </NativeSelect>
                   </Field>
                 )}
-                <FileUploadZone label="Upload Trade License *" files={licenseFiles} onChange={setLicenseFiles} accept="image/*,.pdf" single />
+                <div className="space-y-2">
+                  <FileUploadZone
+                    label="Upload Trade License *"
+                    files={licenseFiles}
+                    onChange={(files) => {
+                      setLicenseFiles(files);
+                      setLicenseOcrStatus("idle");
+                      setLicenseOcrDates({});
+                    }}
+                    accept="image/*,.pdf"
+                    single
+                  />
+                  {licenseFiles.length > 0 && (
+                    <Button
+                      type="button" size="sm" variant="outline" className="w-full"
+                      disabled={licenseOcrStatus === "checking"}
+                      onClick={async () => {
+                        if (!entityName.trim()) { toast.error("Please enter company name first"); return; }
+                        setLicenseOcrStatus("checking");
+                        const result = await verifyWithOCR(licenseFiles[0], entityName, "license");
+                        setLicenseOcrStatus(result.match ? "match" : "mismatch");
+                        setLicenseOcrExtracted(result.extractedName);
+                        setLicenseOcrDates(result.dates);
+                      }}
+                    >
+                      {licenseOcrStatus === "checking"
+                        ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying License...</>
+                        : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Trade License</>}
+                    </Button>
+                  )}
+                  <OcrBadge status={licenseOcrStatus} extractedName={licenseOcrExtracted} />
+                  {Object.keys(licenseOcrDates).length > 0 && (
+                    <div className="text-xs bg-muted/40 border border-border rounded-lg p-2 space-y-0.5">
+                      {licenseOcrDates.license_number && <div>🔢 License No: <span className="font-semibold">{licenseOcrDates.license_number}</span></div>}
+                      {licenseOcrDates.issue_date     && <div>📅 Issue Date: <span className="font-semibold">{licenseOcrDates.issue_date}</span></div>}
+                      {licenseOcrDates.expiry_date    && <div>⏳ Expiry Date: <span className="font-semibold">{licenseOcrDates.expiry_date}</span></div>}
+                      {licenseOcrDates.legal_type     && <div>🏢 Legal Type: <span className="font-semibold">{licenseOcrDates.legal_type}</span></div>}
+                    </div>
+                  )}
+                  {licenseOcrStatus === "mismatch" && (
+                    <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+                      <div className="font-semibold">⚠️ License Name Mismatch — Cannot Proceed</div>
+                      <div>Name you entered: <span className="font-bold">{entityName}</span></div>
+                      <div>Name on License: <span className="font-bold">{licenseOcrExtracted || "Could not be read"}</span></div>
+                      <div className="text-xs text-muted-foreground mt-1">Please correct the company name to match the license.</div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
