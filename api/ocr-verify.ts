@@ -21,6 +21,9 @@ serve(async (req) => {
         raw: rawBody.slice(0, 100)
     }), { status: 400, headers: cors });
     }
+    console.log("RAW BODY:", rawBody);
+    console.log("PARSED BODY:", body);
+
     console.log("BODY KEYS:", Object.keys(body));
 
     const imageBase64 =
