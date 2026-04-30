@@ -10,7 +10,18 @@ serve(async (req) => {
 
   try {
     //const { imageB64, imageMime, enteredName, type } = await req.json();
-    const body = await req.json();
+    const rawBody = await req.text();
+
+    let body;
+    try {
+    body = JSON.parse(rawBody);
+    } catch {
+    return new Response(JSON.stringify({
+        error: "Invalid JSON body",
+        raw: rawBody.slice(0, 100)
+    }), { status: 400, headers: cors });
+    }
+    console.log("BODY KEYS:", Object.keys(body));
 
     const imageBase64 =
     body.image ||
