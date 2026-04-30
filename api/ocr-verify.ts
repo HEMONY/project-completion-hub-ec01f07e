@@ -6,37 +6,27 @@ const cors = {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { status: 200, headers: cors });
+  }
 
   try {
-    //const { imageB64, imageMime, enteredName, type } = await req.json();
-    const rawBody = await req.text();
+    const body = await req.json();
 
-    let body;
-    try {
-    body = JSON.parse(rawBody);
-    } catch {
-    return new Response(JSON.stringify({
-        error: "Invalid JSON body",
-        raw: rawBody.slice(0, 100)
-    }), { status: 400, headers: cors });
-    }
-    console.log("RAW BODY:", rawBody);
-    console.log("PARSED BODY:", body);
-
-    console.log("BODY KEYS:", Object.keys(body));
+    console.log("BODY:", body);
+    console.log("BODY KEYS:", Object.keys(body || {}));
 
     const imageBase64 =
-    body.image ||
-    body.imageB64 ||
-    body.file ||
-    null;
+      body.imageB64 ||
+      body.image ||
+      body.file ||
+      null;
 
     const mimeType =
-    body.mimeType ||
-    body.imageMime ||
-    body.fileType ||
-    null;
+      body.imageMime ||
+      body.mimeType ||
+      body.fileType ||
+      null;
 
     const enteredName = body.enteredName || "";
     const type = body.type || "";
