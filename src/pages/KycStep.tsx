@@ -107,7 +107,7 @@ Extract ALL of the following fields and return ONLY a valid JSON object — no m
 }`;
 
   try {
-    const resp = await fetch(`${supabaseUrl}/functions/v1/ocr-verify`, {
+    const resp = await fetch(`${supabaseUrl}/functions/v1/verify-id-ocr`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
