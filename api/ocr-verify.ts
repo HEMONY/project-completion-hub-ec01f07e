@@ -9,7 +9,43 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
-    const { imageB64, imageMime, enteredName, type } = await req.json();
+    //const { imageB64, imageMime, enteredName, type } = await req.json();
+    const body = await req.json();
+
+    const imageBase64 =
+    body.image ||
+    body.imageB64 ||
+    body.file ||
+    null;
+
+    const mimeType =
+    body.mimeType ||
+    body.imageMime ||
+    body.fileType ||
+    null;
+
+    const enteredName = body.enteredName || "";
+    const type = body.type || "";
+    if (!imageBase64 || !mimeType) {
+        return new Response(JSON.stringify({
+            error: "Missing required OCR input"
+        }), { status: 400, headers: cors });
+    }
+
+    const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/webp",
+        "image/heic",
+        "application/pdf"
+    ];
+
+    if (!allowedTypes.includes(mimeType)) {
+        return new Response(JSON.stringify({
+            error: "Unsupported file type"
+        }), { status: 400, headers: cors });
+    }
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return new Response(JSON.stringify({ error: "No API key" }), { status: 500, headers: cors });
 
@@ -32,7 +68,7 @@ serve(async (req) => {
         messages: [{
           role: "user",
           content: [
-            { type: "image", source: { type: "base64", media_type: imageMime ?? "image/jpeg", data: imageB64 } },
+            { type: "image", source: { type: "base64", media_type: mimeType ?? "image/jpeg", data: imageBase64 } },
             { type: "text", text: prompt },
           ],
         }],
