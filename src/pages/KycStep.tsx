@@ -66,8 +66,6 @@ async function verifyWithOCR(
   enteredName: string,
   type: "id" | "license" = "id"
 ): Promise<{ match: boolean; extractedName: string; dates: Record<string, string>; confidence: string }> {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   // Convert file to base64
   const b64 = await new Promise<string>((res, rej) => {
     const reader = new FileReader();
@@ -107,28 +105,21 @@ Extract ALL of the following fields and return ONLY a valid JSON object — no m
 }`;
 
   try {
-    const resp = await fetch(`${supabaseUrl}/functions/v1/verify-id-ocr`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": supabaseKey,
-        "Authorization": `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify({ imageB64: b64, imageMime: mime, enteredName, type }),
+    const { data, error } = await supabase.functions.invoke("verify-id-ocr", {
+      body: { imageB64: b64, imageMime: mime, enteredName, type },
     });
 
-    if (!resp.ok) {
-      console.error("OCR error:", resp.status, await resp.text());
+    if (error) {
+      console.error("OCR error:", error);
       return { match: false, extractedName: "", dates: {}, confidence: "api_error" };
     }
 
-    const data = await resp.json();
     const parsed = data;
 
     return {
       match: parsed.match === true,
       extractedName: parsed.extractedName ?? "",
-      dates: {
+      dates: parsed.dates ?? {
         ...(parsed.issueDate     && { issue_date:      parsed.issueDate }),
         ...(parsed.issuingDate   && { issuing_date:    parsed.issuingDate }),
         ...(parsed.expiryDate    && { expiry_date:     parsed.expiryDate }),
