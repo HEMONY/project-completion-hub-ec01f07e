@@ -140,24 +140,22 @@ CDD: ${cdd?.eligibility_status ?? "لم يكتمل"}
 
     const prompt = buildPrompt(entity, auditFee, taxStatus, screenings ?? [], cdd, s);
 
-    // محاولة API أولاً
+    // محاولة API عبر Supabase Edge Function
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const resp = await fetch(`${supabaseUrl}/functions/v1/ai-audit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY ?? "",
-          "anthropic-version": "2023-06-01",
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
         },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 800,
-          messages: [{ role: "user", content: prompt }],
-        }),
+        body: JSON.stringify({ prompt }),
       });
       if (resp.ok) {
         const data = await resp.json();
-        const text = data.content?.map((c: any) => c.text ?? "").join("") ?? "";
+        const text = data.text ?? "";
         if (text.trim()) {
           setResult(text);
           setMethod("api");
@@ -306,11 +304,7 @@ ${s < 60 ? `${risks.length + 1}. يُنصح بمراجعة فورية للملف
                         </Badge>
                       )}
                     </div>
-                    {method === "local" && (
-                      <div className="text-xs text-muted-foreground rounded-md bg-muted/40 px-3 py-2">
-                        لتفعيل تحليل Claude AI: أضف <code className="font-mono">VITE_ANTHROPIC_API_KEY</code> في ملف <code className="font-mono">.env</code>
-                      </div>
-                    )}
+
                     <div className="flex flex-wrap gap-2">
                       {score >= 80 && <Badge className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"><CheckCircle2 className="size-3" /> منخفض المخاطر</Badge>}
                       {score >= 60 && score < 80 && <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"><AlertTriangle className="size-3" /> مخاطر متوسطة</Badge>}
