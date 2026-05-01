@@ -266,12 +266,14 @@ export type Database = {
           contact_email: string | null
           created_at: string
           current_step: number
+          declarations_signed: Json | null
           digital_signature_name: string | null
           digital_signature_requested_at: string | null
           digital_signature_required: boolean
           digital_signature_signed_at: string | null
           digital_signature_status: string
           economic_sector: string | null
+          email: string | null
           emirate: string | null
           employer_name: string | null
           engagement_number: string | null
@@ -281,6 +283,7 @@ export type Database = {
           id: string
           ind_completed: boolean | null
           legal_declarations: Json
+          legal_type: string | null
           license_expiry_date: string | null
           license_issue_date: string | null
           license_number: string | null
@@ -288,8 +291,12 @@ export type Database = {
           mainland_company_type: string | null
           management_control: Json | null
           ocr_verification: Json
+          ocr_verified: boolean | null
           payment_status: string | null
+          pep_exists: boolean | null
           pep_persons: Json
+          poa_path: string | null
+          principal_activity: string | null
           registration_status: string | null
           rejection_reason: string | null
           review_stage: string
@@ -314,12 +321,14 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           current_step?: number
+          declarations_signed?: Json | null
           digital_signature_name?: string | null
           digital_signature_requested_at?: string | null
           digital_signature_required?: boolean
           digital_signature_signed_at?: string | null
           digital_signature_status?: string
           economic_sector?: string | null
+          email?: string | null
           emirate?: string | null
           employer_name?: string | null
           engagement_number?: string | null
@@ -329,6 +338,7 @@ export type Database = {
           id?: string
           ind_completed?: boolean | null
           legal_declarations?: Json
+          legal_type?: string | null
           license_expiry_date?: string | null
           license_issue_date?: string | null
           license_number?: string | null
@@ -336,8 +346,12 @@ export type Database = {
           mainland_company_type?: string | null
           management_control?: Json | null
           ocr_verification?: Json
+          ocr_verified?: boolean | null
           payment_status?: string | null
+          pep_exists?: boolean | null
           pep_persons?: Json
+          poa_path?: string | null
+          principal_activity?: string | null
           registration_status?: string | null
           rejection_reason?: string | null
           review_stage?: string
@@ -362,12 +376,14 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           current_step?: number
+          declarations_signed?: Json | null
           digital_signature_name?: string | null
           digital_signature_requested_at?: string | null
           digital_signature_required?: boolean
           digital_signature_signed_at?: string | null
           digital_signature_status?: string
           economic_sector?: string | null
+          email?: string | null
           emirate?: string | null
           employer_name?: string | null
           engagement_number?: string | null
@@ -377,6 +393,7 @@ export type Database = {
           id?: string
           ind_completed?: boolean | null
           legal_declarations?: Json
+          legal_type?: string | null
           license_expiry_date?: string | null
           license_issue_date?: string | null
           license_number?: string | null
@@ -384,8 +401,12 @@ export type Database = {
           mainland_company_type?: string | null
           management_control?: Json | null
           ocr_verification?: Json
+          ocr_verified?: boolean | null
           payment_status?: string | null
+          pep_exists?: boolean | null
           pep_persons?: Json
+          poa_path?: string | null
+          principal_activity?: string | null
           registration_status?: string | null
           rejection_reason?: string | null
           review_stage?: string
