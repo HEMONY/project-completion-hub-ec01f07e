@@ -105,9 +105,11 @@ serve(async (req) => {
     }
 
     if (mimeType === "image/jpg") mimeType = "image/jpeg";
+    if (mimeType === "application/x-pdf") mimeType = "application/pdf";
 
     const allowedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!allowedImageTypes.includes(mimeType)) {
+    const isPdf = mimeType === "application/pdf";
+    if (!isPdf && !allowedImageTypes.includes(mimeType)) {
       return jsonResponse({ error: "Unsupported file type", mimeType }, 400);
     }
 
@@ -121,8 +123,12 @@ serve(async (req) => {
     }
 
     const prompt = type === "license"
-      ? `You are reading a UAE Trade License or Professional License image. Extract the trade name and return ONLY valid JSON, no markdown and no extra text:\n{"extractedName":"<trade name exactly as printed>","licenseNumber":"<license number>","issueDate":"<DD/MM/YYYY if visible>","expiryDate":"<DD/MM/YYYY if visible>","legalType":"<legal type if visible>","match":false}\nExpected trade name: ${enteredName}`
-      : `You are reading a UAE Emirates ID or passport image. Extract the English full name and return ONLY valid JSON, no markdown and no extra text:\n{"extractedName":"<full English name exactly as printed>","idNumber":"<ID number if visible>","dateOfBirth":"<DD/MM/YYYY if visible>","issuingDate":"<DD/MM/YYYY if visible>","expiryDate":"<DD/MM/YYYY if visible>","nationality":"<nationality if visible>","match":false}\nExpected name: ${enteredName}`;
+      ? `You are reading a UAE Trade License or Professional License (image or PDF). Extract the trade name and return ONLY valid JSON, no markdown and no extra text:\n{"extractedName":"<trade name exactly as printed>","licenseNumber":"<license number>","issueDate":"<DD/MM/YYYY if visible>","expiryDate":"<DD/MM/YYYY if visible>","legalType":"<legal type if visible>","match":false}\nExpected trade name: ${enteredName}`
+      : `You are reading a UAE Emirates ID or passport (image or PDF). Extract the English full name and return ONLY valid JSON, no markdown and no extra text:\n{"extractedName":"<full English name exactly as printed>","idNumber":"<ID number if visible>","dateOfBirth":"<DD/MM/YYYY if visible>","issuingDate":"<DD/MM/YYYY if visible>","expiryDate":"<DD/MM/YYYY if visible>","nationality":"<nationality if visible>","match":false}\nExpected name: ${enteredName}`;
+
+    const mediaBlock = isPdf
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: imageBase64 } }
+      : { type: "image", source: { type: "base64", media_type: mimeType, data: imageBase64 } };
 
     const claude = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -137,7 +143,7 @@ serve(async (req) => {
         messages: [{
           role: "user",
           content: [
-            { type: "image", source: { type: "base64", media_type: mimeType, data: imageBase64 } },
+            mediaBlock,
             { type: "text", text: prompt },
           ],
         }],
