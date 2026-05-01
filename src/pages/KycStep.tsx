@@ -1153,7 +1153,16 @@ function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    await supabase.from("financial_years").upsert({ entity_id: entity.id, ...form }, { onConflict: "entity_id" });
+    await supabase.from("financial_years").upsert({
+      entity_id: entity.id,
+      user_id: entity.user_id,
+      is_first_year: form.is_first_year === "Yes",
+      first_start_date: form.first_year_start || null,
+      first_end_date: form.first_year_end || null,
+      current_start_date: form.current_year_start || null,
+      current_end_date: form.current_year_end || null,
+      previous_audited: form.previous_year_audited || null,
+    }, { onConflict: "entity_id" });
     await supabase.from("entities").update({ current_step: 4 }).eq("id", entity.id);
     setBusy(false);
     toast.success(t("saved"));
@@ -1229,7 +1238,18 @@ function TaxStatusForm({ entity, onSaved, onBack, t }: any) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    await supabase.from("tax_status").upsert({ entity_id: entity.id, ...form }, { onConflict: "entity_id" });
+    await supabase.from("tax_status").upsert({
+      entity_id: entity.id,
+      user_id: entity.user_id,
+      vat_status: form.vat_status || null,
+      vat_registration_number: form.vat_number || null,
+      not_registered_reason: form.not_registered_reason || null,
+      corporate_tax_status: form.corporate_tax_status || null,
+      corporate_tax_registration_number: form.corporate_tax_number || null,
+      corporate_tax_treatment: form.corporate_tax_treatment || null,
+      small_business_relief: form.small_business_relief || null,
+      excise_tax_status: form.excise_status || null,
+    }, { onConflict: "entity_id" });
     await supabase.from("entities").update({ current_step: 5 }).eq("id", entity.id);
     setBusy(false);
     toast.success(t("saved"));
@@ -1325,9 +1345,11 @@ function EngagementForm({ entity, onSaved, onBack, t }: any) {
     if (!signerName.trim()) return toast.error("Signer name is required");
     setBusy(true);
     await supabase.from("engagement_letters").upsert({
-      entity_id: entity.id, user_id: entity.user_id,
-      agreed: true, signer_name: signerName,
-      signed_at: new Date().toISOString(),
+      entity_id: entity.id,
+      user_id: entity.user_id,
+      accepted: true,
+      accepted_at: new Date().toISOString(),
+      letter_content: `Accepted by ${signerName}`,
     }, { onConflict: "entity_id" });
     await supabase.from("entities").update({
       application_status: "submitted",
