@@ -26,7 +26,7 @@ export default function Index() {
   const [stats, setStats] = useState({ submitted: 0, approved: 0, rejected: 0, draft: 0 });
 
   useEffect(() => {
-    if (!loading && !user) navigate("/auth");
+    if (!loading && !user) navigate("/home");
   }, [user, loading, navigate]);
 
   useEffect(() => {
