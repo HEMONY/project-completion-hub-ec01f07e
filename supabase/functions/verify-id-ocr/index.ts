@@ -70,6 +70,35 @@ serve(async (req) => {
 
   try {
     const body = await readBody(req) as Record<string, unknown>;
+    // ── AI Audit (text-only request) ─────────────────────────────────────────
+    if (body.prompt && !body.imageB64 && !body.image && !body.imageBase64) {
+      const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!apiKey) return jsonResponse({ error: "No API key" }, 500);
+    
+      const claude = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 800,
+          messages: [{ role: "user", content: String(body.prompt) }],
+        }),
+      });
+    
+      if (!claude.ok) {
+        const detail = await claude.text();
+        return jsonResponse({ error: "Claude failed", detail }, 502);
+      }
+    
+      const data = await claude.json();
+      const text = data.content?.find((c: { type?: string; text?: string }) => c.type === "text")?.text ?? "";
+      return jsonResponse({ text });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const rawImage =
       body.imageB64 ??
