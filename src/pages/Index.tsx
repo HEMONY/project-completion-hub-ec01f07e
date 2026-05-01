@@ -22,7 +22,6 @@ export default function Index() {
   const { user, loading } = useAuth();
   const { t, dir } = useI18n();
   const navigate = useNavigate();
-  if (!loading && !user) return <Navigate to="/home" />;
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [stats, setStats] = useState({ submitted: 0, approved: 0, rejected: 0, draft: 0 });
 
