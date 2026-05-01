@@ -346,7 +346,7 @@ function PersonCard({
             </Button>
           )}
           <OcrBadge status={person.ocr_status} extractedName={person.ocr_extracted} />
-          {Object.keys(person.ocr_dates ?? {}).length > 0 && person.ocr_status === "match" && (
+          {Object.keys(person.ocr_dates ?? {}).length > 0 && (person.ocr_status === "match" || person.ocr_status === "mismatch") && (
             <div className="text-xs bg-muted/40 border border-border rounded-lg p-2 space-y-0.5">
               {person.ocr_dates.id_number && (
                 <div className="flex items-center gap-2">
@@ -631,7 +631,7 @@ function KycForm({ entity, onSaved, t }: any) {
       if (employerIdFiles.length === 0) errs.push("Employer Emirates ID document is required when employer name is provided");
       if (employerOcrStatus === "checking") errs.push("Employer ID verification is still in progress");
       if (employerOcrStatus === "mismatch") errs.push(`Employer name does not match Emirates ID document. Extracted: ${employerOcrExtracted || "unreadable"}`);
-      if (employerOcrStatus === "match" && employerOcrDates.id_number && employerEmiratesId) {
+      if (employerOcrDates.id_number && employerEmiratesId) {
         if (employerEmiratesId.replace(/\D/g, "") !== employerOcrDates.id_number.replace(/\D/g, "")) {
           errs.push(`Employer Emirates ID number entered does not match document (${employerOcrDates.id_number})`);
         }
@@ -653,9 +653,9 @@ function KycForm({ entity, onSaved, t }: any) {
       if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
       if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
       if (sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Name does not match Emirates ID document`);
-      if (sh.ocr_status === "match" && sh.ocr_dates?.id_number && sh.emirates_id) {
+      if (sh.ocr_dates?.id_number && sh.emirates_id) {
         if (sh.emirates_id.replace(/\D/g, "") !== sh.ocr_dates.id_number.replace(/\D/g, "")) {
-          errs.push(`Shareholder ${i + 1}: Emirates ID number entered does not match document`);
+          errs.push(`Shareholder ${i + 1}: Emirates ID number (${sh.emirates_id}) does not match document (${sh.ocr_dates.id_number})`);
         }
       }
       totalCapital += parseFloat(sh.capital) || 0;
@@ -678,9 +678,9 @@ function KycForm({ entity, onSaved, t }: any) {
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
         if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
         if (u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Name does not match Emirates ID document`);
-        if (u.ocr_status === "match" && u.ocr_dates?.id_number && u.emirates_id) {
+        if (u.ocr_dates?.id_number && u.emirates_id) {
           if (u.emirates_id.replace(/\D/g, "") !== u.ocr_dates.id_number.replace(/\D/g, "")) {
-            errs.push(`UBO ${i + 1}: Emirates ID number entered does not match document`);
+            errs.push(`UBO ${i + 1}: Emirates ID number (${u.emirates_id}) does not match document (${u.ocr_dates.id_number})`);
           }
         }
       });
@@ -758,8 +758,8 @@ function KycForm({ entity, onSaved, t }: any) {
       source_of_funds: sourceOfFunds,
       employer_name: employerName,
       employer_emirates_id: employerEmiratesId || null,
-      shareholders: shareholders.map(({ id_files, passport_files, ocr_status, ocr_extracted, ...s }) => s),
-      ubos: hasUbo === "yes" ? ubos.map(({ id_files, passport_files, ocr_status, ocr_extracted, ...u }) => u) : [],
+      shareholders: shareholders.map(({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...s }) => s),
+      ubos: hasUbo === "yes" ? ubos.map(({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...u }) => u) : [],
       pep_exists: hasPep === "yes",
       pep_persons: hasPep === "yes" ? pepPersons.map((p) => ({ name: p.name })) : [],
       management_control: managementSelect,
@@ -813,15 +813,7 @@ function KycForm({ entity, onSaved, t }: any) {
                 <Field label="Name of Employer" required>
                   <Input required value={employerName} placeholder="e.g., Employer name, Self employed" onChange={(e) => setEmployerName(e.target.value)} />
                 </Field>
-                <Field label="Employer Emirates ID Number (15 digits)" required>
-                  <Input
-                    required
-                    value={employerEmiratesId}
-                    placeholder="784XXXXXXXXXX"
-                    maxLength={15}
-                    onChange={(e) => setEmployerEmiratesId(e.target.value.replace(/\D/g, "").slice(0, 15))}
-                  />
-                </Field>
+                
                 <Field label="Employer Emirates ID Number (15 digits)" required>
                   <Input
                     required
