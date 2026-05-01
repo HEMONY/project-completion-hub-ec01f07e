@@ -6,57 +6,27 @@ const cors = {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { status: 200, headers: cors });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
     const body = await req.json();
 
-    console.log("BODY:", body);
-    console.log("BODY KEYS:", Object.keys(body || {}));
+    const imageB64    = body.imageB64 ?? body.image ?? null;
+    const imageMime   = body.imageMime ?? body.mimeType ?? "image/jpeg";
+    const enteredName = body.enteredName ?? "";
+    const type        = body.type ?? "id";
 
-    const imageBase64 =
-      body.imageB64 ||
-      body.image ||
-      body.file ||
-      null;
-
-    const mimeType =
-      body.imageMime ||
-      body.mimeType ||
-      body.fileType ||
-      null;
-
-    const enteredName = body.enteredName || "";
-    const type = body.type || "";
-    if (!imageBase64 || !mimeType) {
-        return new Response(JSON.stringify({
-            error: "Missing required OCR input"
-        }), { status: 400, headers: cors });
+    if (!imageB64) {
+      return new Response(JSON.stringify({ error: "Missing imageB64" }), { status: 400, headers: cors });
     }
 
-    const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/jpg",
-        "image/webp",
-        "image/heic",
-        "application/pdf"
-    ];
-
-    if (!allowedTypes.includes(mimeType)) {
-        return new Response(JSON.stringify({
-            error: "Unsupported file type"
-        }), { status: 400, headers: cors });
-    }
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) return new Response(JSON.stringify({ error: "No API key" }), { status: 500, headers: cors });
 
     const prompt = type === "license"
-      ? `UAE Trade License. Return ONLY valid JSON no extra text:
+      ? `UAE Trade License. Return ONLY valid JSON:
 {"extractedName":"<trade name>","licenseNumber":"<no>","issueDate":"<DD/MM/YYYY>","expiryDate":"<DD/MM/YYYY>","legalType":"<type>","match":<true if matches "${enteredName}" ignoring case/spaces>}`
-      : `UAE Emirates ID or passport. Return ONLY valid JSON no extra text:
+      : `UAE Emirates ID or passport. Return ONLY valid JSON:
 {"extractedName":"<full English name>","idNumber":"<ID>","dateOfBirth":"<DD/MM/YYYY>","issuingDate":"<DD/MM/YYYY>","expiryDate":"<DD/MM/YYYY>","nationality":"<nat>","match":<true if all words in "${enteredName}" appear in extracted name ignoring case>}`;
 
     const claude = await fetch("https://api.anthropic.com/v1/messages", {
@@ -72,7 +42,7 @@ serve(async (req) => {
         messages: [{
           role: "user",
           content: [
-            { type: "image", source: { type: "base64", media_type: mimeType ?? "image/jpeg", data: imageBase64 } },
+            { type: "image", source: { type: "base64", media_type: imageMime, data: imageB64 } },
             { type: "text", text: prompt },
           ],
         }],
@@ -84,8 +54,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Claude failed", detail: err }), { status: 502, headers: cors });
     }
 
-    const claudeData = await claude.json();
-    const raw = (claudeData.content?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
+    const data = await claude.json();
+    const raw = (data.content?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(raw);
 
     return new Response(JSON.stringify({
