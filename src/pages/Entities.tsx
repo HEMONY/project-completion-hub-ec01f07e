@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "./Index";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 const STATUS_FILTERS = ["all", "draft", "submitted", "under_review", "approved", "rejected"] as const;
 type StatusFilter = typeof STATUS_FILTERS[number];
@@ -117,7 +117,7 @@ export default function Entities() {
                         <td className="py-3 font-mono text-xs">{r.engagement_number ?? "—"}</td>
                         <td className="py-3"><Badge variant="outline">{r.application_type}</Badge></td>
                         <td className="py-3"><StatusBadge status={r.application_status} /></td>
-                        <td className="py-3 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
+                        <td className="py-3 text-xs text-muted-foreground">{formatDate(r.created_at)}</td>
                         <td className="py-3 text-end pe-3">
                           <div className="flex justify-end gap-2">
                             <Button asChild size="sm" variant="outline">
