@@ -170,6 +170,19 @@ export default function AdminDashboard() {
   // Logs state
   const [logs, setLogs] = useState<any[]>([]);
 
+  // Admin notifications
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const fetchAlerts = async () => {
+    const { data } = await (supabase as any)
+      .from("admin_notifications").select("*")
+      .order("created_at", { ascending: false }).limit(200);
+    setAlerts(data ?? []);
+  };
+  const markAlertRead = async (id: string) => {
+    await (supabase as any).from("admin_notifications").update({ is_read: true, read_at: new Date().toISOString(), read_by: user?.id }).eq("id", id);
+    fetchAlerts();
+  };
+
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
   }, [user, loading, navigate]);
@@ -181,6 +194,7 @@ export default function AdminDashboard() {
     fetchSanctions();
     fetchUsers();
     fetchLogs();
+    fetchAlerts();
   }, [user]);
 
   // ── Entities ──────────────────────────────────────────────
