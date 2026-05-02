@@ -698,11 +698,19 @@ function KycForm({ entity, onSaved, t }: any) {
       if (poaFiles.length === 0) errs.push("Power of Attorney (POA) document is required");
     }
 
-    // PEP
+    // PEP — validated like shareholders
     if (hasPep === "yes") {
       pepPersons.forEach((p, i) => {
-        if (!p.name.trim()) errs.push(`PEP ${i + 1}: Name required`);
-        if (!p.file) errs.push(`PEP ${i + 1}: Declaration document required`);
+        if (!p.name.trim()) errs.push(`PEP ${i + 1}: Full name required`);
+        if (!p.nationality.trim()) errs.push(`PEP ${i + 1}: Nationality required`);
+        if (!p.dob_place.trim()) errs.push(`PEP ${i + 1}: Date and place of birth required`);
+        if (!p.emirates_id || p.emirates_id.length !== 15) errs.push(`PEP ${i + 1}: Emirates ID must be 15 digits`);
+        if (!p.address.trim()) errs.push(`PEP ${i + 1}: Address required`);
+        if (p.id_files.length === 0) errs.push(`PEP ${i + 1}: Emirates ID document required`);
+        if (p.passport_files.length === 0) errs.push(`PEP ${i + 1}: Passport document required`);
+        if (isBlacklisted(p.nationality)) errs.push(`⚠️ SUSPENDED: PEP ${i + 1} nationality does not align with our compliance framework`);
+        if (p.ocr_status === "checking") errs.push(`PEP ${i + 1}: ID verification still in progress`);
+        if (p.ocr_status === "mismatch") errs.push(`PEP ${i + 1}: Name does not match Emirates ID`);
       });
     }
 
