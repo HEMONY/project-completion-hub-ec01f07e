@@ -959,6 +959,7 @@ function KycForm({ entity, onSaved, t }: any) {
     try {
 
     // ── Sanctions screening BEFORE upload/save ───────────────────────────
+    const pepPersons = [...shareholders, ...ubos, ...managers].filter(p => selectedPepNames.includes(p.name));
     const personsToScreen = [
       { name: entityName, role: "Owner / Entity" },
       ...shareholders.map((s, i) => ({ name: s.name, role: `Shareholder ${i + 1}`, nationality: s.nationality, emirates_id: s.emirates_id })),
