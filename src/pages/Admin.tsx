@@ -443,6 +443,7 @@ export default function AdminDashboard() {
     { id: "entities", label: `الكيانات (${entities.length})`, icon: Building2 },
     { id: "documents", label: `المستندات (${documents.length})`, icon: FileText },
     { id: "sanctions", label: `قائمة العقوبات (${sanctions.length})`, icon: ScrollText },
+    { id: "alerts", label: `التنبيهات (${alerts.filter(a => !a.is_read).length})`, icon: AlertCircle },
     { id: "users", label: `المستخدمون (${users.length})`, icon: Users },
     { id: "logs", label: "سجل النشاط", icon: Activity },
   ];
