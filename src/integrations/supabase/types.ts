@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          id: string
+          is_read: boolean
+          message: string | null
+          read_at: string | null
+          read_by: string | null
+          severity: string
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          read_at?: string | null
+          read_by?: string | null
+          severity?: string
+          title: string
+          type?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string | null
+          read_at?: string | null
+          read_by?: string | null
+          severity?: string
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       audit_acceptance_memorandum: {
         Row: {
           accepted: boolean | null
@@ -303,6 +348,8 @@ export type Database = {
           review_stage: string
           reviewed_at: string | null
           reviewed_by: string | null
+          sanctions_match: boolean
+          sanctions_match_details: Json | null
           screening_completed: boolean | null
           shareholders: Json | null
           source_of_funds: string | null
@@ -359,6 +406,8 @@ export type Database = {
           review_stage?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          sanctions_match?: boolean
+          sanctions_match_details?: Json | null
           screening_completed?: boolean | null
           shareholders?: Json | null
           source_of_funds?: string | null
@@ -415,6 +464,8 @@ export type Database = {
           review_stage?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          sanctions_match?: boolean
+          sanctions_match_details?: Json | null
           screening_completed?: boolean | null
           shareholders?: Json | null
           source_of_funds?: string | null
