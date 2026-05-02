@@ -1146,45 +1146,23 @@ function KycForm({ entity, onSaved, t }: any) {
               </div>
             </Field>
             {hasPep === "yes" && (
-                <div className="space-y-3">
-                  {pepPersons.map((p, i) => (
-                    <div key={i} className="border border-border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-muted-foreground">PEP {i + 1}</span>
-                        {pepPersons.length > 1 && (
-                          <Button type="button" size="sm" variant="ghost" className="text-destructive h-7"
-                            onClick={() => setPepPersons(pepPersons.filter((_, idx) => idx !== i))}>
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                      <Field label="PEP Name" required>
-                        <Input required value={p.name} placeholder="Full name" onChange={(e) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x))} />
-                      </Field>
-                      <div className="space-y-2">
-                        <FileUploadZone
-                          label="PEP Declaration Document *"
-                          files={p.file ? [p.file] : []}
-                          onChange={(files) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, file: files[0] ?? null } : x))}
-                          accept="image/png,image/jpeg,image/jpg,.pdf,.docx"
-                          single
-                        />
-                        
-                        <a  href="/Declaration_of_Source_of_Funds.docx"
-                          download
-                          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-                        >
-                          <FileText className="size-3.5" />
-                          Download PEP Declaration Template
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => setPepPersons([...pepPersons, { name: "", file: null }])}>
-                    <Plus className="size-3.5" /> Add PEP Name
-                  </Button>
-                </div>
-              )}
+              <div className="space-y-3">
+                {pepPersons.map((p, i) => (
+                  <PersonCard
+                    key={i}
+                    person={p}
+                    index={i}
+                    label="PEP"
+                    canRemove={pepPersons.length > 1}
+                    onChange={(np) => setPepPersons(pepPersons.map((x, idx) => idx === i ? np : x))}
+                    onRemove={() => setPepPersons(pepPersons.filter((_, idx) => idx !== i))}
+                  />
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => setPepPersons([...pepPersons, emptyPerson()])}>
+                  <Plus className="size-3.5" /> Add PEP Name
+                </Button>
+              </div>
+            )}
             </div>
 
           {/* ── SECTION 7: Compliance & Legal Declarations ── */}
