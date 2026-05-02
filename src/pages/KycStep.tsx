@@ -549,10 +549,12 @@ function KycForm({ entity, onSaved, t }: any) {
   const [managers, setManagers] = useState<Person[]>([emptyPerson()]);
   const [poaFiles, setPoaFiles] = useState<File[]>([]);
 
-  // § Section 6 — PEP
+  // § Section 6 — PEP (full PersonCard like shareholders/UBOs)
   const [hasPep, setHasPep] = useState<"yes"|"no"|"">(entity.pep_exists ? "yes" : "");
-  const [pepPersons, setPepPersons] = useState<{ name: string; file: File | null }[]>(
-    entity.pep_persons?.length > 0 ? entity.pep_persons.map((p: any) => ({ name: p.name ?? "", file: null })) : [{ name: "", file: null }]
+  const [pepPersons, setPepPersons] = useState<Person[]>(
+    entity.pep_persons?.length > 0
+      ? entity.pep_persons.map((p: any) => ({ ...emptyPerson(), ...p, id_files: [], passport_files: [] }))
+      : [emptyPerson()]
   );
 
   // § Section 7 — Declarations
