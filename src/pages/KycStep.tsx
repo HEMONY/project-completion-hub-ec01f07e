@@ -731,6 +731,32 @@ function KycForm({ entity, onSaved, t }: any) {
     }
     setBusy(true);
 
+    // ── Sanctions screening BEFORE upload/save ───────────────────────────
+    const personsToScreen = [
+      { name: entityName, role: "Owner / Entity" },
+      ...shareholders.map((s, i) => ({ name: s.name, role: `Shareholder ${i + 1}`, nationality: s.nationality, emirates_id: s.emirates_id })),
+      ...(hasUbo === "yes" ? ubos.map((u, i) => ({ name: u.name, role: `UBO ${i + 1}`, nationality: u.nationality, emirates_id: u.emirates_id })) : []),
+      ...(managementSelect === "Other" ? managers.map((m, i) => ({ name: m.name, role: `Manager ${i + 1}`, nationality: m.nationality, emirates_id: m.emirates_id })) : []),
+      ...(hasPep === "yes" ? pepPersons.map((p, i) => ({ name: p.name, role: `PEP ${i + 1}`, nationality: p.nationality, emirates_id: p.emirates_id })) : []),
+    ].filter((p) => p.name?.trim());
+
+    try {
+      const { data: scr } = await supabase.functions.invoke("sanctions-screen", {
+        body: { persons: personsToScreen, entityId: entity.id, entityName },
+      });
+      if (scr?.matches?.length > 0) {
+        setBusy(false);
+        const names = scr.matches.map((m: any) => `${m.person_name} (${m.person_role}) ↔ ${m.matched_english}`).join("\n• ");
+        toast.error(
+          `🚨 SANCTIONS MATCH — Application rejected.\nThe following person(s) appear on the sanctions list:\n• ${names}\n\nCompliance team has been notified.`,
+          { duration: 12000 }
+        );
+        return;
+      }
+    } catch (err) {
+      console.error("Sanctions screening failed:", err);
+    }
+
     // Upload license
     const licensePaths = licenseFiles.length > 0 ? await uploadFiles(licenseFiles, "trade") : [];
 
@@ -746,11 +772,21 @@ function KycForm({ entity, onSaved, t }: any) {
       if (u.passport_files.length > 0) await uploadFiles(u.passport_files, `ubos/${u.name}/passport`);
     }
 
+    // Upload PEP docs
+    if (hasPep === "yes") {
+      for (const p of pepPersons) {
+        if (p.id_files.length > 0) await uploadFiles(p.id_files, `pep/${p.name}/eid`);
+        if (p.passport_files.length > 0) await uploadFiles(p.passport_files, `pep/${p.name}/passport`);
+      }
+    }
+
     // Upload Employer ID doc
     if (employerIdFiles.length > 0) await uploadFiles(employerIdFiles, `employer/${employerName || "unknown"}/eid`);
 
     // Upload POA
     if (poaFiles.length > 0) await uploadFiles(poaFiles, "poa");
+
+    const stripPerson = ({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...rest }: Person) => rest;
 
     const payload: any = {
       entity_name: entityName,
@@ -768,10 +804,10 @@ function KycForm({ entity, onSaved, t }: any) {
       source_of_funds: sourceOfFunds,
       employer_name: employerName,
       employer_emirates_id: employerEmiratesId || null,
-      shareholders: shareholders.map(({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...s }) => s),
-      ubos: hasUbo === "yes" ? ubos.map(({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...u }) => u) : [],
+      shareholders: shareholders.map(stripPerson),
+      ubos: hasUbo === "yes" ? ubos.map(stripPerson) : [],
       pep_exists: hasPep === "yes",
-      pep_persons: hasPep === "yes" ? pepPersons.map((p) => ({ name: p.name })) : [],
+      pep_persons: hasPep === "yes" ? pepPersons.map(stripPerson) : [],
       management_control: managementSelect,
       declarations_signed: declarations,
       current_step: 2,
