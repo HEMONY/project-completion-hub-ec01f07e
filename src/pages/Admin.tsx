@@ -129,7 +129,7 @@ function DocumentPreview({ doc }: { doc: any }) {
   return <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-md bg-muted/40 text-sm text-muted-foreground"><ImageIcon className="size-6" /> لا توجد معاينة لهذا النوع</div>;
 }
 
-type Tab = "overview" | "entities" | "documents" | "sanctions" | "users" | "logs";
+type Tab = "overview" | "entities" | "documents" | "sanctions" | "alerts" | "users" | "logs";
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
@@ -170,6 +170,19 @@ export default function AdminDashboard() {
   // Logs state
   const [logs, setLogs] = useState<any[]>([]);
 
+  // Admin notifications
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const fetchAlerts = async () => {
+    const { data } = await (supabase as any)
+      .from("admin_notifications").select("*")
+      .order("created_at", { ascending: false }).limit(200);
+    setAlerts(data ?? []);
+  };
+  const markAlertRead = async (id: string) => {
+    await (supabase as any).from("admin_notifications").update({ is_read: true, read_at: new Date().toISOString(), read_by: user?.id }).eq("id", id);
+    fetchAlerts();
+  };
+
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
   }, [user, loading, navigate]);
@@ -181,6 +194,7 @@ export default function AdminDashboard() {
     fetchSanctions();
     fetchUsers();
     fetchLogs();
+    fetchAlerts();
   }, [user]);
 
   // ── Entities ──────────────────────────────────────────────
@@ -429,6 +443,7 @@ export default function AdminDashboard() {
     { id: "entities", label: `الكيانات (${entities.length})`, icon: Building2 },
     { id: "documents", label: `المستندات (${documents.length})`, icon: FileText },
     { id: "sanctions", label: `قائمة العقوبات (${sanctions.length})`, icon: ScrollText },
+    { id: "alerts", label: `التنبيهات (${alerts.filter(a => !a.is_read).length})`, icon: AlertCircle },
     { id: "users", label: `المستخدمون (${users.length})`, icon: Users },
     { id: "logs", label: "سجل النشاط", icon: Activity },
   ];

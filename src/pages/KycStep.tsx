@@ -549,10 +549,12 @@ function KycForm({ entity, onSaved, t }: any) {
   const [managers, setManagers] = useState<Person[]>([emptyPerson()]);
   const [poaFiles, setPoaFiles] = useState<File[]>([]);
 
-  // § Section 6 — PEP
+  // § Section 6 — PEP (full PersonCard like shareholders/UBOs)
   const [hasPep, setHasPep] = useState<"yes"|"no"|"">(entity.pep_exists ? "yes" : "");
-  const [pepPersons, setPepPersons] = useState<{ name: string; file: File | null }[]>(
-    entity.pep_persons?.length > 0 ? entity.pep_persons.map((p: any) => ({ name: p.name ?? "", file: null })) : [{ name: "", file: null }]
+  const [pepPersons, setPepPersons] = useState<Person[]>(
+    entity.pep_persons?.length > 0
+      ? entity.pep_persons.map((p: any) => ({ ...emptyPerson(), ...p, id_files: [], passport_files: [] }))
+      : [emptyPerson()]
   );
 
   // § Section 7 — Declarations
@@ -696,11 +698,19 @@ function KycForm({ entity, onSaved, t }: any) {
       if (poaFiles.length === 0) errs.push("Power of Attorney (POA) document is required");
     }
 
-    // PEP
+    // PEP — validated like shareholders
     if (hasPep === "yes") {
       pepPersons.forEach((p, i) => {
-        if (!p.name.trim()) errs.push(`PEP ${i + 1}: Name required`);
-        if (!p.file) errs.push(`PEP ${i + 1}: Declaration document required`);
+        if (!p.name.trim()) errs.push(`PEP ${i + 1}: Full name required`);
+        if (!p.nationality.trim()) errs.push(`PEP ${i + 1}: Nationality required`);
+        if (!p.dob_place.trim()) errs.push(`PEP ${i + 1}: Date and place of birth required`);
+        if (!p.emirates_id || p.emirates_id.length !== 15) errs.push(`PEP ${i + 1}: Emirates ID must be 15 digits`);
+        if (!p.address.trim()) errs.push(`PEP ${i + 1}: Address required`);
+        if (p.id_files.length === 0) errs.push(`PEP ${i + 1}: Emirates ID document required`);
+        if (p.passport_files.length === 0) errs.push(`PEP ${i + 1}: Passport document required`);
+        if (isBlacklisted(p.nationality)) errs.push(`⚠️ SUSPENDED: PEP ${i + 1} nationality does not align with our compliance framework`);
+        if (p.ocr_status === "checking") errs.push(`PEP ${i + 1}: ID verification still in progress`);
+        if (p.ocr_status === "mismatch") errs.push(`PEP ${i + 1}: Name does not match Emirates ID`);
       });
     }
 
@@ -721,6 +731,32 @@ function KycForm({ entity, onSaved, t }: any) {
     }
     setBusy(true);
 
+    // ── Sanctions screening BEFORE upload/save ───────────────────────────
+    const personsToScreen = [
+      { name: entityName, role: "Owner / Entity" },
+      ...shareholders.map((s, i) => ({ name: s.name, role: `Shareholder ${i + 1}`, nationality: s.nationality, emirates_id: s.emirates_id })),
+      ...(hasUbo === "yes" ? ubos.map((u, i) => ({ name: u.name, role: `UBO ${i + 1}`, nationality: u.nationality, emirates_id: u.emirates_id })) : []),
+      ...(managementSelect === "Other" ? managers.map((m, i) => ({ name: m.name, role: `Manager ${i + 1}`, nationality: m.nationality, emirates_id: m.emirates_id })) : []),
+      ...(hasPep === "yes" ? pepPersons.map((p, i) => ({ name: p.name, role: `PEP ${i + 1}`, nationality: p.nationality, emirates_id: p.emirates_id })) : []),
+    ].filter((p) => p.name?.trim());
+
+    try {
+      const { data: scr } = await supabase.functions.invoke("sanctions-screen", {
+        body: { persons: personsToScreen, entityId: entity.id, entityName },
+      });
+      if (scr?.matches?.length > 0) {
+        setBusy(false);
+        const names = scr.matches.map((m: any) => `${m.person_name} (${m.person_role}) ↔ ${m.matched_english}`).join("\n• ");
+        toast.error(
+          `🚨 SANCTIONS MATCH — Application rejected.\nThe following person(s) appear on the sanctions list:\n• ${names}\n\nCompliance team has been notified.`,
+          { duration: 12000 }
+        );
+        return;
+      }
+    } catch (err) {
+      console.error("Sanctions screening failed:", err);
+    }
+
     // Upload license
     const licensePaths = licenseFiles.length > 0 ? await uploadFiles(licenseFiles, "trade") : [];
 
@@ -736,11 +772,21 @@ function KycForm({ entity, onSaved, t }: any) {
       if (u.passport_files.length > 0) await uploadFiles(u.passport_files, `ubos/${u.name}/passport`);
     }
 
+    // Upload PEP docs
+    if (hasPep === "yes") {
+      for (const p of pepPersons) {
+        if (p.id_files.length > 0) await uploadFiles(p.id_files, `pep/${p.name}/eid`);
+        if (p.passport_files.length > 0) await uploadFiles(p.passport_files, `pep/${p.name}/passport`);
+      }
+    }
+
     // Upload Employer ID doc
     if (employerIdFiles.length > 0) await uploadFiles(employerIdFiles, `employer/${employerName || "unknown"}/eid`);
 
     // Upload POA
     if (poaFiles.length > 0) await uploadFiles(poaFiles, "poa");
+
+    const stripPerson = ({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...rest }: Person) => rest;
 
     const payload: any = {
       entity_name: entityName,
@@ -758,10 +804,10 @@ function KycForm({ entity, onSaved, t }: any) {
       source_of_funds: sourceOfFunds,
       employer_name: employerName,
       employer_emirates_id: employerEmiratesId || null,
-      shareholders: shareholders.map(({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...s }) => s),
-      ubos: hasUbo === "yes" ? ubos.map(({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...u }) => u) : [],
+      shareholders: shareholders.map(stripPerson),
+      ubos: hasUbo === "yes" ? ubos.map(stripPerson) : [],
       pep_exists: hasPep === "yes",
-      pep_persons: hasPep === "yes" ? pepPersons.map((p) => ({ name: p.name })) : [],
+      pep_persons: hasPep === "yes" ? pepPersons.map(stripPerson) : [],
       management_control: managementSelect,
       declarations_signed: declarations,
       current_step: 2,
@@ -1126,7 +1172,7 @@ function KycForm({ entity, onSaved, t }: any) {
             <Field label="Is any person classified as a Politically Exposed Person (PEP)?" required>
               <div className="flex gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-                  <input type="radio" name="pep" value="yes" checked={hasPep === "yes"} onChange={() => { setHasPep("yes"); if (pepPersons.length === 0) setPepPersons([{ name: "", file: null }]); }} />
+                  <input type="radio" name="pep" value="yes" checked={hasPep === "yes"} onChange={() => { setHasPep("yes"); if (pepPersons.length === 0) setPepPersons([emptyPerson()]); }} />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
@@ -1136,45 +1182,23 @@ function KycForm({ entity, onSaved, t }: any) {
               </div>
             </Field>
             {hasPep === "yes" && (
-                <div className="space-y-3">
-                  {pepPersons.map((p, i) => (
-                    <div key={i} className="border border-border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-muted-foreground">PEP {i + 1}</span>
-                        {pepPersons.length > 1 && (
-                          <Button type="button" size="sm" variant="ghost" className="text-destructive h-7"
-                            onClick={() => setPepPersons(pepPersons.filter((_, idx) => idx !== i))}>
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                      <Field label="PEP Name" required>
-                        <Input required value={p.name} placeholder="Full name" onChange={(e) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x))} />
-                      </Field>
-                      <div className="space-y-2">
-                        <FileUploadZone
-                          label="PEP Declaration Document *"
-                          files={p.file ? [p.file] : []}
-                          onChange={(files) => setPepPersons(pepPersons.map((x, idx) => idx === i ? { ...x, file: files[0] ?? null } : x))}
-                          accept="image/png,image/jpeg,image/jpg,.pdf,.docx"
-                          single
-                        />
-                        
-                        <a  href="/Declaration_of_Source_of_Funds.docx"
-                          download
-                          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-                        >
-                          <FileText className="size-3.5" />
-                          Download PEP Declaration Template
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => setPepPersons([...pepPersons, { name: "", file: null }])}>
-                    <Plus className="size-3.5" /> Add PEP Name
-                  </Button>
-                </div>
-              )}
+              <div className="space-y-3">
+                {pepPersons.map((p, i) => (
+                  <PersonCard
+                    key={i}
+                    person={p}
+                    index={i}
+                    label="PEP"
+                    canRemove={pepPersons.length > 1}
+                    onChange={(np) => setPepPersons(pepPersons.map((x, idx) => idx === i ? np : x))}
+                    onRemove={() => setPepPersons(pepPersons.filter((_, idx) => idx !== i))}
+                  />
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => setPepPersons([...pepPersons, emptyPerson()])}>
+                  <Plus className="size-3.5" /> Add PEP Name
+                </Button>
+              </div>
+            )}
             </div>
 
           {/* ── SECTION 7: Compliance & Legal Declarations ── */}
@@ -1305,7 +1329,7 @@ function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    await supabase.from("financial_years").upsert({ entity_id: entity.id, ...form }, { onConflict: "entity_id" });
+    await supabase.from("financial_years").upsert({ entity_id: entity.id, user_id: entity.user_id, ...form } as any, { onConflict: "entity_id" });
     await supabase.from("entities").update({ current_step: 4 }).eq("id", entity.id);
     setBusy(false);
     toast.success(t("saved"));
@@ -1381,7 +1405,7 @@ function TaxStatusForm({ entity, onSaved, onBack, t }: any) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    await supabase.from("tax_status").upsert({ entity_id: entity.id, ...form }, { onConflict: "entity_id" });
+    await supabase.from("tax_status").upsert({ entity_id: entity.id, user_id: entity.user_id, ...form } as any, { onConflict: "entity_id" });
     await supabase.from("entities").update({ current_step: 5 }).eq("id", entity.id);
     setBusy(false);
     toast.success(t("saved"));
@@ -1478,9 +1502,9 @@ function EngagementForm({ entity, onSaved, onBack, t }: any) {
     setBusy(true);
     await supabase.from("engagement_letters").upsert({
       entity_id: entity.id, user_id: entity.user_id,
-      agreed: true, signer_name: signerName,
-      signed_at: new Date().toISOString(),
-    }, { onConflict: "entity_id" });
+      accepted: true, accepted_at: new Date().toISOString(),
+      letter_content: signerName,
+    } as any, { onConflict: "entity_id" });
     await supabase.from("entities").update({
       application_status: "submitted",
       submitted_at: new Date().toISOString(),
