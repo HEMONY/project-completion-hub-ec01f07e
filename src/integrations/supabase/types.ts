@@ -275,6 +275,7 @@ export type Database = {
           economic_sector: string | null
           email: string | null
           emirate: string | null
+          employer_emirates_id: string | null
           employer_name: string | null
           engagement_number: string | null
           entity_name: string
@@ -330,6 +331,7 @@ export type Database = {
           economic_sector?: string | null
           email?: string | null
           emirate?: string | null
+          employer_emirates_id?: string | null
           employer_name?: string | null
           engagement_number?: string | null
           entity_name: string
@@ -385,6 +387,7 @@ export type Database = {
           economic_sector?: string | null
           email?: string | null
           emirate?: string | null
+          employer_emirates_id?: string | null
           employer_name?: string | null
           engagement_number?: string | null
           entity_name?: string
