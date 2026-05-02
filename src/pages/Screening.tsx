@@ -9,6 +9,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth, useRole } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { ShieldCheck, Search } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function Screening() {
@@ -219,7 +220,7 @@ export default function Screening() {
                             </Badge>
                           </td>
                           <td className="py-2 text-xs text-muted-foreground">{r.notes ?? "—"}</td>
-                          <td className="py-2 text-xs text-muted-foreground">{new Date(r.screened_at).toLocaleString()}</td>
+                          <td className="py-2 text-xs text-muted-foreground">{formatDateTime(r.screened_at)}</td>
                         </tr>
                       ))}
                     </tbody>
