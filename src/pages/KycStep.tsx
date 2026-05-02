@@ -499,6 +499,13 @@ export default function KycStep() {
 // ═══════════════════════════════════════════════════════════════════
 // STEP 1 — KYC Form (7 sections matching HTML exactly)
 // ═══════════════════════════════════════════════════════════════════
+
+type PepDeclaration = {
+  sourceOfFunds: string[];
+  otherSource: string;
+  wealthSummary: string;
+  confirmed: boolean;
+};
 function KycForm({ entity, onSaved, t }: any) {
   const { user } = useAuth();
   const [busy, setBusy] = useState(false);
@@ -549,12 +556,26 @@ function KycForm({ entity, onSaved, t }: any) {
   const [managers, setManagers] = useState<Person[]>([emptyPerson()]);
   const [poaFiles, setPoaFiles] = useState<File[]>([]);
 
-  // § Section 6 — PEP (full PersonCard like shareholders/UBOs)
+  // § Section 6 — PEP
   const [hasPep, setHasPep] = useState<"yes"|"no"|"">(entity.pep_exists ? "yes" : "");
-  const [pepPersons, setPepPersons] = useState<Person[]>(
+  const [selectedPepNames, setSelectedPepNames] = useState<string[]>(
+    entity.pep_persons?.length > 0 ? entity.pep_persons.map((p: any) => p.name ?? "") : []
+  );
+  /*type PepDeclaration = {
+    sourceOfFunds: string[];
+    otherSource: string;
+    wealthSummary: string;
+    confirmed: boolean;
+  };*/
+  const [pepDeclarations, setPepDeclarations] = useState<Record<string, PepDeclaration>>(
     entity.pep_persons?.length > 0
-      ? entity.pep_persons.map((p: any) => ({ ...emptyPerson(), ...p, id_files: [], passport_files: [] }))
-      : [emptyPerson()]
+      ? Object.fromEntries(entity.pep_persons.map((p: any) => [p.name ?? "", {
+          sourceOfFunds: p.sourceOfFunds ?? [],
+          otherSource: p.otherSource ?? "",
+          wealthSummary: p.wealthSummary ?? "",
+          confirmed: p.confirmed ?? false,
+        }]))
+      : {}
   );
 
   // § Section 7 — Declarations
@@ -698,19 +719,16 @@ function KycForm({ entity, onSaved, t }: any) {
       if (poaFiles.length === 0) errs.push("Power of Attorney (POA) document is required");
     }
 
-    // PEP — validated like shareholders
+    // PEP
     if (hasPep === "yes") {
-      pepPersons.forEach((p, i) => {
-        if (!p.name.trim()) errs.push(`PEP ${i + 1}: Full name required`);
-        if (!p.nationality.trim()) errs.push(`PEP ${i + 1}: Nationality required`);
-        if (!p.dob_place.trim()) errs.push(`PEP ${i + 1}: Date and place of birth required`);
-        if (!p.emirates_id || p.emirates_id.length !== 15) errs.push(`PEP ${i + 1}: Emirates ID must be 15 digits`);
-        if (!p.address.trim()) errs.push(`PEP ${i + 1}: Address required`);
-        if (p.id_files.length === 0) errs.push(`PEP ${i + 1}: Emirates ID document required`);
-        if (p.passport_files.length === 0) errs.push(`PEP ${i + 1}: Passport document required`);
-        if (isBlacklisted(p.nationality)) errs.push(`⚠️ SUSPENDED: PEP ${i + 1} nationality does not align with our compliance framework`);
-        if (p.ocr_status === "checking") errs.push(`PEP ${i + 1}: ID verification still in progress`);
-        if (p.ocr_status === "mismatch") errs.push(`PEP ${i + 1}: Name does not match Emirates ID`);
+      if (selectedPepNames.length === 0) errs.push("Please select at least one PEP person");
+      selectedPepNames.forEach((name) => {
+        const decl = pepDeclarations[name];
+        if (!decl) { errs.push(`PEP (${name}): Declaration required`); return; }
+        if ((decl.sourceOfFunds ?? []).length === 0) errs.push(`PEP (${name}): Source of Funds required`);
+        if (decl.sourceOfFunds?.includes("Other") && !decl.otherSource?.trim()) errs.push(`PEP (${name}): Please specify other source of funds`);
+        if (!decl.wealthSummary?.trim()) errs.push(`PEP (${name}): Brief Summary of Source of Wealth required`);
+        if (!decl.confirmed) errs.push(`PEP (${name}): Must confirm the declaration`);
       });
     }
 
@@ -772,13 +790,7 @@ function KycForm({ entity, onSaved, t }: any) {
       if (u.passport_files.length > 0) await uploadFiles(u.passport_files, `ubos/${u.name}/passport`);
     }
 
-    // Upload PEP docs
-    if (hasPep === "yes") {
-      for (const p of pepPersons) {
-        if (p.id_files.length > 0) await uploadFiles(p.id_files, `pep/${p.name}/eid`);
-        if (p.passport_files.length > 0) await uploadFiles(p.passport_files, `pep/${p.name}/passport`);
-      }
-    }
+    // PEP — no extra uploads needed (persons already uploaded in their sections)
 
     // Upload Employer ID doc
     if (employerIdFiles.length > 0) await uploadFiles(employerIdFiles, `employer/${employerName || "unknown"}/eid`);
@@ -807,7 +819,10 @@ function KycForm({ entity, onSaved, t }: any) {
       shareholders: shareholders.map(stripPerson),
       ubos: hasUbo === "yes" ? ubos.map(stripPerson) : [],
       pep_exists: hasPep === "yes",
-      pep_persons: hasPep === "yes" ? pepPersons.map(stripPerson) : [],
+      pep_persons: hasPep === "yes" ? selectedPepNames.map(name => ({
+        name,
+        ...pepDeclarations[name],
+      })) : [],
       management_control: managementSelect,
       declarations_signed: declarations,
       current_step: 2,
@@ -854,7 +869,7 @@ function KycForm({ entity, onSaved, t }: any) {
               </Field>
             )}
 
-            {isUnlicensed && (
+            {(isUnlicensed || isSole) && (
               <>
                 <Field label="Name of Employer" required>
                   <Input required value={employerName} placeholder="e.g., Employer name, Self employed" onChange={(e) => setEmployerName(e.target.value)} />
@@ -1172,34 +1187,135 @@ function KycForm({ entity, onSaved, t }: any) {
             <Field label="Is any person classified as a Politically Exposed Person (PEP)?" required>
               <div className="flex gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-                  <input type="radio" name="pep" value="yes" checked={hasPep === "yes"} onChange={() => { setHasPep("yes"); if (pepPersons.length === 0) setPepPersons([emptyPerson()]); }} />
+                  <input type="radio" name="pep" value="yes" checked={hasPep === "yes"} onChange={() => setHasPep("yes")} />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-                  <input type="radio" name="pep" value="no" checked={hasPep === "no"} onChange={() => setHasPep("no")} />
+                  <input type="radio" name="pep" value="no" checked={hasPep === "no"} onChange={() => { setHasPep("no"); setSelectedPepNames([]); }} />
                   No
                 </label>
               </div>
             </Field>
-            {hasPep === "yes" && (
-              <div className="space-y-3">
-                {pepPersons.map((p, i) => (
-                  <PersonCard
-                    key={i}
-                    person={p}
-                    index={i}
-                    label="PEP"
-                    canRemove={pepPersons.length > 1}
-                    onChange={(np) => setPepPersons(pepPersons.map((x, idx) => idx === i ? np : x))}
-                    onRemove={() => setPepPersons(pepPersons.filter((_, idx) => idx !== i))}
-                  />
-                ))}
-                <Button type="button" variant="outline" size="sm" onClick={() => setPepPersons([...pepPersons, emptyPerson()])}>
-                  <Plus className="size-3.5" /> Add PEP Name
-                </Button>
-              </div>
-            )}
-            </div>
+
+            {hasPep === "yes" && (() => {
+              // جمع كل الأشخاص المدخلين مسبقاً
+              const allPersons = [
+                ...shareholders.map(s => ({ name: s.name, role: "Shareholder" })),
+                ...ubos.map(u => ({ name: u.name, role: "UBO" })),
+                ...managers.map(m => ({ name: m.name, role: "Manager" })),
+              ].filter(p => p.name.trim());
+
+              const updateDecl = (name: string, key: keyof PepDeclaration, value: any) => {
+                setPepDeclarations(prev => ({
+                  ...prev,
+                  [name]: { sourceOfFunds: [], otherSource: "", wealthSummary: "", confirmed: false, ...prev[name], [key]: value },
+                }));
+              };
+
+              const toggleSof = (name: string, value: string) => {
+                const current = pepDeclarations[name]?.sourceOfFunds ?? [];
+                const updated = current.includes(value) ? current.filter(v => v !== value) : [...current, value];
+                updateDecl(name, "sourceOfFunds", updated);
+              };
+
+              return (
+                <div className="space-y-4">
+                  {/* اختيار الأشخاص */}
+                  <div className="border border-border rounded-lg p-4 bg-muted/10">
+                    <div className="text-sm font-semibold mb-3">Select PEP Person(s) from previously entered persons:</div>
+                    {allPersons.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">No persons entered yet. Please fill Shareholders / UBOs / Management sections first.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {allPersons.map(({ name, role }) => (
+                          <label key={name} className="flex items-center gap-3 cursor-pointer text-sm p-2 rounded hover:bg-muted/30">
+                            <input
+                              type="checkbox"
+                              checked={selectedPepNames.includes(name)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedPepNames(prev => [...prev, name]);
+                                  setPepDeclarations(prev => ({
+                                    ...prev,
+                                    [name]: prev[name] ?? { sourceOfFunds: [], otherSource: "", wealthSummary: "", confirmed: false },
+                                  }));
+                                } else {
+                                  setSelectedPepNames(prev => prev.filter(n => n !== name));
+                                }
+                              }}
+                              className="size-4"
+                            />
+                            <span className="font-medium">{name}</span>
+                            <span className="text-muted-foreground text-xs">({role})</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* نموذج الإقرار لكل شخص مختار */}
+                  {selectedPepNames.map((name) => (
+                    <div key={name} className="border border-primary/30 rounded-xl p-5 space-y-4 bg-primary/5">
+                      <div className="font-semibold text-sm border-b border-border pb-2">
+                        📋 Declaration of Source of Funds — <span className="text-primary">{name}</span>
+                      </div>
+
+                      {/* Source of Funds */}
+                      <div className="space-y-2">
+                        <div className="text-sm font-semibold">Source of Funds (SOF) *</div>
+                        <div className="text-xs text-muted-foreground mb-2">The funds used for my capital share in the above-mentioned entity originated from:</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {["Personal Savings", "Salary/Employment Income", "Sale of Asset", "Business Profits", "Other"].map(opt => (
+                            <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={(pepDeclarations[name]?.sourceOfFunds ?? []).includes(opt)}
+                                onChange={() => toggleSof(name, opt)}
+                                className="size-4"
+                              />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                        {(pepDeclarations[name]?.sourceOfFunds ?? []).includes("Other") && (
+                          <Input
+                            placeholder="Please specify..."
+                            value={pepDeclarations[name]?.otherSource ?? ""}
+                            onChange={(e) => updateDecl(name, "otherSource", e.target.value)}
+                            className="mt-1"
+                          />
+                        )}
+                      </div>
+
+                      {/* Source of Wealth */}
+                      <div className="space-y-2">
+                        <div className="text-sm font-semibold">Brief Summary of Source of Wealth (SOW) *</div>
+                        <textarea
+                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          placeholder="Briefly describe your source of wealth..."
+                          value={pepDeclarations[name]?.wealthSummary ?? ""}
+                          onChange={(e) => updateDecl(name, "wealthSummary", e.target.value)}
+                        />
+                      </div>
+
+                      {/* Confirmation */}
+                      <label className={`flex items-start gap-3 cursor-pointer border rounded-lg p-3 transition-colors ${pepDeclarations[name]?.confirmed ? "border-green-300 bg-green-50 dark:bg-green-950/20" : "border-border"}`}>
+                        <input
+                          type="checkbox"
+                          checked={pepDeclarations[name]?.confirmed ?? false}
+                          onChange={(e) => updateDecl(name, "confirmed", e.target.checked)}
+                          className="size-4 mt-0.5"
+                        />
+                        <span className="text-xs text-muted-foreground leading-relaxed">
+                          I, <strong>{name}</strong>, hereby declare that the information provided above is true and accurate. I confirm that these funds are derived from legitimate sources and are not related to any illegal activities.
+                        </span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
 
           {/* ── SECTION 7: Compliance & Legal Declarations ── */}
           <SectionTitle number={7} title="Compliance & Legal Declarations" />
