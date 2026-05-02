@@ -859,7 +859,7 @@ function KycForm({ entity, onSaved, t }: any) {
               </NativeSelect>
             </Field>
 
-            <Field label={isUnlicensed ? "Owner Name" : "Company Name"} required>
+            <Field label={isUnlicensed || isSole ? "Owner Name" : "Company Name"} required>
               <Input required value={entityName} placeholder="Enter name" onChange={(e) => setEntityName(e.target.value)} />
             </Field>
 
