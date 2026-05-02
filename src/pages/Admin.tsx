@@ -129,7 +129,7 @@ function DocumentPreview({ doc }: { doc: any }) {
   return <div className="flex h-56 flex-col items-center justify-center gap-2 rounded-md bg-muted/40 text-sm text-muted-foreground"><ImageIcon className="size-6" /> لا توجد معاينة لهذا النوع</div>;
 }
 
-type Tab = "overview" | "entities" | "documents" | "sanctions" | "users" | "logs";
+type Tab = "overview" | "entities" | "documents" | "sanctions" | "alerts" | "users" | "logs";
 
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
