@@ -17,6 +17,7 @@ import {
   Upload, Trash2, Plus, Users, Activity,
   BarChart3, Shield, RefreshCw, ExternalLink, ArrowLeft, Image as ImageIcon, Loader2,
 } from "lucide-react";
+import { formatDate, formatDateTime } from "@/lib/utils";
 
 function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -492,8 +493,82 @@ export default function AdminDashboard() {
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">رقم الارتباط</div><div className="mt-1 font-medium">{selectedEntity.engagement_number ?? "—"}</div></div>
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">نوع الطلب</div><div className="mt-1 font-medium">{selectedEntity.application_type ?? "—"}</div></div>
                 <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">CDD</div><div className="mt-1 font-medium">{selectedEntity.cdd_completed ? "مكتمل" : "غير مكتمل"}</div></div>
-                <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">تاريخ الإنشاء</div><div className="mt-1 font-medium">{new Date(selectedEntity.created_at).toLocaleDateString("ar-AE")}</div></div>
+                <div className="rounded-md border border-border p-3"><div className="text-xs text-muted-foreground">تاريخ الإنشاء</div><div className="mt-1 font-medium">{formatDate(selectedEntity.created_at)}</div></div>
               </div>
+
+              {/* ── هويات المساهمين ── */}
+              {selectedEntity.shareholders?.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Users className="size-4" /> المساهمون والهويات المرفقة
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {selectedEntity.shareholders.map((sh: any, i: number) => {
+                      const shDocs = selectedEntityDocuments.filter((d: any) =>
+                        d.storage_path?.includes(sh.name)
+                      );
+                      return (
+                        <div key={i} className="rounded-md border border-border p-3 space-y-2">
+                          <div className="font-medium text-sm">{sh.name} — <span className="text-muted-foreground text-xs">مساهم {i + 1} ({sh.capital}%)</span></div>
+                          <div className="text-xs text-muted-foreground">الجنسية: {sh.nationality ?? "—"} | هوية: {sh.emirates_id ?? "—"}</div>
+                          {shDocs.length === 0
+                            ? <div className="text-xs text-muted-foreground italic">لا توجد وثائق مرفوعة</div>
+                            : shDocs.map((doc: any) => (
+                                <div key={doc.id} className="flex items-center gap-2 text-xs bg-muted/40 rounded px-2 py-1.5">
+                                  <FileText className="size-3 shrink-0" />
+                                  <span className="flex-1 truncate">{doc.file_name}</span>
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {doc.document_type === "emirates_id" ? "هوية" : "جواز"}
+                                  </Badge>
+                                  <Button size="sm" variant="ghost" className="h-6 px-1" onClick={() => openDocument(doc)}>
+                                    <ExternalLink className="size-3" />
+                                  </Button>
+                                </div>
+                              ))
+                          }
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── هويات الـ UBOs ── */}
+              {selectedEntity.ubos?.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Users className="size-4" /> المستفيدون الفعليون (UBOs) وهوياتهم
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {selectedEntity.ubos.map((u: any, i: number) => {
+                      const uboDocs = selectedEntityDocuments.filter((d: any) =>
+                        d.storage_path?.includes(u.name)
+                      );
+                      return (
+                        <div key={i} className="rounded-md border border-border p-3 space-y-2">
+                          <div className="font-medium text-sm">{u.name} — <span className="text-muted-foreground text-xs">UBO {i + 1}</span></div>
+                          <div className="text-xs text-muted-foreground">الجنسية: {u.nationality ?? "—"} | هوية: {u.emirates_id ?? "—"}</div>
+                          {uboDocs.length === 0
+                            ? <div className="text-xs text-muted-foreground italic">لا توجد وثائق مرفوعة</div>
+                            : uboDocs.map((doc: any) => (
+                                <div key={doc.id} className="flex items-center gap-2 text-xs bg-muted/40 rounded px-2 py-1.5">
+                                  <FileText className="size-3 shrink-0" />
+                                  <span className="flex-1 truncate">{doc.file_name}</span>
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {doc.document_type === "emirates_id" ? "هوية" : "جواز"}
+                                  </Badge>
+                                  <Button size="sm" variant="ghost" className="h-6 px-1" onClick={() => openDocument(doc)}>
+                                    <ExternalLink className="size-3" />
+                                  </Button>
+                                </div>
+                              ))
+                          }
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
@@ -514,7 +589,7 @@ export default function AdminDashboard() {
                                 <CardTitle className="truncate text-base">{doc.file_name}</CardTitle>
                                 <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
                                   <Badge variant="secondary">{DOC_TYPE_LABELS[doc.document_type] ?? doc.document_type}</Badge>
-                                  <span>{new Date(doc.uploaded_at).toLocaleString("ar-AE")}</span>
+                                  <span>{formatDateTime(doc.uploaded_at)}</span>
                                 </div>
                               </div>
                               <Badge variant={status === "approved" ? "success" : status === "rejected" ? "destructive" : "warning"}>
@@ -548,7 +623,7 @@ export default function AdminDashboard() {
                       <div key={log.id} className="p-3 text-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <Badge variant="outline">{log.action}</Badge>
-                          <span className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString("ar-AE")}</span>
+                          <span className="text-xs text-muted-foreground">{formatDateTime(log.created_at)}</span>
                         </div>
                         <div className="mt-2 text-muted-foreground">{log.description ?? "—"}</div>
                       </div>
@@ -641,7 +716,7 @@ export default function AdminDashboard() {
                         <li key={log.id} className="px-4 py-3">
                           <div className="text-xs font-medium truncate">{log.description}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            {new Date(log.created_at).toLocaleString("ar-AE")}
+                            {formatDateTime(log.created_at)}
                           </div>
                         </li>
                       ))}
@@ -715,7 +790,7 @@ export default function AdminDashboard() {
                             )}
                           </td>
                           <td className="py-3 px-4 text-xs text-muted-foreground">
-                            {new Date(e.created_at).toLocaleDateString("ar-AE")}
+                            {formatDate(e.created_at)}
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-1.5 flex-wrap">
@@ -821,7 +896,7 @@ export default function AdminDashboard() {
                               </Badge>
                               {doc.rejection_reason && <div className="mt-1 text-xs text-destructive max-w-48 truncate">{doc.rejection_reason}</div>}
                             </td>
-                            <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">{new Date(doc.uploaded_at).toLocaleString("ar-AE")}</td>
+                            <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(doc.uploaded_at)}</td>
                             <td className="py-3 px-4">
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <Button size="sm" variant="outline" onClick={() => openDocument(doc)}><ExternalLink className="size-3.5" /> عرض</Button>
@@ -938,7 +1013,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-4 font-medium">{u.full_name ?? "—"}</td>
                           <td className="py-3 px-4 text-muted-foreground text-xs">{u.email ?? "—"}</td>
                           <td className="py-3 px-4 text-xs text-muted-foreground">
-                            {new Date(u.created_at).toLocaleDateString("ar-AE")}
+                            {formatDate(u.created_at)}
                           </td>
                           <td className="py-3 px-4">
                             {role === "admin" ? (
@@ -991,7 +1066,7 @@ export default function AdminDashboard() {
                     ) : logs.map((log) => (
                       <tr key={log.id} className="border-b border-border/60 hover:bg-muted/20">
                         <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(log.created_at).toLocaleString("ar-AE")}
+                          {formatDateTime(log.created_at)}
                         </td>
                         <td className="py-3 px-4 text-xs">
                           <div>{log.profiles?.full_name ?? "—"}</div>
