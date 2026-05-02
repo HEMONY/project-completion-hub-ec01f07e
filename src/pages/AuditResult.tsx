@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CheckCircle2, AlertTriangle, FileText, PenLine, Clock } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 function ScoreBar({ score }: { score: number }) {
   const color = score >= 80 ? "bg-green-500" : score >= 60 ? "bg-yellow-500" : "bg-red-500";
@@ -225,7 +226,7 @@ export default function AuditResult() {
                     {/* تاريخ الإرسال */}
                     {r.sent_at && (
                       <div className="text-xs text-muted-foreground">
-                        أُرسل في: {new Date(r.sent_at).toLocaleString("ar-AE")}
+                        أُرسل في: {formatDateTime(r.sent_at)}
                       </div>
                     )}
 
@@ -285,7 +286,7 @@ export default function AuditResult() {
                             <strong>{r.client_signature}</strong>
                             {r.client_signed_at && (
                               <span className="text-xs text-muted-foreground ms-2">
-                                ({new Date(r.client_signed_at).toLocaleString("ar-AE")})
+                                ({formatDateTime(r.client_signed_at)})
                               </span>
                             )}
                           </div>
