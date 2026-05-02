@@ -1305,7 +1305,7 @@ function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    await supabase.from("financial_years").upsert({ entity_id: entity.id, ...form }, { onConflict: "entity_id" });
+    await supabase.from("financial_years").upsert({ entity_id: entity.id, user_id: entity.user_id, ...form } as any, { onConflict: "entity_id" });
     await supabase.from("entities").update({ current_step: 4 }).eq("id", entity.id);
     setBusy(false);
     toast.success(t("saved"));
@@ -1381,7 +1381,7 @@ function TaxStatusForm({ entity, onSaved, onBack, t }: any) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    await supabase.from("tax_status").upsert({ entity_id: entity.id, ...form }, { onConflict: "entity_id" });
+    await supabase.from("tax_status").upsert({ entity_id: entity.id, user_id: entity.user_id, ...form } as any, { onConflict: "entity_id" });
     await supabase.from("entities").update({ current_step: 5 }).eq("id", entity.id);
     setBusy(false);
     toast.success(t("saved"));
@@ -1478,9 +1478,9 @@ function EngagementForm({ entity, onSaved, onBack, t }: any) {
     setBusy(true);
     await supabase.from("engagement_letters").upsert({
       entity_id: entity.id, user_id: entity.user_id,
-      agreed: true, signer_name: signerName,
-      signed_at: new Date().toISOString(),
-    }, { onConflict: "entity_id" });
+      accepted: true, accepted_at: new Date().toISOString(),
+      letter_content: signerName,
+    } as any, { onConflict: "entity_id" });
     await supabase.from("entities").update({
       application_status: "submitted",
       submitted_at: new Date().toISOString(),
