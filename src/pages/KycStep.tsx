@@ -1136,7 +1136,7 @@ function KycForm({ entity, onSaved, t }: any) {
             <Field label="Is any person classified as a Politically Exposed Person (PEP)?" required>
               <div className="flex gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-                  <input type="radio" name="pep" value="yes" checked={hasPep === "yes"} onChange={() => { setHasPep("yes"); if (pepPersons.length === 0) setPepPersons([{ name: "", file: null }]); }} />
+                  <input type="radio" name="pep" value="yes" checked={hasPep === "yes"} onChange={() => { setHasPep("yes"); if (pepPersons.length === 0) setPepPersons([emptyPerson()]); }} />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
