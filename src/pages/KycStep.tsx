@@ -314,10 +314,18 @@ function PersonCard({
     }
     onChange({ ...person, id_files: filesToUse, ocr_status: "checking" });
     const result = await verifyWithOCR(filesToUse[0], person.name, "id");
+
+    // تحقق إضافي: مطابقة رقم الهوية إذا استُخرج
+    let idNumMatch = true;
+    if (result.dates.id_number && person.emirates_id) {
+      idNumMatch = person.emirates_id.replace(/\D/g, "") === result.dates.id_number.replace(/\D/g, "");
+    }
+    const finalMatch = result.match && idNumMatch;
+
     onChange({
       ...person,
       id_files: filesToUse,
-      ocr_status: result.match ? "match" : "mismatch",
+      ocr_status: finalMatch ? "match" : "mismatch",
       ocr_extracted: result.extractedName,
       ocr_dates: result.dates,
     });
@@ -794,14 +802,18 @@ function KycForm({ entity, onSaved, t }: any) {
       if (data) {
         paths.push(data.path);
         if (docType) {
-          await supabase.from("kyc_documents").insert({
-            entity_id: entity.id,
-            user_id: user!.id,
-            file_name: file.name,
-            storage_path: data.path,
-            document_type: docType,
-            mime_type: file.type || "application/octet-stream",
-          } as any);
+          try {
+            await supabase.from("kyc_documents").insert({
+              entity_id: entity.id,
+              user_id: user!.id,
+              file_name: file.name,
+              storage_path: data.path,
+              document_type: docType,
+              mime_type: file.type || "application/octet-stream",
+            } as any);
+          } catch {
+            // non-critical — file is uploaded to storage regardless
+          }
         }
       }
     }
@@ -944,6 +956,7 @@ function KycForm({ entity, onSaved, t }: any) {
       return;
     }
     setBusy(true);
+    try {
 
     // ── Sanctions screening BEFORE upload/save ───────────────────────────
     const personsToScreen = [
@@ -959,7 +972,6 @@ function KycForm({ entity, onSaved, t }: any) {
         body: { persons: personsToScreen, entityId: entity.id, entityName },
       });
       if (scr?.matches?.length > 0) {
-        setBusy(false);
         const names = scr.matches.map((m: any) => `${m.person_name} (${m.person_role}) ↔ ${m.matched_english}`).join("\n• ");
         toast.error(
           `🚨 SANCTIONS MATCH — Application rejected.\nThe following person(s) appear on the sanctions list:\n• ${names}\n\nCompliance team has been notified.`,
@@ -1025,10 +1037,16 @@ function KycForm({ entity, onSaved, t }: any) {
     };
 
     const { data, error } = await supabase.from("entities").update(payload).eq("id", entity.id).select().single();
-    setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Saved successfully");
     onSaved(data);
+
+    } catch (err: any) {
+      console.error("Submit error:", err);
+      toast.error(err?.message ?? "حدث خطأ، يرجى المحاولة مجدداً");
+    } finally {
+      setBusy(false);
+    }
   };
   const normalize = (s: string) => s.toLowerCase().replace(/[\s\-_.\/]/g, "");
   return (
@@ -1185,7 +1203,13 @@ function KycForm({ entity, onSaved, t }: any) {
                         if (!entityName.trim()) { toast.error("Please enter company name first"); return; }
                         setLicenseOcrStatus("checking");
                         const result = await verifyWithOCR(licenseFiles[0], entityName, "license");
-                        setLicenseOcrStatus(result.match ? "match" : "mismatch");
+                        // تحقق إضافي: مطابقة رقم الرخصة إذا استُخرج
+                        let licNumMatch = true;
+                        if (result.dates.license_number && licenseNumber.trim()) {
+                          const norm = (s: string) => s.toLowerCase().replace(/[\s\-_.\/]/g, "");
+                          licNumMatch = norm(licenseNumber) === norm(result.dates.license_number);
+                        }
+                        setLicenseOcrStatus((result.match && licNumMatch) ? "match" : "mismatch");
                         setLicenseOcrExtracted(result.extractedName);
                         setLicenseOcrDates(result.dates);
                       }}
