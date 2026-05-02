@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2, ExternalLink } from "lucide-react";
 
 // Steps match exactly the HTML sections:
 // S1: Entity Info + Contact + Shareholders + UBOs + Management + PEP + Declarations = "kyc"
@@ -36,6 +36,59 @@ function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
       {...props}
       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
     />
+  );
+}
+
+function NationalitySelect({
+  value, onChange,
+}: { value: string; onChange: (v: string) => void }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const filtered = ALL_NATIONALITIES.filter((n) =>
+    n.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="relative">
+      <div
+        onClick={() => setOpen(!open)}
+        className="flex h-10 w-full cursor-pointer items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+      >
+        <span className={value ? "text-foreground" : "text-muted-foreground"}>
+          {value || "Select nationality..."}
+        </span>
+        <svg className="size-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-background shadow-lg">
+          <div className="p-2">
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search nationality..."
+              className="w-full rounded border border-input bg-background px-2 py-1.5 text-sm outline-none"
+            />
+          </div>
+          <ul className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <li className="px-3 py-2 text-sm text-muted-foreground">No results</li>
+            ) : filtered.map((n) => (
+              <li
+                key={n}
+                onClick={() => { onChange(n); setOpen(false); setSearch(""); }}
+                className={`cursor-pointer px-3 py-2 text-sm hover:bg-accent ${value === n ? "bg-primary/10 font-medium" : ""}`}
+              >
+                {n}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -302,7 +355,15 @@ function PersonCard({
           </Field>
         )}
         <Field label="Nationality" required>
-          <Input required value={person.nationality} placeholder="Nationality" onChange={(e) => set("nationality", e.target.value)} />
+          <NationalitySelect
+            value={person.nationality}
+            onChange={(v) => set("nationality", v)}
+          />
+          {isBlacklisted(person.nationality) && (
+            <div className="text-xs text-destructive mt-1 font-semibold">
+              ⚠️ This nationality is not permitted under our compliance framework
+            </div>
+          )}
         </Field>
         <Field label="Date & Place of Birth" required>
           <Input required value={person.dob_place} placeholder="DD/MM/YYYY, City, Country" onChange={(e) => set("dob_place", e.target.value)} />
@@ -418,11 +479,131 @@ const DECLARATIONS = [
   "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data.",
 ];
 
-const BLACKLISTED = ["iran", "myanmar", "north korea", "korea north", "islamic republic of iran", "burma"];
+const BLACKLISTED_NATIONALITIES = ["Iranian", "Burmese", "North Korean"];
+
+const ALL_NATIONALITIES = [
+  "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan",
+  "Antiguans", "Argentine", "Armenian", "Australian", "Austrian", "Azerbaijani",
+  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belarusian", "Belgian",
+  "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Botswana",
+  "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burundian",
+  "Cabo Verdean", "Cambodian", "Cameroonian", "Canadian", "Central African",
+  "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese",
+  "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech",
+  "Danish", "Djiboutian", "Dominican",
+  "Dutch",
+  "Ecuadorian", "Egyptian", "Emirati", "Equatorial Guinean", "Eritrean",
+  "Estonian", "Eswatini", "Ethiopian",
+  "Fijian", "Filipino", "Finnish", "French",
+  "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek",
+  "Grenadian", "Guatemalan", "Guinean", "Guinea-Bissauan", "Guyanese",
+  "Haitian", "Honduran", "Hungarian",
+  "Icelandic", "Indian", "Indonesian", "Iraqi", "Irish", "Israeli",
+  "Italian", "Ivorian",
+  "Jamaican", "Japanese", "Jordanian",
+  "Kazakhstani", "Kenyan", "Kiribatian", "Kuwaiti", "Kyrgyz",
+  "Laotian", "Latvian", "Lebanese", "Lesothan", "Liberian", "Libyan",
+  "Liechtensteiner", "Lithuanian", "Luxembourger",
+  "Malagasy", "Malawian", "Malaysian", "Maldivian", "Malian", "Maltese",
+  "Marshallese", "Mauritanian", "Mauritian", "Mexican", "Micronesian",
+  "Moldovan", "Monacan", "Mongolian", "Montenegrin", "Moroccan", "Mozambican",
+  "Namibian", "Nauruan", "Nepalese", "New Zealander", "Nicaraguan",
+  "Nigerian", "Nigerien", "Norwegian",
+  "Omani",
+  "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean",
+  "Paraguayan", "Peruvian", "Polish", "Portuguese",
+  "Qatari",
+  "Romanian", "Russian", "Rwandan",
+  "Saint Lucian", "Salvadoran", "Samoan", "Saudi", "Senegalese", "Serbian",
+  "Seychellois", "Sierra Leonean", "Singaporean", "Slovak", "Slovenian",
+  "Solomon Islander", "Somali", "South African", "South Sudanese",
+  "Spanish", "Sri Lankan", "Sudanese", "Surinamese", "Swedish", "Swiss", "Syrian",
+  "Taiwanese", "Tajik", "Tanzanian", "Thai", "Timorese", "Togolese",
+  "Tongan", "Trinidadian", "Tunisian", "Turkish", "Turkmen", "Tuvaluan",
+  "Ugandan", "Ukrainian", "Uruguayan", "Uzbek",
+  "Vanuatuan", "Venezuelan", "Vietnamese",
+  "Yemeni",
+  "Zambian", "Zimbabwean",
+].filter((n) => !BLACKLISTED_NATIONALITIES.includes(n));
 
 function isBlacklisted(nationality: string) {
-  const n = nationality.toLowerCase();
-  return BLACKLISTED.some((b) => n.includes(b));
+  return BLACKLISTED_NATIONALITIES.some((b) =>
+    nationality.toLowerCase().includes(b.toLowerCase())
+  );
+}
+
+// ── User Documents Panel ────────────────────────────────────────────────────
+function MyDocumentsPanel({ entityId, userId }: { entityId: string; userId: string }) {
+  const [docs, setDocs] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    supabase.from("kyc_documents").select("*")
+      .eq("entity_id", entityId)
+      .eq("user_id", userId)
+      .order("uploaded_at", { ascending: false })
+      .then(({ data }) => setDocs(data ?? []));
+  }, [entityId, userId]);
+
+  if (docs.length === 0) return null;
+
+  const DOC_LABELS: Record<string, string> = {
+    trade_license: "رخصة تجارية",
+    emirates_id: "هوية إماراتية",
+    passport: "جواز سفر",
+    authorization_letter: "تفويض",
+    cdd_identity: "هوية CDD",
+    cdd_eligibility: "أهلية",
+    cdd_auditor: "مدقق",
+  };
+
+  const openDoc = async (doc: any) => {
+    const { data, error } = await supabase.storage.from("kyc-documents").createSignedUrl(doc.storage_path, 600);
+    if (error) { toast.error(error.message); return; }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <Card className="shadow-card mt-4">
+      <CardHeader className="py-3 px-4 cursor-pointer" onClick={() => setOpen(!open)}>
+        <CardTitle className="text-sm flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2"><FileText className="size-4 text-primary" /> المستندات المرفوعة ({docs.length})</span>
+          <span className="text-muted-foreground text-xs">{open ? "▲" : "▼"}</span>
+        </CardTitle>
+      </CardHeader>
+      {open && (
+        <CardContent className="px-4 pb-4 space-y-2">
+          {docs.map((doc) => {
+            const status = doc.status ?? "pending";
+            return (
+              <div key={doc.id} className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs">
+                <FileText className="size-3 shrink-0 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-medium">{doc.file_name}</div>
+                  <div className="text-muted-foreground">{DOC_LABELS[doc.document_type] ?? doc.document_type}</div>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                  status === "approved" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  : status === "rejected" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                }`}>
+                  {status === "approved" ? "معتمد" : status === "rejected" ? "مرفوض" : "قيد المراجعة"}
+                </span>
+                {doc.rejection_reason && (
+                  <span className="text-destructive text-[10px] shrink-0 max-w-24 truncate" title={doc.rejection_reason}>
+                    {doc.rejection_reason}
+                  </span>
+                )}
+                <Button type="button" size="sm" variant="ghost" className="h-6 px-1 shrink-0" onClick={() => openDoc(doc)}>
+                  <ExternalLink className="size-3" />
+                </Button>
+              </div>
+            );
+          })}
+        </CardContent>
+      )}
+    </Card>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -469,7 +650,10 @@ export default function KycStep() {
     <AppShell>
       <div className="max-w-6xl mx-auto">
         <div className="grid lg:grid-cols-[260px_1fr] gap-6 items-start">
-          <KycStepper current={stepKey} entityId={entityId} completed={completedSteps} />
+          <div>
+            <KycStepper current={stepKey} entityId={entityId} completed={completedSteps} />
+            {user && entityId && <MyDocumentsPanel entityId={entityId} userId={user.id} />}
+          </div>
           <div className="min-w-0">
             {stepKey === "kyc" && (
               <KycForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} t={t} />
@@ -602,12 +786,24 @@ function KycForm({ entity, onSaved, t }: any) {
   };
 
   // Upload files
-  const uploadFiles = async (files: File[], folder: string): Promise<string[]> => {
+  const uploadFiles = async (files: File[], folder: string, docType?: string): Promise<string[]> => {
     const paths: string[] = [];
     for (const file of files) {
       const p = `${user!.id}/${entity.id}/${folder}/${Date.now()}_${file.name}`;
       const { data } = await supabase.storage.from("kyc-documents").upload(p, file, { upsert: true });
-      if (data) paths.push(data.path);
+      if (data) {
+        paths.push(data.path);
+        if (docType) {
+          await supabase.from("kyc_documents").insert({
+            entity_id: entity.id,
+            user_id: user!.id,
+            file_name: file.name,
+            storage_path: data.path,
+            document_type: docType,
+            mime_type: file.type || "application/octet-stream",
+          } as any);
+        }
+      }
     }
     return paths;
   };
@@ -776,27 +972,27 @@ function KycForm({ entity, onSaved, t }: any) {
     }
 
     // Upload license
-    const licensePaths = licenseFiles.length > 0 ? await uploadFiles(licenseFiles, "trade") : [];
+    const licensePaths = licenseFiles.length > 0 ? await uploadFiles(licenseFiles, "trade", "trade_license") : [];
 
     // Upload shareholder docs
     for (const sh of shareholders) {
-      if (sh.id_files.length > 0) await uploadFiles(sh.id_files, `shareholders/${sh.name}/eid`);
-      if (sh.passport_files.length > 0) await uploadFiles(sh.passport_files, `shareholders/${sh.name}/passport`);
+      if (sh.id_files.length > 0) await uploadFiles(sh.id_files, `shareholders/${sh.name}/eid`, "emirates_id");
+      if (sh.passport_files.length > 0) await uploadFiles(sh.passport_files, `shareholders/${sh.name}/passport`, "passport");
     }
 
     // Upload UBO docs
     for (const u of ubos) {
-      if (u.id_files.length > 0) await uploadFiles(u.id_files, `ubos/${u.name}/eid`);
-      if (u.passport_files.length > 0) await uploadFiles(u.passport_files, `ubos/${u.name}/passport`);
+      if (u.id_files.length > 0) await uploadFiles(u.id_files, `ubos/${u.name}/eid`, "emirates_id");
+      if (u.passport_files.length > 0) await uploadFiles(u.passport_files, `ubos/${u.name}/passport`, "passport");
     }
 
     // PEP — no extra uploads needed (persons already uploaded in their sections)
 
     // Upload Employer ID doc
-    if (employerIdFiles.length > 0) await uploadFiles(employerIdFiles, `employer/${employerName || "unknown"}/eid`);
+    if (employerIdFiles.length > 0) await uploadFiles(employerIdFiles, `employer/${employerName || "unknown"}/eid`, "emirates_id");
 
     // Upload POA
-    if (poaFiles.length > 0) await uploadFiles(poaFiles, "poa");
+    if (poaFiles.length > 0) await uploadFiles(poaFiles, "poa", "authorization_letter");
 
     const stripPerson = ({ id_files, passport_files, ocr_status, ocr_extracted, ocr_dates, ...rest }: Person) => rest;
 
