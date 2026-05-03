@@ -828,27 +828,8 @@ function KycForm({ entity, onSaved, t }: any) {
     if (!entityName.trim()) errs.push("Owner/Company name is required");
     if (isLicensed && !licenseNumber.trim()) errs.push("License number is required");
     if (isLicensed && !licenseDate) errs.push("License issue date is required");
-    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "checking") errs.push("Trade License verification still in progress, please wait");
-    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "mismatch") errs.push(`Company name does not match Trade License. License shows: "${licenseOcrExtracted || "unreadable"}"`);
-    if (isLicensed && licenseOcrDates.license_number && licenseNumber.trim()) {
-      const normalize = (s: string) => s.toLowerCase().replace(/[\s\-_.\/]/g, "");
-      if (normalize(licenseNumber) !== normalize(licenseOcrDates.license_number)) {
-        errs.push(`License number entered (${licenseNumber}) does not match document (${licenseOcrDates.license_number})`);
-      }
-    }
-    if (isLicensed && licenseOcrDates.expiry_date) {
-      const [d, m, y] = licenseOcrDates.expiry_date.split("/");
-      const expiry = new Date(`${y}-${m}-${d}`);
-      if (expiry < new Date()) {
-        errs.push(`Trade License is expired (${licenseOcrDates.expiry_date}) — cannot proceed`);
-      }
-    }
-    if (isLicensed && licenseOcrDates.issue_date && licenseDate) {
-      const fromDoc = licenseOcrDates.issue_date.split("/").reverse().join("-");
-      if (fromDoc !== licenseDate) {
-        errs.push(`License issue date entered (${licenseDate}) does not match document (${licenseOcrDates.issue_date})`);
-      }
-    }
+    // OCR matching is informational only — do NOT block submission
+    // (license expiry / id mismatch / number mismatch warnings are surfaced via OcrBadge)
     if (!principalActivity.trim()) errs.push("Principal Activity is required");
     if (!economicSector) errs.push("Economic Sector is required");
     if (!emirate) errs.push("Emirate is required");
