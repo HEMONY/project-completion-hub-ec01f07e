@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2, ExternalLink } from "lucide-react";
+import { DateInput } from "@/components/DateInput";
 
 // Steps match exactly the HTML sections:
 // S1: Entity Info + Contact + Shareholders + UBOs + Management + PEP + Declarations = "kyc"
@@ -827,27 +828,8 @@ function KycForm({ entity, onSaved, t }: any) {
     if (!entityName.trim()) errs.push("Owner/Company name is required");
     if (isLicensed && !licenseNumber.trim()) errs.push("License number is required");
     if (isLicensed && !licenseDate) errs.push("License issue date is required");
-    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "checking") errs.push("Trade License verification still in progress, please wait");
-    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "mismatch") errs.push(`Company name does not match Trade License. License shows: "${licenseOcrExtracted || "unreadable"}"`);
-    if (isLicensed && licenseOcrDates.license_number && licenseNumber.trim()) {
-      const normalize = (s: string) => s.toLowerCase().replace(/[\s\-_.\/]/g, "");
-      if (normalize(licenseNumber) !== normalize(licenseOcrDates.license_number)) {
-        errs.push(`License number entered (${licenseNumber}) does not match document (${licenseOcrDates.license_number})`);
-      }
-    }
-    if (isLicensed && licenseOcrDates.expiry_date) {
-      const [d, m, y] = licenseOcrDates.expiry_date.split("/");
-      const expiry = new Date(`${y}-${m}-${d}`);
-      if (expiry < new Date()) {
-        errs.push(`Trade License is expired (${licenseOcrDates.expiry_date}) — cannot proceed`);
-      }
-    }
-    if (isLicensed && licenseOcrDates.issue_date && licenseDate) {
-      const fromDoc = licenseOcrDates.issue_date.split("/").reverse().join("-");
-      if (fromDoc !== licenseDate) {
-        errs.push(`License issue date entered (${licenseDate}) does not match document (${licenseOcrDates.issue_date})`);
-      }
-    }
+    // OCR matching is informational only — do NOT block submission
+    // (license expiry / id mismatch / number mismatch warnings are surfaced via OcrBadge)
     if (!principalActivity.trim()) errs.push("Principal Activity is required");
     if (!economicSector) errs.push("Economic Sector is required");
     if (!emirate) errs.push("Emirate is required");
@@ -860,13 +842,7 @@ function KycForm({ entity, onSaved, t }: any) {
     if (employerName.trim()) {
       if (!employerEmiratesId || employerEmiratesId.length !== 15) errs.push("Employer Emirates ID must be 15 digits");
       if (employerIdFiles.length === 0) errs.push("Employer Emirates ID document is required when employer name is provided");
-      if (employerOcrStatus === "checking") errs.push("Employer ID verification is still in progress");
-      if (employerOcrStatus === "mismatch") errs.push(`Employer name does not match Emirates ID document. Extracted: ${employerOcrExtracted || "unreadable"}`);
-      if (employerOcrDates.id_number && employerEmiratesId) {
-        if (employerEmiratesId.replace(/\D/g, "") !== employerOcrDates.id_number.replace(/\D/g, "")) {
-          errs.push(`Employer Emirates ID number entered does not match document (${employerOcrDates.id_number})`);
-        }
-      }
+      // OCR matching for employer is informational only
     }
 
     // Shareholders
@@ -882,13 +858,7 @@ function KycForm({ entity, onSaved, t }: any) {
       if (sh.id_files.length === 0) errs.push(`Shareholder ${i + 1}: Emirates ID document required`);
       if (sh.passport_files.length === 0) errs.push(`Shareholder ${i + 1}: Passport document required`);
       if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
-      if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
-      if (sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Name does not match Emirates ID document`);
-      if (sh.ocr_dates?.id_number && sh.emirates_id) {
-        if (sh.emirates_id.replace(/\D/g, "") !== sh.ocr_dates.id_number.replace(/\D/g, "")) {
-          errs.push(`Shareholder ${i + 1}: Emirates ID number (${sh.emirates_id}) does not match document (${sh.ocr_dates.id_number})`);
-        }
-      }
+      // OCR matching is informational only — does not block submission
       totalCapital += parseFloat(sh.capital) || 0;
     });
     if (shareholders.length > 0 && Math.abs(totalCapital - 100) > 0.01) {
@@ -907,13 +877,7 @@ function KycForm({ entity, onSaved, t }: any) {
         if (u.id_files.length === 0) errs.push(`UBO ${i + 1}: Emirates ID document required`);
         if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
-        if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
-        if (u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Name does not match Emirates ID document`);
-        if (u.ocr_dates?.id_number && u.emirates_id) {
-          if (u.emirates_id.replace(/\D/g, "") !== u.ocr_dates.id_number.replace(/\D/g, "")) {
-            errs.push(`UBO ${i + 1}: Emirates ID number (${u.emirates_id}) does not match document (${u.ocr_dates.id_number})`);
-          }
-        }
+        // OCR matching is informational only — does not block submission
       });
     }
 
@@ -922,7 +886,7 @@ function KycForm({ entity, onSaved, t }: any) {
     if (managementSelect === "Other") {
       managers.forEach((m, i) => {
         if (!m.name.trim()) errs.push(`Manager ${i + 1}: Name required`);
-        if (m.ocr_status === "mismatch") errs.push(`Manager ${i + 1}: Name does not match Emirates ID`);
+        // OCR matching is informational only
       });
       if (poaFiles.length === 0) errs.push("Power of Attorney (POA) document is required");
     }
@@ -1174,7 +1138,7 @@ function KycForm({ entity, onSaved, t }: any) {
                   <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => setLicenseNumber(e.target.value)} />
                 </Field>
                 <Field label="License Issue Date" required>
-                  <Input required type="date" value={licenseDate} onChange={(e) => setLicenseDate(e.target.value)} />
+                  <DateInput required value={licenseDate} onChange={setLicenseDate} />
                 </Field>
                 {legalTypeOptions[registrationStatus] && (
                   <Field label="Legal Structure">
@@ -1692,13 +1656,13 @@ function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
           </Field>
           {form.is_first_year === "Yes" && (
             <div className="grid md:grid-cols-2 gap-4">
-              <Field label="First Year Start Date" required><Input required type="date" value={form.first_year_start} onChange={(e) => set("first_year_start", e.target.value)} /></Field>
-              <Field label="First Year End Date" required><Input required type="date" value={form.first_year_end} onChange={(e) => set("first_year_end", e.target.value)} /></Field>
+              <Field label="First Year Start Date" required><DateInput required value={form.first_year_start} onChange={(v) => set("first_year_start", v)} /></Field>
+              <Field label="First Year End Date" required><DateInput required value={form.first_year_end} onChange={(v) => set("first_year_end", v)} /></Field>
             </div>
           )}
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Current Year Start" required><Input required type="date" value={form.current_year_start} onChange={(e) => set("current_year_start", e.target.value)} /></Field>
-            <Field label="Current Year End" required><Input required type="date" value={form.current_year_end} onChange={(e) => set("current_year_end", e.target.value)} /></Field>
+            <Field label="Current Year Start" required><DateInput required value={form.current_year_start} onChange={(v) => set("current_year_start", v)} /></Field>
+            <Field label="Current Year End" required><DateInput required value={form.current_year_end} onChange={(v) => set("current_year_end", v)} /></Field>
           </div>
           {form.is_first_year === "No" && (
             <Field label="Was the previous year audited?" required>

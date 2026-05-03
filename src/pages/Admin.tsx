@@ -988,7 +988,59 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ─── TAB: USERS ────────────────────────────────────── */}
+        {/* ─── TAB: ALERTS ───────────────────────────────────── */}
+        {tab === "alerts" && (
+          <div className="space-y-4">
+            <Card className="shadow-card">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="size-5 text-destructive" /> تنبيهات الامتثال ({alerts.length})
+                  </CardTitle>
+                  <Button size="sm" variant="outline" onClick={fetchAlerts}><RefreshCw className="size-4" /> تحديث</Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {alerts.length === 0 ? (
+                  <div className="py-12 text-center text-sm text-muted-foreground">لا توجد تنبيهات</div>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {alerts.map((a) => (
+                      <li key={a.id} className={`p-4 ${!a.is_read ? "bg-destructive/5" : ""}`}>
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant={a.severity === "high" ? "destructive" : "warning"}>{a.severity}</Badge>
+                              <Badge variant="outline" className="text-xs">{a.type}</Badge>
+                              {!a.is_read && <Badge variant="destructive" className="text-[10px]">جديد</Badge>}
+                            </div>
+                            <div className="font-medium text-sm">{a.title}</div>
+                            {a.message && <div className="text-xs text-muted-foreground mt-1">{a.message}</div>}
+                            {a.details && Object.keys(a.details).length > 0 && (
+                              <pre className="mt-2 text-[10px] bg-muted/40 p-2 rounded overflow-x-auto max-h-40">{JSON.stringify(a.details, null, 2)}</pre>
+                            )}
+                            <div className="text-[10px] text-muted-foreground mt-1">{formatDateTime(a.created_at)}</div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {a.entity_id && (
+                              <Button size="sm" variant="outline" onClick={() => {
+                                const ent = entities.find((e) => e.id === a.entity_id);
+                                if (ent) { setSelectedEntity(ent); setTab("entities"); }
+                              }}>عرض الكيان</Button>
+                            )}
+                            {!a.is_read && (
+                              <Button size="sm" variant="ghost" onClick={() => markAlertRead(a.id)}>تعليم كمقروء</Button>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
         {tab === "users" && (
           <Card className="shadow-card">
             <CardHeader><CardTitle className="flex items-center gap-2"><Users className="size-5" /> إدارة المستخدمين ({users.length})</CardTitle></CardHeader>
