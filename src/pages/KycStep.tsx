@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2, ExternalLink } from "lucide-react";
-import { DateInput } from "@/components/DateInput";
 
 // Steps match exactly the HTML sections:
 // S1: Entity Info + Contact + Shareholders + UBOs + Management + PEP + Declarations = "kyc"
@@ -39,7 +38,58 @@ function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
     />
   );
 }
+const BLACKLISTED_NATIONALITIES = ["Iranian", "Burmese", "North Korean"];
 
+const ALL_NATIONALITIES = [
+  "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan",
+  "Antiguans", "Argentine", "Armenian", "Australian", "Austrian", "Azerbaijani",
+  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belarusian", "Belgian",
+  "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Botswana",
+  "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burundian",
+  "Cabo Verdean", "Cambodian", "Cameroonian", "Canadian", "Central African",
+  "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese",
+  "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech",
+  "Danish", "Djiboutian", "Dominican",
+  "Dutch",
+  "Ecuadorian", "Egyptian", "Emirati", "Equatorial Guinean", "Eritrean",
+  "Estonian", "Eswatini", "Ethiopian",
+  "Fijian", "Filipino", "Finnish", "French",
+  "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek",
+  "Grenadian", "Guatemalan", "Guinean", "Guinea-Bissauan", "Guyanese",
+  "Haitian", "Honduran", "Hungarian",
+  "Icelandic", "Indian", "Indonesian", "Iraqi", "Irish", "Israeli",
+  "Italian", "Ivorian",
+  "Jamaican", "Japanese", "Jordanian",
+  "Kazakhstani", "Kenyan", "Kiribatian", "Kuwaiti", "Kyrgyz",
+  "Laotian", "Latvian", "Lebanese", "Lesothan", "Liberian", "Libyan",
+  "Liechtensteiner", "Lithuanian", "Luxembourger",
+  "Malagasy", "Malawian", "Malaysian", "Maldivian", "Malian", "Maltese",
+  "Marshallese", "Mauritanian", "Mauritian", "Mexican", "Micronesian",
+  "Moldovan", "Monacan", "Mongolian", "Montenegrin", "Moroccan", "Mozambican",
+  "Namibian", "Nauruan", "Nepalese", "New Zealander", "Nicaraguan",
+  "Nigerian", "Nigerien", "Norwegian",
+  "Omani",
+  "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean",
+  "Paraguayan", "Peruvian", "Polish", "Portuguese",
+  "Qatari",
+  "Romanian", "Russian", "Rwandan",
+  "Saint Lucian", "Salvadoran", "Samoan", "Saudi", "Senegalese", "Serbian",
+  "Seychellois", "Sierra Leonean", "Singaporean", "Slovak", "Slovenian",
+  "Solomon Islander", "Somali", "South African", "South Sudanese",
+  "Spanish", "Sri Lankan", "Sudanese", "Surinamese", "Swedish", "Swiss", "Syrian",
+  "Taiwanese", "Tajik", "Tanzanian", "Thai", "Timorese", "Togolese",
+  "Tongan", "Trinidadian", "Tunisian", "Turkish", "Turkmen", "Tuvaluan",
+  "Ugandan", "Ukrainian", "Uruguayan", "Uzbek",
+  "Vanuatuan", "Venezuelan", "Vietnamese",
+  "Yemeni",
+  "Zambian", "Zimbabwean",
+].filter((n) => !BLACKLISTED_NATIONALITIES.includes(n));
+
+function isBlacklisted(nationality: string) {
+  return BLACKLISTED_NATIONALITIES.some((b) =>
+    nationality.toLowerCase().includes(b.toLowerCase())
+  );
+}
 function NationalitySelect({
   value, onChange,
 }: { value: string; onChange: (v: string) => void }) {
@@ -405,8 +455,9 @@ function PersonCard({
             single
           />
           {person.id_files.length > 0 && (
+          <div className="flex gap-2">
             <Button
-              type="button" size="sm" variant="outline" className="w-full"
+              type="button" size="sm" variant="outline" className="flex-1"
               disabled={person.ocr_status === "checking"}
               onClick={() => runOCR()}
             >
@@ -414,7 +465,19 @@ function PersonCard({
                 ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
                 : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Name against ID</>}
             </Button>
-          )}
+            <Button
+              type="button" size="sm" variant="outline"
+              title="Preview Document"
+              onClick={() => {
+                const file = person.id_files[0];
+                const url = URL.createObjectURL(file);
+                window.open(url, "_blank");
+              }}
+            >
+              <FileText className="size-3.5" />
+            </Button>
+          </div>
+        )}
           <OcrBadge status={person.ocr_status} extractedName={person.ocr_extracted} />
           {Object.keys(person.ocr_dates ?? {}).length > 0 && (person.ocr_status === "match" || person.ocr_status === "mismatch") && (
             <div className="text-xs bg-muted/40 border border-border rounded-lg p-2 space-y-0.5">
@@ -473,73 +536,22 @@ function emptyPerson(): Person {
 const DECLARATIONS = [
   "The entity hereby declares and confirms that it maintains proper accounting records and statutory books that accurately reflect its financial position and enable the traceability of all transactions in compliance with applicable laws.",
   "The entity hereby confirms that its prior period financial statements (if any) were audited by a licensed auditor, and no material reservations or audit findings were issued that would necessitate an adjustment to the opening balances or a restatement of previous financial data.",
-  "The entity hereby declares that, if it is not currently registered with the Federal Tax Authority (FTA), such non-registration is based on valid legal and commercial grounds in compliance with applicable tax laws.",
-  "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE) or the General Directorate of Residency and Foreigners Affairs (GDRFA), as applicable.",
-  "The entity hereby declares that all generated income is derived from genuine and legitimate economic activities, and confirms that it possesses the necessary infrastructure and resources to generate such income.",
+  "The entity hereby declares that, if it is not currently registered with the Federal Tax Authority (FTA), such non-registration is based on valid legal and commercial grounds in compliance with applicable tax laws. The entity remains responsible for monitoring its tax status and registering once the statutory requirements are met.",
+  "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE) or the General Directorate of Residency and Foreigners Affairs (GDRFA), as applicable to its business activities. In the absence of registered staff, the entity declares that its operations are either limited to the personal efforts of the Business Owner or are executed through formal contracts with authorized third parties, in full compliance with applicable regulations.",
+  "The entity hereby declares that all generated income is derived from genuine and legitimate economic activities, and confirms that it possesses the necessary infrastructure and resources to generate such income. Furthermore, the entity affirms that its registered business address is appropriate and adequate for the nature and scale of its operations.",
   "The entity hereby confirms that its total annual revenue (both operating and non-operating), for the current financial year and any prior years (if applicable), has not exceeded AED 50 million for any single financial period.",
   "The entity hereby confirms that any remarks, fines, or penalties issued by the Federal Tax Authority (FTA) against it (if any) are strictly related to outstanding tax liabilities or technical/procedural errors, and do not involve any matters related to integrity or intentional tax evasion.",
-  "The entity hereby confirms that it maintains no business or financial relationships with prohibited, suspicious, or shell entities.",
-  "The entity hereby confirms that any changes occurred during the current financial year — whether regarding partners, Ultimate Beneficial Owners (UBOs), business activities, or the entity's legal name — were implemented for legitimate commercial reasons.",
-  "The entity hereby confirms that there are no ongoing legal disputes or pending litigations among its partners/owners.",
-  "The entity hereby confirms that there are no confirmed, suspected, or alleged instances of fraud or embezzlement during the current financial year.",
-  "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods.",
-  "The entity specifically affirms that the management of its activities, including strategic and operational decision-making, is not conducted outside the United Arab Emirates.",
-  "The entity hereby confirms that there is no intention, plan, or decision to liquidate the entity, dispose of its material assets, or sell the business.",
-  "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data.",
+  "The entity hereby confirms that it maintains no business or financial relationships with prohibited, suspicious, or shell entities. Furthermore, any transactions with parties located in high-risk jurisdictions (if any) are conducted on a strictly arms length basis with clear economic substance. The entity undertakes to provide all supporting documentation requested by the auditor for verification purposes.",
+  "The entity hereby confirms that any changes occurred during the current financial year whether regarding partners, Ultimate Beneficial Owners (UBOs), business activities, or the entitys legal name were implemented for legitimate commercial reasons and are fully justified. The entity affirms that such changes were not intended, under any circumstances, to conceal the identity of the beneficial owner or to divert the flow of funds for illicit purposes.",
+  "The entity hereby confirms that there are no ongoing legal disputes or pending litigations among its partners/owners. Furthermore, the entity affirms that its management and ownership structure are stable, with no existing conflicts that could impact business continuity or the decision-making process.",
+  "The entity hereby confirms that there are no confirmed, suspected, or alleged instances of fraud or embezzlement during the current financial year. Furthermore, the entity declares that there are no internal reports or ongoing investigations regarding the integrity of financial data or professional conduct within the entity.",
+  "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses.",
+  "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses. The entity specifically affirms that the management of its activities, including strategic and operational decision-making, is not conducted outside the United Arab Emirates.",
+  "The entity hereby confirms that there is no intention, plan, or decision to liquidate the entity, dispose of its material assets, or sell the business. The entity further affirms its ability to continue as a going concern for the foreseeable future.",
+  "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data, undertaking to update it immediately upon any changes.",
 ];
 
-const BLACKLISTED_NATIONALITIES = ["Iranian", "Burmese", "North Korean"];
 
-const ALL_NATIONALITIES = [
-  "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan",
-  "Antiguans", "Argentine", "Armenian", "Australian", "Austrian", "Azerbaijani",
-  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belarusian", "Belgian",
-  "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Botswana",
-  "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burundian",
-  "Cabo Verdean", "Cambodian", "Cameroonian", "Canadian", "Central African",
-  "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese",
-  "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech",
-  "Danish", "Djiboutian", "Dominican",
-  "Dutch",
-  "Ecuadorian", "Egyptian", "Emirati", "Equatorial Guinean", "Eritrean",
-  "Estonian", "Eswatini", "Ethiopian",
-  "Fijian", "Filipino", "Finnish", "French",
-  "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek",
-  "Grenadian", "Guatemalan", "Guinean", "Guinea-Bissauan", "Guyanese",
-  "Haitian", "Honduran", "Hungarian",
-  "Icelandic", "Indian", "Indonesian", "Iraqi", "Irish", "Israeli",
-  "Italian", "Ivorian",
-  "Jamaican", "Japanese", "Jordanian",
-  "Kazakhstani", "Kenyan", "Kiribatian", "Kuwaiti", "Kyrgyz",
-  "Laotian", "Latvian", "Lebanese", "Lesothan", "Liberian", "Libyan",
-  "Liechtensteiner", "Lithuanian", "Luxembourger",
-  "Malagasy", "Malawian", "Malaysian", "Maldivian", "Malian", "Maltese",
-  "Marshallese", "Mauritanian", "Mauritian", "Mexican", "Micronesian",
-  "Moldovan", "Monacan", "Mongolian", "Montenegrin", "Moroccan", "Mozambican",
-  "Namibian", "Nauruan", "Nepalese", "New Zealander", "Nicaraguan",
-  "Nigerian", "Nigerien", "Norwegian",
-  "Omani",
-  "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean",
-  "Paraguayan", "Peruvian", "Polish", "Portuguese",
-  "Qatari",
-  "Romanian", "Russian", "Rwandan",
-  "Saint Lucian", "Salvadoran", "Samoan", "Saudi", "Senegalese", "Serbian",
-  "Seychellois", "Sierra Leonean", "Singaporean", "Slovak", "Slovenian",
-  "Solomon Islander", "Somali", "South African", "South Sudanese",
-  "Spanish", "Sri Lankan", "Sudanese", "Surinamese", "Swedish", "Swiss", "Syrian",
-  "Taiwanese", "Tajik", "Tanzanian", "Thai", "Timorese", "Togolese",
-  "Tongan", "Trinidadian", "Tunisian", "Turkish", "Turkmen", "Tuvaluan",
-  "Ugandan", "Ukrainian", "Uruguayan", "Uzbek",
-  "Vanuatuan", "Venezuelan", "Vietnamese",
-  "Yemeni",
-  "Zambian", "Zimbabwean",
-].filter((n) => !BLACKLISTED_NATIONALITIES.includes(n));
-
-function isBlacklisted(nationality: string) {
-  return BLACKLISTED_NATIONALITIES.some((b) =>
-    nationality.toLowerCase().includes(b.toLowerCase())
-  );
-}
 
 // ── User Documents Panel ────────────────────────────────────────────────────
 function MyDocumentsPanel({ entityId, userId }: { entityId: string; userId: string }) {
@@ -780,7 +792,7 @@ function KycForm({ entity, onSaved, t }: any) {
   // بعد
   const isUnlicensed = registrationStatus === "unlicensed";
   const isSole = registrationStatus === "sole";
-  const isLicensed = ["multiple", "freezone", "branch", "sole"].includes(registrationStatus);
+  const isLicensed = ["multiple", "freezone", "branch"].includes(registrationStatus);
   const managementOptions = [
     ...shareholders.map((s) => s.name).filter(Boolean),
     ...ubos.map((u) => u.name).filter(Boolean),
@@ -789,8 +801,8 @@ function KycForm({ entity, onSaved, t }: any) {
 
   // Legal type options per status
   const legalTypeOptions: Record<string, string[]> = {
-    multiple: ["Civil Company", "Limited Liability Company", "General Partnership Company", "Limited Partnership Company", "Branch of Local Company", "Branch of Foreign Company"],
-    freezone: ["FZ-LLC", "Branch of Foreign Company (FZ)", "FZ Establishment"],
+    multiple: ["Limited Liability Company", "General Partnership Company", "Limited Partnership Company"],
+    freezone: ["Free Zone Establishment", "Free Zone Company", "Free Zone Branch"],
     branch: ["Branch of Local Company", "Branch of Foreign Company"],
   };
 
@@ -828,8 +840,27 @@ function KycForm({ entity, onSaved, t }: any) {
     if (!entityName.trim()) errs.push("Owner/Company name is required");
     if (isLicensed && !licenseNumber.trim()) errs.push("License number is required");
     if (isLicensed && !licenseDate) errs.push("License issue date is required");
-    // OCR matching is informational only — do NOT block submission
-    // (license expiry / id mismatch / number mismatch warnings are surfaced via OcrBadge)
+    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "checking") errs.push("Trade License verification still in progress, please wait");
+    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "mismatch") errs.push(`Company name does not match Trade License. License shows: "${licenseOcrExtracted || "unreadable"}"`);
+    if (isLicensed && licenseOcrDates.license_number && licenseNumber.trim()) {
+      const normalize = (s: string) => s.toLowerCase().replace(/[\s\-_.\/]/g, "");
+      if (normalize(licenseNumber) !== normalize(licenseOcrDates.license_number)) {
+        errs.push(`License number entered (${licenseNumber}) does not match document (${licenseOcrDates.license_number})`);
+      }
+    }
+    if (isLicensed && licenseOcrDates.expiry_date) {
+      const [d, m, y] = licenseOcrDates.expiry_date.split("/");
+      const expiry = new Date(`${y}-${m}-${d}`);
+      if (expiry < new Date()) {
+        errs.push(`Trade License is expired (${licenseOcrDates.expiry_date}) — cannot proceed`);
+      }
+    }
+    if (isLicensed && licenseOcrDates.issue_date && licenseDate) {
+      const fromDoc = licenseOcrDates.issue_date.split("/").reverse().join("-");
+      if (fromDoc !== licenseDate) {
+        errs.push(`License issue date entered (${licenseDate}) does not match document (${licenseOcrDates.issue_date})`);
+      }
+    }
     if (!principalActivity.trim()) errs.push("Principal Activity is required");
     if (!economicSector) errs.push("Economic Sector is required");
     if (!emirate) errs.push("Emirate is required");
@@ -842,7 +873,13 @@ function KycForm({ entity, onSaved, t }: any) {
     if (employerName.trim()) {
       if (!employerEmiratesId || employerEmiratesId.length !== 15) errs.push("Employer Emirates ID must be 15 digits");
       if (employerIdFiles.length === 0) errs.push("Employer Emirates ID document is required when employer name is provided");
-      // OCR matching for employer is informational only
+      if (employerOcrStatus === "checking") errs.push("Employer ID verification is still in progress");
+      if (employerOcrStatus === "mismatch") errs.push(`Employer name does not match Emirates ID document. Extracted: ${employerOcrExtracted || "unreadable"}`);
+      if (employerOcrDates.id_number && employerEmiratesId) {
+        if (employerEmiratesId.replace(/\D/g, "") !== employerOcrDates.id_number.replace(/\D/g, "")) {
+          errs.push(`Employer Emirates ID number entered does not match document (${employerOcrDates.id_number})`);
+        }
+      }
     }
 
     // Shareholders
@@ -858,7 +895,13 @@ function KycForm({ entity, onSaved, t }: any) {
       if (sh.id_files.length === 0) errs.push(`Shareholder ${i + 1}: Emirates ID document required`);
       if (sh.passport_files.length === 0) errs.push(`Shareholder ${i + 1}: Passport document required`);
       if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
-      // OCR matching is informational only — does not block submission
+      if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
+      if (sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Name does not match Emirates ID document`);
+      if (sh.ocr_dates?.id_number && sh.emirates_id) {
+        if (sh.emirates_id.replace(/\D/g, "") !== sh.ocr_dates.id_number.replace(/\D/g, "")) {
+          errs.push(`Shareholder ${i + 1}: Emirates ID number (${sh.emirates_id}) does not match document (${sh.ocr_dates.id_number})`);
+        }
+      }
       totalCapital += parseFloat(sh.capital) || 0;
     });
     if (shareholders.length > 0 && Math.abs(totalCapital - 100) > 0.01) {
@@ -877,7 +920,13 @@ function KycForm({ entity, onSaved, t }: any) {
         if (u.id_files.length === 0) errs.push(`UBO ${i + 1}: Emirates ID document required`);
         if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
-        // OCR matching is informational only — does not block submission
+        if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
+        if (u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Name does not match Emirates ID document`);
+        if (u.ocr_dates?.id_number && u.emirates_id) {
+          if (u.emirates_id.replace(/\D/g, "") !== u.ocr_dates.id_number.replace(/\D/g, "")) {
+            errs.push(`UBO ${i + 1}: Emirates ID number (${u.emirates_id}) does not match document (${u.ocr_dates.id_number})`);
+          }
+        }
       });
     }
 
@@ -886,7 +935,7 @@ function KycForm({ entity, onSaved, t }: any) {
     if (managementSelect === "Other") {
       managers.forEach((m, i) => {
         if (!m.name.trim()) errs.push(`Manager ${i + 1}: Name required`);
-        // OCR matching is informational only
+        if (m.ocr_status === "mismatch") errs.push(`Manager ${i + 1}: Name does not match Emirates ID`);
       });
       if (poaFiles.length === 0) errs.push("Power of Attorney (POA) document is required");
     }
@@ -1075,22 +1124,34 @@ function KycForm({ entity, onSaved, t }: any) {
                     single
                   />
                   {employerIdFiles.length > 0 && (
-                    <Button
-                      type="button" size="sm" variant="outline" className="w-full"
-                      disabled={employerOcrStatus === "checking"}
-                      onClick={async () => {
-                        if (!employerName.trim()) { toast.error("Please enter employer name first"); return; }
-                        setEmployerOcrStatus("checking");
-                        const result = await verifyWithOCR(employerIdFiles[0], employerName, "id");
-                        setEmployerOcrStatus(result.match ? "match" : "mismatch");
-                        setEmployerOcrExtracted(result.extractedName);
-                        setEmployerOcrDates(result.dates);
-                      }}
-                    >
-                      {employerOcrStatus === "checking"
-                        ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
-                        : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Employer ID</>}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button" size="sm" variant="outline" className="flex-1"
+                        disabled={employerOcrStatus === "checking"}
+                        onClick={async () => {
+                          if (!employerName.trim()) { toast.error("Please enter employer name first"); return; }
+                          setEmployerOcrStatus("checking");
+                          const result = await verifyWithOCR(employerIdFiles[0], employerName, "id");
+                          setEmployerOcrStatus(result.match ? "match" : "mismatch");
+                          setEmployerOcrExtracted(result.extractedName);
+                          setEmployerOcrDates(result.dates);
+                        }}
+                      >
+                        {employerOcrStatus === "checking"
+                          ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
+                          : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Employer ID</>}
+                      </Button>
+                      <Button
+                        type="button" size="sm" variant="outline"
+                        title="Preview Document"
+                        onClick={() => {
+                          const url = URL.createObjectURL(employerIdFiles[0]);
+                          window.open(url, "_blank");
+                        }}
+                      >
+                        <FileText className="size-3.5" />
+                      </Button>
+                    </div>
                   )}
                   <OcrBadge status={employerOcrStatus} extractedName={employerOcrExtracted} />
                   {Object.keys(employerOcrDates).length > 0 && (
@@ -1138,7 +1199,7 @@ function KycForm({ entity, onSaved, t }: any) {
                   <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => setLicenseNumber(e.target.value)} />
                 </Field>
                 <Field label="License Issue Date" required>
-                  <DateInput required value={licenseDate} onChange={setLicenseDate} />
+                  <Input required type="date" value={licenseDate} onChange={(e) => setLicenseDate(e.target.value)} />
                 </Field>
                 {legalTypeOptions[registrationStatus] && (
                   <Field label="Legal Structure">
@@ -1161,20 +1222,15 @@ function KycForm({ entity, onSaved, t }: any) {
                     single
                   />
                   {licenseFiles.length > 0 && (
+                  <div className="flex gap-2">
                     <Button
-                      type="button" size="sm" variant="outline" className="w-full"
+                      type="button" size="sm" variant="outline" className="flex-1"
                       disabled={licenseOcrStatus === "checking"}
                       onClick={async () => {
                         if (!entityName.trim()) { toast.error("Please enter company name first"); return; }
                         setLicenseOcrStatus("checking");
                         const result = await verifyWithOCR(licenseFiles[0], entityName, "license");
-                        // تحقق إضافي: مطابقة رقم الرخصة إذا استُخرج
-                        let licNumMatch = true;
-                        if (result.dates.license_number && licenseNumber.trim()) {
-                          const norm = (s: string) => s.toLowerCase().replace(/[\s\-_.\/]/g, "");
-                          licNumMatch = norm(licenseNumber) === norm(result.dates.license_number);
-                        }
-                        setLicenseOcrStatus((result.match && licNumMatch) ? "match" : "mismatch");
+                        setLicenseOcrStatus(result.match ? "match" : "mismatch");
                         setLicenseOcrExtracted(result.extractedName);
                         setLicenseOcrDates(result.dates);
                       }}
@@ -1183,7 +1239,19 @@ function KycForm({ entity, onSaved, t }: any) {
                         ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying License...</>
                         : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Trade License</>}
                     </Button>
-                  )}
+                    <Button
+                      type="button" size="sm" variant="outline"
+                      title="Preview Document"
+                      onClick={() => {
+                        const file = licenseFiles[0];
+                        const url = URL.createObjectURL(file);
+                        window.open(url, "_blank");
+                      }}
+                    >
+                      <FileText className="size-3.5" />
+                    </Button>
+                  </div>
+                )}
                   <OcrBadge status={licenseOcrStatus} extractedName={licenseOcrExtracted} />
                   {Object.keys(licenseOcrDates).length > 0 && (
                   <div className="text-xs bg-muted/40 border border-border rounded-lg p-2 space-y-1">
@@ -1308,7 +1376,8 @@ function KycForm({ entity, onSaved, t }: any) {
           {/* ── SECTION 4: Beneficial Owners ── */}
           <SectionTitle number={4} title="Beneficial Owners" />
           <div className="space-y-4">
-            <Field label="Is there any individual who directly or indirectly owns 25% or more?" required>
+            <Field label="Is there any other individual who directly or indirectly owns 25% or more of the capital or has power to exercise significant influence?" required>
+
               <div className="flex gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
                   <input type="radio" name="ubo" value="yes" checked={hasUbo === "yes"} onChange={() => { setHasUbo("yes"); if (ubos.length === 0) setUbos([emptyPerson()]); }} />
@@ -1362,6 +1431,18 @@ function KycForm({ entity, onSaved, t }: any) {
                   <Plus className="size-3.5" /> Add Manager
                 </Button>
                 <FileUploadZone label="Upload Power of Attorney (POA) *" files={poaFiles} onChange={setPoaFiles} accept="image/*,.pdf" single />
+                  {poaFiles.length > 0 && (
+                    <Button
+                      type="button" size="sm" variant="outline"
+                      title="Preview POA Document"
+                      onClick={() => {
+                        const url = URL.createObjectURL(poaFiles[0]);
+                        window.open(url, "_blank");
+                      }}
+                    >
+                      <FileText className="size-3.5" /> Preview POA
+                    </Button>
+                  )}
               </>
             )}
           </div>
@@ -1369,7 +1450,8 @@ function KycForm({ entity, onSaved, t }: any) {
           {/* ── SECTION 6: PEP ── */}
           <SectionTitle number={6} title="Politically Exposed Persons (PEP)" />
           <div className="space-y-4">
-            <Field label="Is any person classified as a Politically Exposed Person (PEP)?" required>
+            <Field label="Is any person classified as a Politically Exposed Person (PEP), locally or internationally, or closely related to a PEP?" required>
+
               <div className="flex gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
                   <input type="radio" name="pep" value="yes" checked={hasPep === "yes"} onChange={() => setHasPep("yes")} />
@@ -1656,13 +1738,13 @@ function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
           </Field>
           {form.is_first_year === "Yes" && (
             <div className="grid md:grid-cols-2 gap-4">
-              <Field label="First Year Start Date" required><DateInput required value={form.first_year_start} onChange={(v) => set("first_year_start", v)} /></Field>
-              <Field label="First Year End Date" required><DateInput required value={form.first_year_end} onChange={(v) => set("first_year_end", v)} /></Field>
+              <Field label="First Year Start Date" required><Input required type="date" value={form.first_year_start} onChange={(e) => set("first_year_start", e.target.value)} /></Field>
+              <Field label="First Year End Date" required><Input required type="date" value={form.first_year_end} onChange={(e) => set("first_year_end", e.target.value)} /></Field>
             </div>
           )}
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Current Year Start" required><DateInput required value={form.current_year_start} onChange={(v) => set("current_year_start", v)} /></Field>
-            <Field label="Current Year End" required><DateInput required value={form.current_year_end} onChange={(v) => set("current_year_end", v)} /></Field>
+            <Field label="Current Year Start" required><Input required type="date" value={form.current_year_start} onChange={(e) => set("current_year_start", e.target.value)} /></Field>
+            <Field label="Current Year End" required><Input required type="date" value={form.current_year_end} onChange={(e) => set("current_year_end", e.target.value)} /></Field>
           </div>
           {form.is_first_year === "No" && (
             <Field label="Was the previous year audited?" required>
