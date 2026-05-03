@@ -23,6 +23,17 @@ export default function Entities() {
   const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState<any[]>([]);
   const [q, setQ] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [docs, setDocs] = useState<Record<string, any[]>>({});
+
+  const toggleDocs = async (id: string) => {
+    if (openId === id) { setOpenId(null); return; }
+    setOpenId(id);
+    if (!docs[id]) {
+      const { data } = await supabase.from("kyc_documents").select("*").eq("entity_id", id).order("uploaded_at", { ascending: false });
+      setDocs((prev) => ({ ...prev, [id]: data ?? [] }));
+    }
+  };
 
   const status = (params.get("status") as StatusFilter) || "all";
 
