@@ -1656,13 +1656,13 @@ function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
           </Field>
           {form.is_first_year === "Yes" && (
             <div className="grid md:grid-cols-2 gap-4">
-              <Field label="First Year Start Date" required><Input required type="date" value={form.first_year_start} onChange={(e) => set("first_year_start", e.target.value)} /></Field>
-              <Field label="First Year End Date" required><Input required type="date" value={form.first_year_end} onChange={(e) => set("first_year_end", e.target.value)} /></Field>
+              <Field label="First Year Start Date" required><DateInput required value={form.first_year_start} onChange={(v) => set("first_year_start", v)} /></Field>
+              <Field label="First Year End Date" required><DateInput required value={form.first_year_end} onChange={(v) => set("first_year_end", v)} /></Field>
             </div>
           )}
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Current Year Start" required><Input required type="date" value={form.current_year_start} onChange={(e) => set("current_year_start", e.target.value)} /></Field>
-            <Field label="Current Year End" required><Input required type="date" value={form.current_year_end} onChange={(e) => set("current_year_end", e.target.value)} /></Field>
+            <Field label="Current Year Start" required><DateInput required value={form.current_year_start} onChange={(v) => set("current_year_start", v)} /></Field>
+            <Field label="Current Year End" required><DateInput required value={form.current_year_end} onChange={(v) => set("current_year_end", v)} /></Field>
           </div>
           {form.is_first_year === "No" && (
             <Field label="Was the previous year audited?" required>
