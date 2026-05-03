@@ -1138,7 +1138,7 @@ function KycForm({ entity, onSaved, t }: any) {
                   <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => setLicenseNumber(e.target.value)} />
                 </Field>
                 <Field label="License Issue Date" required>
-                  <Input required type="date" value={licenseDate} onChange={(e) => setLicenseDate(e.target.value)} />
+                  <DateInput required value={licenseDate} onChange={setLicenseDate} />
                 </Field>
                 {legalTypeOptions[registrationStatus] && (
                   <Field label="Legal Structure">
