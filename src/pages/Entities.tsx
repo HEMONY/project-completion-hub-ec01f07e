@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "./Index";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDate } from "@/lib/utils";
+import { DocumentPreview } from "@/components/DocumentPreview";
+import { FileText, ChevronDown, ChevronUp } from "lucide-react";
 
 const STATUS_FILTERS = ["all", "draft", "submitted", "under_review", "approved", "rejected"] as const;
 type StatusFilter = typeof STATUS_FILTERS[number];
