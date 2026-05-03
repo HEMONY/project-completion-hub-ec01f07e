@@ -844,11 +844,6 @@ function KycForm({ entity, onSaved, t }: any) {
       if (employerIdFiles.length === 0) errs.push("Employer Emirates ID document is required when employer name is provided");
       // OCR matching for employer is informational only
     }
-        if (employerEmiratesId.replace(/\D/g, "") !== employerOcrDates.id_number.replace(/\D/g, "")) {
-          errs.push(`Employer Emirates ID number entered does not match document (${employerOcrDates.id_number})`);
-        }
-      }
-    }
 
     // Shareholders
     if (shareholders.length === 0) errs.push("At least one shareholder is required");
