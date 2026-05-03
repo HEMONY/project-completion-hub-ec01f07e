@@ -886,7 +886,7 @@ function KycForm({ entity, onSaved, t }: any) {
     if (managementSelect === "Other") {
       managers.forEach((m, i) => {
         if (!m.name.trim()) errs.push(`Manager ${i + 1}: Name required`);
-        if (m.ocr_status === "mismatch") errs.push(`Manager ${i + 1}: Name does not match Emirates ID`);
+        // OCR matching is informational only
       });
       if (poaFiles.length === 0) errs.push("Power of Attorney (POA) document is required");
     }
