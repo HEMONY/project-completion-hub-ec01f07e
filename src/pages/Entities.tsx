@@ -125,7 +125,7 @@ export default function Entities() {
                   </thead>
                   <tbody>
                     {filtered.map((r) => (
-                      <FragmentRow key={r.id}>
+                      <FragmentWithKey key={r.id}>
                       <tr key={r.id} className="border-b border-border/60 last:border-0 hover:bg-accent/30">
                         <td className="py-3 ps-3 font-medium">{r.entity_name}</td>
                         <td className="py-3 font-mono text-xs">{r.engagement_number ?? "—"}</td>
