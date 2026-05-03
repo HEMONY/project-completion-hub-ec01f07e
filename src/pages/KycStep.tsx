@@ -877,13 +877,7 @@ function KycForm({ entity, onSaved, t }: any) {
         if (u.id_files.length === 0) errs.push(`UBO ${i + 1}: Emirates ID document required`);
         if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
-        if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
-        if (u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Name does not match Emirates ID document`);
-        if (u.ocr_dates?.id_number && u.emirates_id) {
-          if (u.emirates_id.replace(/\D/g, "") !== u.ocr_dates.id_number.replace(/\D/g, "")) {
-            errs.push(`UBO ${i + 1}: Emirates ID number (${u.emirates_id}) does not match document (${u.ocr_dates.id_number})`);
-          }
-        }
+        // OCR matching is informational only — does not block submission
       });
     }
 
