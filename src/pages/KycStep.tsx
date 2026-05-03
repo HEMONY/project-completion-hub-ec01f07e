@@ -842,9 +842,8 @@ function KycForm({ entity, onSaved, t }: any) {
     if (employerName.trim()) {
       if (!employerEmiratesId || employerEmiratesId.length !== 15) errs.push("Employer Emirates ID must be 15 digits");
       if (employerIdFiles.length === 0) errs.push("Employer Emirates ID document is required when employer name is provided");
-      if (employerOcrStatus === "checking") errs.push("Employer ID verification is still in progress");
-      if (employerOcrStatus === "mismatch") errs.push(`Employer name does not match Emirates ID document. Extracted: ${employerOcrExtracted || "unreadable"}`);
-      if (employerOcrDates.id_number && employerEmiratesId) {
+      // OCR matching for employer is informational only
+    }
         if (employerEmiratesId.replace(/\D/g, "") !== employerOcrDates.id_number.replace(/\D/g, "")) {
           errs.push(`Employer Emirates ID number entered does not match document (${employerOcrDates.id_number})`);
         }
