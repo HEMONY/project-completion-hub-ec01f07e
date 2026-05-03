@@ -125,6 +125,7 @@ export default function Entities() {
                   </thead>
                   <tbody>
                     {filtered.map((r) => (
+                      <>
                       <tr key={r.id} className="border-b border-border/60 last:border-0 hover:bg-accent/30">
                         <td className="py-3 ps-3 font-medium">{r.entity_name}</td>
                         <td className="py-3 font-mono text-xs">{r.engagement_number ?? "—"}</td>
@@ -132,7 +133,11 @@ export default function Entities() {
                         <td className="py-3"><StatusBadge status={r.application_status} /></td>
                         <td className="py-3 text-xs text-muted-foreground">{formatDate(r.created_at)}</td>
                         <td className="py-3 text-end pe-3">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-2 flex-wrap">
+                            <Button size="sm" variant="ghost" onClick={() => toggleDocs(r.id)}>
+                              <FileText className="size-3.5" />
+                              {openId === r.id ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+                            </Button>
                             <Button asChild size="sm" variant="outline">
                               <Link to={`/kyc/${r.id}/kyc`}>{t("btn_view")}</Link>
                             </Button>
@@ -142,6 +147,30 @@ export default function Entities() {
                           </div>
                         </td>
                       </tr>
+                      {openId === r.id && (
+                        <tr key={r.id + "-docs"} className="bg-muted/20">
+                          <td colSpan={6} className="p-4">
+                            <div className="text-sm font-semibold mb-3 flex items-center gap-2"><FileText className="size-4" /> المستندات المرفقة ({(docs[r.id] || []).length})</div>
+                            {(docs[r.id] || []).length === 0 ? (
+                              <div className="text-xs text-muted-foreground py-4 text-center">لا توجد مستندات مرفقة</div>
+                            ) : (
+                              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {(docs[r.id] || []).map((d) => (
+                                  <div key={d.id} className="border border-border rounded-md p-2 bg-card space-y-2">
+                                    <div className="text-xs font-medium truncate">{d.file_name}</div>
+                                    <div className="flex gap-2 items-center text-[10px] text-muted-foreground">
+                                      <Badge variant="secondary" className="text-[10px]">{d.document_type}</Badge>
+                                      <span>{formatDate(d.uploaded_at)}</span>
+                                    </div>
+                                    <DocumentPreview doc={d} />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                      </>
                     ))}
                   </tbody>
                 </table>
