@@ -342,7 +342,39 @@ type Person = {
   ocr_extracted: string;
   ocr_dates: Record<string, string>;
 };
-
+// ── Document Preview Modal ──────────────────────────────────────────────────
+function DocPreview({ file, onClose }: { file: File; onClose: () => void }) {
+  const url = URL.createObjectURL(file);
+  const isPdf = file.type === "application/pdf" || file.name.endsWith(".pdf");
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-background rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="text-sm font-semibold truncate">{file.name}</span>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto">
+          {isPdf ? (
+            <iframe src={url} className="w-full h-[75vh] border-none" />
+          ) : (
+            <img src={url} alt={file.name} className="w-full object-contain max-h-[75vh]" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 function PersonCard({
   person, index, onChange, onRemove, showCapital, canRemove, label,
 }: {
@@ -355,6 +387,7 @@ function PersonCard({
   label: string;
 }) {
   const set = (k: keyof Person, v: any) => onChange({ ...person, [k]: v });
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   const runOCR = async (files?: File[]) => {
     const filesToUse = files ?? person.id_files;
@@ -366,7 +399,6 @@ function PersonCard({
     onChange({ ...person, id_files: filesToUse, ocr_status: "checking" });
     const result = await verifyWithOCR(filesToUse[0], person.name, "id");
 
-    // تحقق إضافي: مطابقة رقم الهوية إذا استُخرج
     let idNumMatch = true;
     if (result.dates.id_number && person.emirates_id) {
       idNumMatch = person.emirates_id.replace(/\D/g, "") === result.dates.id_number.replace(/\D/g, "");
@@ -383,148 +415,152 @@ function PersonCard({
   };
 
   return (
-    <div className="border border-border rounded-xl bg-card p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          {label} {index + 1}
-        </span>
-        {canRemove && (
-          <Button type="button" size="sm" variant="ghost" onClick={onRemove} className="text-destructive hover:text-destructive h-7">
-            <Trash2 className="size-3.5" /> <span className="ms-1 text-xs">Remove</span>
-          </Button>
-        )}
-      </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        <Field label="Full Name" required>
-          <Input
-            required
-            value={person.name}
-            placeholder="Full legal name"
-            onChange={(e) => set("name", e.target.value)}
-          />
-        </Field>
-        {showCapital && (
-          <Field label="Capital (%)" required>
-            <Input
-              required type="number" min={0} max={100} step="0.01"
-              value={person.capital}
-              placeholder="e.g. 50"
-              onChange={(e) => set("capital", e.target.value)}
-            />
-          </Field>
-        )}
-        <Field label="Nationality" required>
-          <NationalitySelect
-            value={person.nationality}
-            onChange={(v) => set("nationality", v)}
-          />
-          {isBlacklisted(person.nationality) && (
-            <div className="text-xs text-destructive mt-1 font-semibold">
-              ⚠️ This nationality is not permitted under our compliance framework
-            </div>
-          )}
-        </Field>
-        <Field label="Date & Place of Birth" required>
-          <Input required value={person.dob_place} placeholder="DD/MM/YYYY, City, Country" onChange={(e) => set("dob_place", e.target.value)} />
-        </Field>
-        <Field label="Emirates ID Number (15 digits)" required>
-          <Input
-            required
-            value={person.emirates_id}
-            placeholder="784XXXXXXXXXX"
-            maxLength={15}
-            onChange={(e) => set("emirates_id", e.target.value.replace(/\D/g, "").slice(0, 15))}
-          />
-          {person.emirates_id && person.emirates_id.length !== 15 && (
-            <div className="text-xs text-destructive mt-1">Must be exactly 15 digits</div>
-          )}
-        </Field>
-        <Field label="Residential Address" required>
-          <Input required value={person.address} placeholder="Full residential address" onChange={(e) => set("address", e.target.value)} />
-        </Field>
-      </div>
-
-      {/* Document Upload with OCR */}
-      <div className="grid md:grid-cols-2 gap-3 pt-2 border-t border-border">
-        <div className="space-y-2">
-          <FileUploadZone
-            label="Upload Emirates ID *"
-            files={person.id_files}
-            onChange={(files) => onChange({ ...person, id_files: files, ocr_status: "idle" })}
-            accept="image/png,image/jpeg,image/jpg,.pdf"
-            single
-          />
-          {person.id_files.length > 0 && (
-          <div className="flex gap-2">
-            <Button
-              type="button" size="sm" variant="outline" className="flex-1"
-              disabled={person.ocr_status === "checking"}
-              onClick={() => runOCR()}
-            >
-              {person.ocr_status === "checking"
-                ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
-                : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Name against ID</>}
+    <>
+      {previewFile && <DocPreview file={previewFile} onClose={() => setPreviewFile(null)} />}
+      <div className="border border-border rounded-xl bg-card p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            {label} {index + 1}
+          </span>
+          {canRemove && (
+            <Button type="button" size="sm" variant="ghost" onClick={onRemove} className="text-destructive hover:text-destructive h-7">
+              <Trash2 className="size-3.5" /> <span className="ms-1 text-xs">Remove</span>
             </Button>
-            <Button
-              type="button" size="sm" variant="outline"
-              title="Preview Document"
-              onClick={() => {
-                const file = person.id_files[0];
-                const url = URL.createObjectURL(file);
-                window.open(url, "_blank");
-              }}
-            >
-              <FileText className="size-3.5" />
-            </Button>
-          </div>
-        )}
-          <OcrBadge status={person.ocr_status} extractedName={person.ocr_extracted} />
-          {Object.keys(person.ocr_dates ?? {}).length > 0 && (person.ocr_status === "match" || person.ocr_status === "mismatch") && (
-            <div className="text-xs bg-muted/40 border border-border rounded-lg p-2 space-y-0.5">
-              {person.ocr_dates.id_number && (
-                <div className="flex items-center gap-2">
-                  <span>🪪 ID No:</span>
-                  <span className="font-semibold">{person.ocr_dates.id_number}</span>
-                  {person.emirates_id && (
-                    person.emirates_id.replace(/\D/g, "") === person.ocr_dates.id_number.replace(/\D/g, "")
-                      ? <span className="text-green-600 font-semibold">✅ Matches</span>
-                      : <span className="text-destructive font-semibold">⚠️ ID mismatch: entered {person.emirates_id}</span>
-                  )}
-                </div>
-              )}
-              {person.ocr_dates.expiry_date && (
-                <div className="flex items-center gap-2">
-                  <span>⏳ Expiry:</span>
-                  <span className="font-semibold">{person.ocr_dates.expiry_date}</span>
-                  {(() => {
-                    const [d, m, y] = person.ocr_dates.expiry_date.split("/");
-                    const expiry = new Date(`${y}-${m}-${d}`);
-                    return expiry < new Date()
-                      ? <span className="text-destructive font-semibold">⚠️ EXPIRED</span>
-                      : <span className="text-green-600 font-semibold">✅ Valid</span>;
-                  })()}
-                </div>
-              )}
-            </div>
-          )}
-          {person.ocr_status === "mismatch" && (
-            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
-              <div className="font-semibold">⚠️ Name Mismatch — Cannot Proceed</div>
-              <div>Name you entered: <span className="font-bold">{person.name}</span></div>
-              <div>Name on Emirates ID: <span className="font-bold">{person.ocr_extracted || "Could not be read"}</span></div>
-              <div className="text-xs text-muted-foreground mt-1">Please correct the name to match exactly what appears on the ID.</div>
-            </div>
           )}
         </div>
-        <FileUploadZone
-          label="Upload Passport *"
-          files={person.passport_files}
-          onChange={(files) => set("passport_files", files)}
-          accept="image/*,.pdf"
-          single
-        />
+        <div className="grid md:grid-cols-2 gap-3">
+          <Field label="Full Name" required>
+            <Input required value={person.name} placeholder="Full legal name" onChange={(e) => set("name", e.target.value)} />
+          </Field>
+          {showCapital && (
+            <Field label="Capital (%)" required>
+              <Input required type="number" min={0} max={100} step="0.01" value={person.capital} placeholder="e.g. 50" onChange={(e) => set("capital", e.target.value)} />
+            </Field>
+          )}
+          <Field label="Nationality" required>
+            <NationalitySelect value={person.nationality} onChange={(v) => set("nationality", v)} />
+            {isBlacklisted(person.nationality) && (
+              <div className="text-xs text-destructive mt-1 font-semibold">
+                ⚠️ This nationality is not permitted under our compliance framework
+              </div>
+            )}
+          </Field>
+          <Field label="Date & Place of Birth" required>
+            <Input required value={person.dob_place} placeholder="DD/MM/YYYY, City, Country" onChange={(e) => set("dob_place", e.target.value)} />
+          </Field>
+          <Field label="Emirates ID Number (15 digits)" required>
+            <Input
+              required value={person.emirates_id} placeholder="784XXXXXXXXXX" maxLength={15}
+              onChange={(e) => set("emirates_id", e.target.value.replace(/\D/g, "").slice(0, 15))}
+            />
+            {person.emirates_id && person.emirates_id.length !== 15 && (
+              <div className="text-xs text-destructive mt-1">Must be exactly 15 digits</div>
+            )}
+          </Field>
+          <Field label="Residential Address" required>
+            <Input required value={person.address} placeholder="Full residential address" onChange={(e) => set("address", e.target.value)} />
+          </Field>
+        </div>
+
+        {/* Document Upload with OCR */}
+        <div className="grid md:grid-cols-2 gap-3 pt-2 border-t border-border">
+          {/* Emirates ID */}
+          <div className="space-y-2">
+            <FileUploadZone
+              label="Upload Emirates ID *"
+              files={person.id_files}
+              onChange={(files) => onChange({ ...person, id_files: files, ocr_status: "idle" })}
+              accept="image/png,image/jpeg,image/jpg,.pdf"
+              single
+            />
+            {person.id_files.length > 0 && (
+              <div className="flex gap-2">
+                <Button
+                  type="button" size="sm" variant="outline" className="flex-1"
+                  disabled={person.ocr_status === "checking"}
+                  onClick={() => runOCR()}
+                >
+                  {person.ocr_status === "checking"
+                    ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
+                    : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Name against ID</>}
+                </Button>
+                <Button
+                  type="button" size="sm" variant="outline"
+                  title="Preview Emirates ID"
+                  onClick={() => setPreviewFile(person.id_files[0])}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </Button>
+              </div>
+            )}
+            <OcrBadge status={person.ocr_status} extractedName={person.ocr_extracted} />
+            {Object.keys(person.ocr_dates ?? {}).length > 0 && (person.ocr_status === "match" || person.ocr_status === "mismatch") && (
+              <div className="text-xs bg-muted/40 border border-border rounded-lg p-2 space-y-0.5">
+                {person.ocr_dates.id_number && (
+                  <div className="flex items-center gap-2">
+                    <span>🪪 ID No:</span>
+                    <span className="font-semibold">{person.ocr_dates.id_number}</span>
+                    {person.emirates_id && (
+                      person.emirates_id.replace(/\D/g, "") === person.ocr_dates.id_number.replace(/\D/g, "")
+                        ? <span className="text-green-600 font-semibold">✅ Matches</span>
+                        : <span className="text-destructive font-semibold">⚠️ ID mismatch: entered {person.emirates_id}</span>
+                    )}
+                  </div>
+                )}
+                {person.ocr_dates.expiry_date && (
+                  <div className="flex items-center gap-2">
+                    <span>⏳ Expiry:</span>
+                    <span className="font-semibold">{person.ocr_dates.expiry_date}</span>
+                    {(() => {
+                      const [d, m, y] = person.ocr_dates.expiry_date.split("/");
+                      const expiry = new Date(`${y}-${m}-${d}`);
+                      return expiry < new Date()
+                        ? <span className="text-destructive font-semibold">⚠️ EXPIRED</span>
+                        : <span className="text-green-600 font-semibold">✅ Valid</span>;
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+            {person.ocr_status === "mismatch" && (
+              <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+                <div className="font-semibold">⚠️ Name Mismatch — Cannot Proceed</div>
+                <div>Name you entered: <span className="font-bold">{person.name}</span></div>
+                <div>Name on Emirates ID: <span className="font-bold">{person.ocr_extracted || "Could not be read"}</span></div>
+                <div className="text-xs text-muted-foreground mt-1">Please correct the name to match exactly what appears on the ID.</div>
+              </div>
+            )}
+          </div>
+
+          {/* Passport */}
+          <div className="space-y-2">
+            <FileUploadZone
+              label="Upload Passport *"
+              files={person.passport_files}
+              onChange={(files) => set("passport_files", files)}
+              accept="image/*,.pdf"
+              single
+            />
+            {person.passport_files.length > 0 && (
+              <Button
+                type="button" size="sm" variant="outline" className="w-full"
+                title="Preview Passport"
+                onClick={() => setPreviewFile(person.passport_files[0])}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="size-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Preview Passport
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -534,22 +570,22 @@ function emptyPerson(): Person {
 
 // ── LEGAL DECLARATIONS (15 items from HTML) ─────────────────────────────────
 const DECLARATIONS = [
-  "The entity hereby declares and confirms that it maintains proper accounting records and statutory books that accurately reflect its financial position and enable the traceability of all transactions in compliance with applicable laws.",
-  "The entity hereby confirms that its prior period financial statements (if any) were audited by a licensed auditor, and no material reservations or audit findings were issued that would necessitate an adjustment to the opening balances or a restatement of previous financial data.",
-  "The entity hereby declares that, if it is not currently registered with the Federal Tax Authority (FTA), such non-registration is based on valid legal and commercial grounds in compliance with applicable tax laws. The entity remains responsible for monitoring its tax status and registering once the statutory requirements are met.",
-  "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE) or the General Directorate of Residency and Foreigners Affairs (GDRFA), as applicable to its business activities. In the absence of registered staff, the entity declares that its operations are either limited to the personal efforts of the Business Owner or are executed through formal contracts with authorized third parties, in full compliance with applicable regulations.",
-  "The entity hereby declares that all generated income is derived from genuine and legitimate economic activities, and confirms that it possesses the necessary infrastructure and resources to generate such income. Furthermore, the entity affirms that its registered business address is appropriate and adequate for the nature and scale of its operations.",
-  "The entity hereby confirms that its total annual revenue (both operating and non-operating), for the current financial year and any prior years (if applicable), has not exceeded AED 50 million for any single financial period.",
-  "The entity hereby confirms that any remarks, fines, or penalties issued by the Federal Tax Authority (FTA) against it (if any) are strictly related to outstanding tax liabilities or technical/procedural errors, and do not involve any matters related to integrity or intentional tax evasion.",
-  "The entity hereby confirms that it maintains no business or financial relationships with prohibited, suspicious, or shell entities. Furthermore, any transactions with parties located in high-risk jurisdictions (if any) are conducted on a strictly arms length basis with clear economic substance. The entity undertakes to provide all supporting documentation requested by the auditor for verification purposes.",
-  "The entity hereby confirms that any changes occurred during the current financial year whether regarding partners, Ultimate Beneficial Owners (UBOs), business activities, or the entitys legal name were implemented for legitimate commercial reasons and are fully justified. The entity affirms that such changes were not intended, under any circumstances, to conceal the identity of the beneficial owner or to divert the flow of funds for illicit purposes.",
-  "The entity hereby confirms that there are no ongoing legal disputes or pending litigations among its partners/owners. Furthermore, the entity affirms that its management and ownership structure are stable, with no existing conflicts that could impact business continuity or the decision-making process.",
-  "The entity hereby confirms that there are no confirmed, suspected, or alleged instances of fraud or embezzlement during the current financial year. Furthermore, the entity declares that there are no internal reports or ongoing investigations regarding the integrity of financial data or professional conduct within the entity.",
-  "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses.",
-  "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses. The entity specifically affirms that the management of its activities, including strategic and operational decision-making, is not conducted outside the United Arab Emirates.",
-  "The entity hereby confirms that there is no intention, plan, or decision to liquidate the entity, dispose of its material assets, or sell the business. The entity further affirms its ability to continue as a going concern for the foreseeable future.",
-  "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data, undertaking to update it immediately upon any changes.",
-];
+        "The entity hereby declares and confirms that it maintains proper accounting records and statutory books that accurately reflect its financial position and enable the traceability of all transactions in compliance with applicable laws.",
+        "The entity hereby confirms that its prior period financial statements (if any) were audited by a licensed auditor, and no material reservations or audit findings were issued that would necessitate an adjustment to the opening balances or a restatement of previous financial data.",
+        "The entity hereby declares that, if it is not currently registered with the Federal Tax Authority (FTA), such non-registration is based on valid legal and commercial grounds in compliance with applicable tax laws. The entity remains responsible for monitoring its tax status and registering once the statutory requirements are met.",
+        "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE) or the General Directorate of Residency and Foreigners Affairs (GDRFA), as applicable to its business activities. In the absence of registered staff, the entity declares that its operations are either limited to the personal efforts of the Business Owner or are executed through formal contracts with authorized third parties, in full compliance with applicable regulations.",
+        "The entity hereby declares that all generated income is derived from genuine and legitimate economic activities, and confirms that it possesses the necessary infrastructure and resources to generate such income. Furthermore, the entity affirms that its registered business address is appropriate and adequate for the nature and scale of its operations.",
+        "The entity hereby confirms that its total annual revenue (both operating and non-operating), for the current financial year and any prior years (if applicable), has not exceeded AED 50 million for any single financial period.",
+        "The entity hereby confirms that any remarks, fines, or penalties issued by the Federal Tax Authority (FTA) against it (if any) are strictly related to outstanding tax liabilities or technical/procedural errors, and do not involve any matters related to integrity or intentional tax evasion.",
+        "The entity hereby confirms that it maintains no business or financial relationships with prohibited, suspicious, or shell entities. Furthermore, any transactions with parties located in high-risk jurisdictions (if any) are conducted on a strictly arms length basis with clear economic substance. The entity undertakes to provide all supporting documentation requested by the auditor for verification purposes.",
+        "The entity hereby confirms that any changes occurred during the current financial year whether regarding partners, Ultimate Beneficial Owners (UBOs), business activities, or the entitys legal name were implemented for legitimate commercial reasons and are fully justified. The entity affirms that such changes were not intended, under any circumstances, to conceal the identity of the beneficial owner or to divert the flow of funds for illicit purposes.",
+        "The entity hereby confirms that there are no ongoing legal disputes or pending litigations among its partners/owners. Furthermore, the entity affirms that its management and ownership structure are stable, with no existing conflicts that could impact business continuity or the decision-making process.",
+        "The entity hereby confirms that there are no confirmed, suspected, or alleged instances of fraud or embezzlement during the current financial year. Furthermore, the entity declares that there are no internal reports or ongoing investigations regarding the integrity of financial data or professional conduct within the entity.",
+        "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses.",
+        "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses. The entity specifically affirms that the management of its activities, including strategic and operational decision-making, is not conducted outside the United Arab Emirates.",
+        "The entity hereby confirms that there is no intention, plan, or decision to liquidate the entity, dispose of its material assets, or sell the business. The entity further affirms its ability to continue as a going concern for the foreseeable future.",
+        "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data, undertaking to update it immediately upon any changes."
+    ];
 
 
 
@@ -714,6 +750,7 @@ type PepDeclaration = {
 function KycForm({ entity, onSaved, t }: any) {
   const { user } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   // § Section 1 — Entity Information
   const [registrationStatus, setRegistrationStatus] = useState(entity.registration_status ?? "");
@@ -801,7 +838,7 @@ function KycForm({ entity, onSaved, t }: any) {
 
   // Legal type options per status
   const legalTypeOptions: Record<string, string[]> = {
-    multiple: ["Limited Liability Company", "General Partnership Company", "Limited Partnership Company"],
+    multiple: ["Limited Liability Company", "General Partnership Company", "Limited Partnership Company", "Civil Company"],
     freezone: ["Free Zone Establishment", "Free Zone Company", "Free Zone Branch"],
     branch: ["Branch of Local Company", "Branch of Foreign Company"],
   };
@@ -1065,6 +1102,7 @@ function KycForm({ entity, onSaved, t }: any) {
   const normalize = (s: string) => s.toLowerCase().replace(/[\s\-_.\/]/g, "");
   return (
     <Card className="shadow-card">
+      {previewFile && <DocPreview file={previewFile} onClose={() => setPreviewFile(null)} />}
       <CardHeader>
         <CardTitle className="text-xl uppercase tracking-wide text-center border-b border-border pb-4">
           Entity Onboarding
@@ -1103,93 +1141,7 @@ function KycForm({ entity, onSaved, t }: any) {
                   <Input required value={employerName} placeholder="e.g., Employer name, Self employed" onChange={(e) => setEmployerName(e.target.value)} />
                 </Field>
                 
-                <Field label="Employer Emirates ID Number (15 digits)" required>
-                  <Input
-                    required
-                    value={employerEmiratesId}
-                    placeholder="784XXXXXXXXXX"
-                    maxLength={15}
-                    onChange={(e) => setEmployerEmiratesId(e.target.value.replace(/\D/g, "").slice(0, 15))}
-                  />
-                  {employerEmiratesId && employerEmiratesId.length !== 15 && (
-                    <div className="text-xs text-destructive mt-1">Must be exactly 15 digits</div>
-                  )}
-                </Field>
-                <div className="space-y-2">
-                  <FileUploadZone
-                    label="Upload Employer Emirates ID"
-                    files={employerIdFiles}
-                    onChange={(files) => { setEmployerIdFiles(files); setEmployerOcrStatus("idle"); }}
-                    accept="image/png,image/jpeg,image/jpg,.pdf"
-                    single
-                  />
-                  {employerIdFiles.length > 0 && (
-                    <div className="flex gap-2">
-                      <Button
-                        type="button" size="sm" variant="outline" className="flex-1"
-                        disabled={employerOcrStatus === "checking"}
-                        onClick={async () => {
-                          if (!employerName.trim()) { toast.error("Please enter employer name first"); return; }
-                          setEmployerOcrStatus("checking");
-                          const result = await verifyWithOCR(employerIdFiles[0], employerName, "id");
-                          setEmployerOcrStatus(result.match ? "match" : "mismatch");
-                          setEmployerOcrExtracted(result.extractedName);
-                          setEmployerOcrDates(result.dates);
-                        }}
-                      >
-                        {employerOcrStatus === "checking"
-                          ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
-                          : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Employer ID</>}
-                      </Button>
-                      <Button
-                        type="button" size="sm" variant="outline"
-                        title="Preview Document"
-                        onClick={() => {
-                          const url = URL.createObjectURL(employerIdFiles[0]);
-                          window.open(url, "_blank");
-                        }}
-                      >
-                        <FileText className="size-3.5" />
-                      </Button>
-                    </div>
-                  )}
-                  <OcrBadge status={employerOcrStatus} extractedName={employerOcrExtracted} />
-                  {Object.keys(employerOcrDates).length > 0 && (
-                    <div className="text-xs bg-muted/40 border border-border rounded-lg p-2 space-y-0.5">
-                      {employerOcrDates.id_number && (
-                        <div className="flex items-center gap-2">
-                          <span>🪪 ID No:</span>
-                          <span className="font-semibold">{employerOcrDates.id_number}</span>
-                          {employerEmiratesId && (
-                            employerEmiratesId.replace(/\D/g, "") === employerOcrDates.id_number.replace(/\D/g, "")
-                              ? <span className="text-green-600 font-semibold">✅ Matches</span>
-                              : <span className="text-destructive font-semibold">⚠️ Entered: {employerEmiratesId}</span>
-                          )}
-                        </div>
-                      )}
-                      {employerOcrDates.expiry_date && (
-                        <div className="flex items-center gap-2">
-                          <span>⏳ Expiry:</span>
-                          <span className="font-semibold">{employerOcrDates.expiry_date}</span>
-                          {(() => {
-                            const [d, m, y] = employerOcrDates.expiry_date.split("/");
-                            const expiry = new Date(`${y}-${m}-${d}`);
-                            return expiry < new Date()
-                              ? <span className="text-destructive font-semibold">⚠️ EXPIRED</span>
-                              : <span className="text-green-600 font-semibold">✅ Valid</span>;
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {employerOcrStatus === "mismatch" && (
-                    <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
-                      <div className="font-semibold">⚠️ Employer Name Mismatch — Cannot Proceed</div>
-                      <div>Name you entered: <span className="font-bold">{employerName}</span></div>
-                      <div>Name on Emirates ID: <span className="font-bold">{employerOcrExtracted || "Could not be read"}</span></div>
-                    </div>
-                  )}
-                </div>
+                
               </>
             )}
 
@@ -1242,13 +1194,12 @@ function KycForm({ entity, onSaved, t }: any) {
                     <Button
                       type="button" size="sm" variant="outline"
                       title="Preview Document"
-                      onClick={() => {
-                        const file = licenseFiles[0];
-                        const url = URL.createObjectURL(file);
-                        window.open(url, "_blank");
-                      }}
+                      onClick={() => setPreviewFile(licenseFiles[0])}
                     >
-                      <FileText className="size-3.5" />
+                      <svg xmlns="http://www.w3.org/2000/svg" className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
                     </Button>
                   </div>
                 )}
@@ -1435,12 +1386,13 @@ function KycForm({ entity, onSaved, t }: any) {
                     <Button
                       type="button" size="sm" variant="outline"
                       title="Preview POA Document"
-                      onClick={() => {
-                        const url = URL.createObjectURL(poaFiles[0]);
-                        window.open(url, "_blank");
-                      }}
+                      onClick={() => setPreviewFile(poaFiles[0])}
                     >
-                      <FileText className="size-3.5" /> Preview POA
+                      <svg xmlns="http://www.w3.org/2000/svg" className="size-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Preview POA
                     </Button>
                   )}
               </>
@@ -1574,7 +1526,7 @@ function KycForm({ entity, onSaved, t }: any) {
                           className="size-4 mt-0.5"
                         />
                         <span className="text-xs text-muted-foreground leading-relaxed">
-                          I, <strong>{name}</strong>, hereby declare that the information provided above is true and accurate. I confirm that these funds are derived from legitimate sources and are not related to any illegal activities.
+                          I, <strong>{name}</strong>, As the Authorized Signatory of this entity, I hereby declare that the information provided above regarding Politically Exposed Persons (PEP) and their Source of Funds and Wealth is true and accurate. I confirm that these funds are derived from legitimate sources and are not related to any illegal activities, and I undertake to provide any supporting documentation upon request.
                         </span>
                       </label>
                     </div>
