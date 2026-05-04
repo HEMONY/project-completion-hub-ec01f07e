@@ -907,7 +907,7 @@ function KycForm({ entity, onSaved, t }: any) {
       errs.push("Telephone must start with +971 followed by 7-12 digits");
     }
     if (!email.trim()) errs.push("Email is required");
-    if (employerName.trim()) {
+    /*if (employerName.trim()) {
       if (!employerEmiratesId || employerEmiratesId.length !== 15) errs.push("Employer Emirates ID must be 15 digits");
       if (employerIdFiles.length === 0) errs.push("Employer Emirates ID document is required when employer name is provided");
       if (employerOcrStatus === "checking") errs.push("Employer ID verification is still in progress");
@@ -917,7 +917,7 @@ function KycForm({ entity, onSaved, t }: any) {
           errs.push(`Employer Emirates ID number entered does not match document (${employerOcrDates.id_number})`);
         }
       }
-    }
+    }*/
 
     // Shareholders
     if (shareholders.length === 0) errs.push("At least one shareholder is required");
@@ -985,7 +985,7 @@ function KycForm({ entity, onSaved, t }: any) {
         if (!decl) { errs.push(`PEP (${name}): Declaration required`); return; }
         if ((decl.sourceOfFunds ?? []).length === 0) errs.push(`PEP (${name}): Source of Funds required`);
         if (decl.sourceOfFunds?.includes("Other") && !decl.otherSource?.trim()) errs.push(`PEP (${name}): Please specify other source of funds`);
-        if (!decl.wealthSummary?.trim()) errs.push(`PEP (${name}): Brief Summary of Source of Wealth required`);
+        //if (!decl.wealthSummary?.trim()) errs.push(`PEP (${name}): Brief Summary of Source of Wealth required`);
         if (!decl.confirmed) errs.push(`PEP (${name}): Must confirm the declaration`);
       });
     }
@@ -1507,7 +1507,7 @@ function KycForm({ entity, onSaved, t }: any) {
                       </div>
 
                       {/* Source of Wealth */}
-                      <div className="space-y-2">
+                      /*<div className="space-y-2">
                         <div className="text-sm font-semibold">Brief Summary of Source of Wealth (SOW) *</div>
                         <textarea
                           className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -1515,7 +1515,7 @@ function KycForm({ entity, onSaved, t }: any) {
                           value={pepDeclarations[name]?.wealthSummary ?? ""}
                           onChange={(e) => updateDecl(name, "wealthSummary", e.target.value)}
                         />
-                      </div>
+                      </div>*/
 
                       {/* Confirmation */}
                       <label className={`flex items-start gap-3 cursor-pointer border rounded-lg p-3 transition-colors ${pepDeclarations[name]?.confirmed ? "border-green-300 bg-green-50 dark:bg-green-950/20" : "border-border"}`}>
