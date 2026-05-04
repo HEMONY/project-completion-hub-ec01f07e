@@ -1551,7 +1551,60 @@ function KycForm({ entity, onSaved, t }: any) {
           </div>
 
           {/* Submit */}
-          <div className="flex justify-end pt-6 border-t border-border">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              disabled={verifyingAll}
+              onClick={async () => {
+                setVerifyingAll(true);
+                try {
+                  // License
+                  if (licenseFiles.length > 0 && entityName.trim()) {
+                    setLicenseOcrStatus("checking");
+                    const r = await verifyWithOCR(licenseFiles[0], entityName, "license");
+                    setLicenseOcrStatus(r.match ? "match" : "mismatch");
+                    setLicenseOcrExtracted(r.extractedName);
+                    setLicenseOcrDates(r.dates);
+                  }
+                  const verifyPersons = async (
+                    persons: Person[],
+                    setter: (p: Person[]) => void,
+                  ) => {
+                    const updated = [...persons];
+                    for (let i = 0; i < updated.length; i++) {
+                      const p = updated[i];
+                      if (p.id_files.length === 0 || !p.name.trim()) continue;
+                      const r = await verifyWithOCR(p.id_files[0], p.name, "id");
+                      let idNumMatch = true;
+                      if (r.dates.id_number && p.emirates_id) {
+                        idNumMatch = p.emirates_id.replace(/\D/g, "") === r.dates.id_number.replace(/\D/g, "");
+                      }
+                      updated[i] = {
+                        ...p,
+                        ocr_status: (r.match && idNumMatch) ? "match" : "mismatch",
+                        ocr_extracted: r.extractedName,
+                        ocr_dates: r.dates,
+                      };
+                      setter([...updated]);
+                    }
+                  };
+                  await verifyPersons(shareholders, setShareholders);
+                  if (hasUbo === "yes") await verifyPersons(ubos, setUbos);
+                  if (managementSelect === "Other") await verifyPersons(managers, setManagers);
+                  toast.success("All documents verified");
+                } catch (e: any) {
+                  toast.error(e?.message ?? "Verification failed");
+                } finally {
+                  setVerifyingAll(false);
+                }
+              }}
+            >
+              {verifyingAll
+                ? <><Loader2 className="size-4 animate-spin mr-2" /> Verifying all documents...</>
+                : <><ShieldCheck className="size-4 mr-2" /> Verify All Documents</>}
+            </Button>
             <Button type="submit" variant="premium" disabled={busy} size="lg">
               {busy ? <><Loader2 className="size-4 animate-spin" /> Saving...</> : "Save & Continue →"}
             </Button>
