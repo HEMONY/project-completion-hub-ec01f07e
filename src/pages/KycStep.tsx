@@ -1506,16 +1506,7 @@ function KycForm({ entity, onSaved, t }: any) {
                         )}
                       </div>
 
-                      {/* Source of Wealth */}
-                      /*<div className="space-y-2">
-                        <div className="text-sm font-semibold">Brief Summary of Source of Wealth (SOW) *</div>
-                        <textarea
-                          className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                          placeholder="Briefly describe your source of wealth..."
-                          value={pepDeclarations[name]?.wealthSummary ?? ""}
-                          onChange={(e) => updateDecl(name, "wealthSummary", e.target.value)}
-                        />
-                      </div>*/
+                     
 
                       {/* Confirmation */}
                       <label className={`flex items-start gap-3 cursor-pointer border rounded-lg p-3 transition-colors ${pepDeclarations[name]?.confirmed ? "border-green-300 bg-green-50 dark:bg-green-950/20" : "border-border"}`}>
