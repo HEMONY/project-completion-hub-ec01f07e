@@ -748,6 +748,7 @@ type PepDeclaration = {
 function KycForm({ entity, onSaved, t }: any) {
   const { user } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [verifyingAll, setVerifyingAll] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   // § Section 1 — Entity Information
