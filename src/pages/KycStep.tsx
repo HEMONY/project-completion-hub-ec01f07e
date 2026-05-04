@@ -483,7 +483,7 @@ function PersonCard({
                 >
                   {person.ocr_status === "checking"
                     ? <><Loader2 className="size-3.5 animate-spin mr-1" /> Verifying...</>
-                    : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Name against ID</>}
+                    : <><CheckCircle2 className="size-3.5 mr-1" /> Verify Emirates ID</>}
                 </Button>
                 <Button
                   type="button" size="sm" variant="outline"
@@ -1525,7 +1525,7 @@ function KycForm({ entity, onSaved, t }: any) {
 
           {/* Submit */}
           <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 border-t border-border">
-            <Button
+            /*<Button
               type="button"
               variant="outline"
               size="lg"
@@ -1577,7 +1577,7 @@ function KycForm({ entity, onSaved, t }: any) {
               {verifyingAll
                 ? <><Loader2 className="size-4 animate-spin mr-2" /> Verifying all documents...</>
                 : <><ShieldCheck className="size-4 mr-2" /> Verify All Documents</>}
-            </Button>
+            </Button>*/
             <Button type="submit" variant="premium" disabled={busy} size="lg">
               {busy ? <><Loader2 className="size-4 animate-spin" /> Saving...</> : "Save & Continue →"}
             </Button>
