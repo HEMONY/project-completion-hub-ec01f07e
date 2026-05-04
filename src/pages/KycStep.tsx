@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2, ExternalLink, ShieldCheck } from "lucide-react";
+import { DateInput } from "@/components/DateInput";
 
 // Steps match exactly the HTML sections:
 // S1: Entity Info + Contact + Shareholders + UBOs + Management + PEP + Declarations = "kyc"
@@ -38,52 +39,52 @@ function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
     />
   );
 }
-const BLACKLISTED_NATIONALITIES = ["Iranian", "Burmese", "North Korean"];
+const BLACKLISTED_NATIONALITIES = ["Iranian", "Burmese", "Myanmar", "North Korean", "Syrian", "Cuban", "Sudanese", "Russian", "Belarusian", "Venezuelan"];
 
 const ALL_NATIONALITIES = [
   "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan",
   "Antiguans", "Argentine", "Armenian", "Australian", "Austrian", "Azerbaijani",
-  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belarusian", "Belgian",
+  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belgian",
   "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Botswana",
   "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burundian",
   "Cabo Verdean", "Cambodian", "Cameroonian", "Canadian", "Central African",
   "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese",
-  "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech",
-  "Danish", "Djiboutian", "Dominican",
-  "Dutch",
+  "Costa Rican", "Croatian", "Cypriot", "Czech",
+  "Danish", "Djiboutian", "Dominican", "Dominica", "Dutch",
   "Ecuadorian", "Egyptian", "Emirati", "Equatorial Guinean", "Eritrean",
   "Estonian", "Eswatini", "Ethiopian",
   "Fijian", "Filipino", "Finnish", "French",
   "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek",
   "Grenadian", "Guatemalan", "Guinean", "Guinea-Bissauan", "Guyanese",
-  "Haitian", "Honduran", "Hungarian",
+  "Haitian", "Honduran", "Hong Konger", "Hungarian",
   "Icelandic", "Indian", "Indonesian", "Iraqi", "Irish", "Israeli",
   "Italian", "Ivorian",
   "Jamaican", "Japanese", "Jordanian",
-  "Kazakhstani", "Kenyan", "Kiribatian", "Kuwaiti", "Kyrgyz",
+  "Kazakhstani", "Kenyan", "Kiribatian", "Kosovar", "Kuwaiti", "Kyrgyz",
   "Laotian", "Latvian", "Lebanese", "Lesothan", "Liberian", "Libyan",
   "Liechtensteiner", "Lithuanian", "Luxembourger",
-  "Malagasy", "Malawian", "Malaysian", "Maldivian", "Malian", "Maltese",
+  "Macedonian", "Malagasy", "Malawian", "Malaysian", "Maldivian", "Malian", "Maltese",
   "Marshallese", "Mauritanian", "Mauritian", "Mexican", "Micronesian",
   "Moldovan", "Monacan", "Mongolian", "Montenegrin", "Moroccan", "Mozambican",
   "Namibian", "Nauruan", "Nepalese", "New Zealander", "Nicaraguan",
   "Nigerian", "Nigerien", "Norwegian",
   "Omani",
   "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean",
-  "Paraguayan", "Peruvian", "Polish", "Portuguese",
+  "Paraguayan", "Peruvian", "Polish", "Portuguese", "Puerto Rican",
   "Qatari",
-  "Romanian", "Russian", "Rwandan",
-  "Saint Lucian", "Salvadoran", "Samoan", "Saudi", "Senegalese", "Serbian",
+  "Romanian", "Rwandan",
+  "Saint Kitts and Nevis", "Saint Lucian", "Saint Vincentian", "Salvadoran", "Samoan", "San Marinese",
+  "Sao Tomean", "Saudi", "Senegalese", "Serbian",
   "Seychellois", "Sierra Leonean", "Singaporean", "Slovak", "Slovenian",
-  "Solomon Islander", "Somali", "South African", "South Sudanese",
-  "Spanish", "Sri Lankan", "Sudanese", "Surinamese", "Swedish", "Swiss", "Syrian",
+  "Solomon Islander", "Somali", "South African", "South Korean", "South Sudanese",
+  "Spanish", "Sri Lankan", "Surinamese", "Swazi", "Swedish", "Swiss",
   "Taiwanese", "Tajik", "Tanzanian", "Thai", "Timorese", "Togolese",
   "Tongan", "Trinidadian", "Tunisian", "Turkish", "Turkmen", "Tuvaluan",
   "Ugandan", "Ukrainian", "Uruguayan", "Uzbek",
-  "Vanuatuan", "Venezuelan", "Vietnamese",
+  "Vanuatuan", "Vatican", "Vietnamese",
   "Yemeni",
   "Zambian", "Zimbabwean",
-].filter((n) => !BLACKLISTED_NATIONALITIES.includes(n));
+].filter((n) => !BLACKLISTED_NATIONALITIES.includes(n)).sort();
 
 function isBlacklisted(nationality: string) {
   return BLACKLISTED_NATIONALITIES.some((b) =>
@@ -573,7 +574,7 @@ const DECLARATIONS = [
         "The entity hereby declares and confirms that it maintains proper accounting records and statutory books that accurately reflect its financial position and enable the traceability of all transactions in compliance with applicable laws.",
         "The entity hereby confirms that its prior period financial statements (if any) were audited by a licensed auditor, and no material reservations or audit findings were issued that would necessitate an adjustment to the opening balances or a restatement of previous financial data.",
         "The entity hereby declares that, if it is not currently registered with the Federal Tax Authority (FTA), such non-registration is based on valid legal and commercial grounds in compliance with applicable tax laws. The entity remains responsible for monitoring its tax status and registering once the statutory requirements are met.",
-        "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE) or the General Directorate of Residency and Foreigners Affairs (GDRFA), as applicable to its business activities. In the absence of registered staff, the entity declares that its operations are either limited to the personal efforts of the Business Owner or are executed through formal contracts with authorized third parties, in full compliance with applicable regulations.",
+        "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE), the General Directorate of Residency and Foreigners Affairs (GDRFA), or the respective Free Zone Authority, as applicable to its business activities. In the absence of registered staff, the entity declares that its operations are either limited to the personal efforts of the Business Owner or are executed through formal contracts with authorized third parties, in full compliance with applicable regulations.",
         "The entity hereby declares that all generated income is derived from genuine and legitimate economic activities, and confirms that it possesses the necessary infrastructure and resources to generate such income. Furthermore, the entity affirms that its registered business address is appropriate and adequate for the nature and scale of its operations.",
         "The entity hereby confirms that its total annual revenue (both operating and non-operating), for the current financial year and any prior years (if applicable), has not exceeded AED 50 million for any single financial period.",
         "The entity hereby confirms that any remarks, fines, or penalties issued by the Federal Tax Authority (FTA) against it (if any) are strictly related to outstanding tax liabilities or technical/procedural errors, and do not involve any matters related to integrity or intentional tax evasion.",
@@ -1151,7 +1152,7 @@ function KycForm({ entity, onSaved, t }: any) {
                   <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => setLicenseNumber(e.target.value)} />
                 </Field>
                 <Field label="License Issue Date" required>
-                  <Input required type="date" value={licenseDate} onChange={(e) => setLicenseDate(e.target.value)} />
+                  <DateInput required value={licenseDate} onChange={(v) => setLicenseDate(v)} />
                 </Field>
                 {legalTypeOptions[registrationStatus] && (
                   <Field label="Legal Structure">
@@ -1517,7 +1518,7 @@ function KycForm({ entity, onSaved, t }: any) {
                           className="size-4 mt-0.5"
                         />
                         <span className="text-xs text-muted-foreground leading-relaxed">
-                          I, <strong>{name}</strong>, As the Authorized Signatory of this entity, I hereby declare that the information provided above regarding Politically Exposed Persons (PEP) and their Source of Funds and Wealth is true and accurate. I confirm that these funds are derived from legitimate sources and are not related to any illegal activities, and I undertake to provide any supporting documentation upon request.
+                          I, the undersigned, hereby declare that the information provided above is true and accurate. I confirm that these funds are derived from legitimate sources and are not related to any illegal activities.
                         </span>
                       </label>
                     </div>
@@ -1681,13 +1682,13 @@ function FinancialYearForm({ entity, onSaved, onBack, t }: any) {
           </Field>
           {form.is_first_year === "Yes" && (
             <div className="grid md:grid-cols-2 gap-4">
-              <Field label="First Year Start Date" required><Input required type="date" value={form.first_year_start} onChange={(e) => set("first_year_start", e.target.value)} /></Field>
-              <Field label="First Year End Date" required><Input required type="date" value={form.first_year_end} onChange={(e) => set("first_year_end", e.target.value)} /></Field>
+              <Field label="First Year Start Date" required><DateInput required value={form.first_year_start} onChange={(v) => set("first_year_start", v)} /></Field>
+              <Field label="First Year End Date" required><DateInput required value={form.first_year_end} onChange={(v) => set("first_year_end", v)} /></Field>
             </div>
           )}
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Current Year Start" required><Input required type="date" value={form.current_year_start} onChange={(e) => set("current_year_start", e.target.value)} /></Field>
-            <Field label="Current Year End" required><Input required type="date" value={form.current_year_end} onChange={(e) => set("current_year_end", e.target.value)} /></Field>
+            <Field label="Current Year Start" required><DateInput required value={form.current_year_start} onChange={(v) => set("current_year_start", v)} /></Field>
+            <Field label="Current Year End" required><DateInput required value={form.current_year_end} onChange={(v) => set("current_year_end", v)} /></Field>
           </div>
           {form.is_first_year === "No" && (
             <Field label="Was the previous year audited?" required>
