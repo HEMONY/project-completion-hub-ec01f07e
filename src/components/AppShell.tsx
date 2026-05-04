@@ -132,7 +132,7 @@ export function AppShell({ children, centered = false }: { children: ReactNode; 
 
       {/* Mobile sidebar */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className={cn("fixed inset-0 z-50 flex", !centered && "md:hidden")}>
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <aside className="relative flex w-72 flex-col bg-sidebar text-sidebar-foreground">
             {Sidebar}
