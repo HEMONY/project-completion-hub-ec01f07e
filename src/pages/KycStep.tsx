@@ -585,7 +585,8 @@ const DECLARATIONS = [
         "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses.",
         "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses. The entity specifically affirms that the management of its activities, including strategic and operational decision-making, is not conducted outside the United Arab Emirates.",
         "The entity hereby confirms that there is no intention, plan, or decision to liquidate the entity, dispose of its material assets, or sell the business. The entity further affirms its ability to continue as a going concern for the foreseeable future.",
-        "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data, undertaking to update it immediately upon any changes."
+        "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data, undertaking to update it immediately upon any changes.",
+        "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE), the General Directorate of Residency and Foreigners Affairs (GDRFA), or the respective Free Zone Authority, as applicable to its business activities. In the absence of registered staff, the entity declares that its operations are either limited to the personal efforts of the Business Owner or are executed through formal contracts with authorized third parties, in full compliance with applicable regulations."
     ];
 
 
@@ -1371,17 +1372,14 @@ function KycForm({ entity, onSaved, t }: any) {
             </Field>
             {managementSelect === "Other" && (
               <>
-                {managers.map((m, i) => (
+                {managers.slice(0, 1).map((m, i) => (
                   <PersonCard
                     key={i} person={m} index={i} label="Manager"
-                    canRemove={managers.length > 1}
-                    onChange={(p) => setManagers(managers.map((x, idx) => idx === i ? p : x))}
-                    onRemove={() => setManagers(managers.filter((_, idx) => idx !== i))}
+                    canRemove={false}
+                    onChange={(p) => setManagers([p])}
+                    onRemove={() => {}}
                   />
                 ))}
-                <Button type="button" variant="outline" size="sm" onClick={() => setManagers([...managers, emptyPerson()])}>
-                  <Plus className="size-3.5" /> Add Manager
-                </Button>
                 <FileUploadZone label="Upload Power of Attorney (POA) *" files={poaFiles} onChange={setPoaFiles} accept="image/*,.pdf" single />
                   {poaFiles.length > 0 && (
                     <Button
