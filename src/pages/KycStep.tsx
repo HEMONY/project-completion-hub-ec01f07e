@@ -690,7 +690,7 @@ export default function KycStep() {
       });
   }, [entityId, user]);
 
-  if (!entity) return <AppShell><div className="py-20 text-center text-muted-foreground">{t("loading")}</div></AppShell>;
+  if (!entity) return <AppShell centered><div className="py-20 text-center text-muted-foreground">{t("loading")}</div></AppShell>;
 
   const goNext = () => {
     const next = validSteps[validSteps.indexOf(stepKey) + 1];
