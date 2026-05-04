@@ -706,34 +706,30 @@ export default function KycStep() {
   const completedSteps = validSteps.slice(0, Math.max(0, (entity.current_step || 1) - 1));
 
   return (
-    <AppShell>
-      <div className="max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-[260px_1fr] gap-6 items-start">
-          <div>
-            <KycStepper current={stepKey} entityId={entityId} completed={completedSteps} />
-            {user && entityId && <MyDocumentsPanel entityId={entityId} userId={user.id} />}
-          </div>
-          <div className="min-w-0">
-            {stepKey === "kyc" && (
-              <KycForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} t={t} />
-            )}
-            {stepKey === "audit-fee" && (
-              <AuditFeeForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
-            )}
-            {stepKey === "financial-year" && (
-              <FinancialYearForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
-            )}
-            {stepKey === "tax-status" && (
-              <TaxStatusForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
-            )}
-            {stepKey === "engagement" && (
-              <EngagementForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
-            )}
-            {stepKey === "payment" && (
-              <PaymentForm entity={entity} onBack={goBack} t={t} />
-            )}
-          </div>
+    <AppShell centered>
+      <div className="max-w-5xl mx-auto space-y-6">
+        <KycStepper current={stepKey} entityId={entityId} completed={completedSteps} />
+        <div className="min-w-0">
+          {stepKey === "kyc" && (
+            <KycForm entity={entity} onSaved={(e) => { setEntity(e); goNext(); }} t={t} />
+          )}
+          {stepKey === "audit-fee" && (
+            <AuditFeeForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
+          )}
+          {stepKey === "financial-year" && (
+            <FinancialYearForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
+          )}
+          {stepKey === "tax-status" && (
+            <TaxStatusForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
+          )}
+          {stepKey === "engagement" && (
+            <EngagementForm entity={entity} onSaved={goNext} onBack={goBack} t={t} />
+          )}
+          {stepKey === "payment" && (
+            <PaymentForm entity={entity} onBack={goBack} t={t} />
+          )}
         </div>
+        {user && entityId && <MyDocumentsPanel entityId={entityId} userId={user.id} />}
       </div>
     </AppShell>
   );
