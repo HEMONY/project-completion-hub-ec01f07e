@@ -144,10 +144,10 @@ export function AppShell({ children, centered = false }: { children: ReactNode; 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-14 border-b border-border bg-card/60 backdrop-blur flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
+            <Button variant="ghost" size="icon" className={centered ? "" : "md:hidden"} onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="size-4" /> : <Menu className="size-4" />}
             </Button>
-            <div className="md:hidden font-bold">{t("app_name")}</div>
+            <div className={centered ? "font-bold" : "md:hidden font-bold"}>{t("app_name")}</div>
           </div>
           <div className="ms-auto flex items-center gap-2">
             <Button variant="ghost" size="sm" className="gap-2" onClick={() => setLang(lang === "ar" ? "en" : "ar")}>
