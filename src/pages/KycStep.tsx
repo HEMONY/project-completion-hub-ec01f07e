@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2, ExternalLink, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, X, CheckCircle2, AlertTriangle, Loader2, ExternalLink } from "lucide-react";
 import { DateInput } from "@/components/DateInput";
 
 // Steps match exactly the HTML sections:
@@ -39,17 +39,17 @@ function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
     />
   );
 }
-const BLACKLISTED_NATIONALITIES = ["Iranian", "Burmese", "Myanmar", "North Korean", "Syrian", "Cuban", "Sudanese", "Russian", "Belarusian", "Venezuelan"];
+const BLACKLISTED_NATIONALITIES = ["Iranian", "Burmese", "Myanmar", "North Korean"];
 
 const ALL_NATIONALITIES = [
   "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan",
   "Antiguans", "Argentine", "Armenian", "Australian", "Austrian", "Azerbaijani",
-  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belgian",
+  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Belarusian", "Belgian",
   "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Botswana",
   "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burundian",
   "Cabo Verdean", "Cambodian", "Cameroonian", "Canadian", "Central African",
   "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese",
-  "Costa Rican", "Croatian", "Cypriot", "Czech",
+  "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech",
   "Danish", "Djiboutian", "Dominican", "Dominica", "Dutch",
   "Ecuadorian", "Egyptian", "Emirati", "Equatorial Guinean", "Eritrean",
   "Estonian", "Eswatini", "Ethiopian",
@@ -73,8 +73,8 @@ const ALL_NATIONALITIES = [
   "Paraguayan", "Peruvian", "Polish", "Portuguese", "Puerto Rican",
   "Qatari",
   "Romanian", "Rwandan",
-  "Saint Kitts and Nevis", "Saint Lucian", "Saint Vincentian", "Salvadoran", "Samoan", "San Marinese",
-  "Sao Tomean", "Saudi", "Senegalese", "Serbian",
+  "Saint Kitts and Nevis", "Saint Lucian", "Saint Vincentian", "Salvadoran",
+  "Samoan", "San Marinese", "Sao Tomean", "Saudi", "Senegalese", "Serbian",
   "Seychellois", "Sierra Leonean", "Singaporean", "Slovak", "Slovenian",
   "Solomon Islander", "Somali", "South African", "South Korean", "South Sudanese",
   "Spanish", "Sri Lankan", "Surinamese", "Swazi", "Swedish", "Swiss",
@@ -84,6 +84,16 @@ const ALL_NATIONALITIES = [
   "Vanuatuan", "Vatican", "Vietnamese",
   "Yemeni",
   "Zambian", "Zimbabwean",
+  // دول ذات حساسية عالية — موجودة لكن مراقبة
+  "Syrian", "Cuban", "Sudanese", "Russian", "Belarusian", "Venezuelan",
+  // دول كانت ناقصة
+  "Anguillan", "Aruban", "Bahamian", "Bermudian", "Cayman Islander",
+  "Cook Islander", "Curaçaoan", "Faroese", "Gibraltarian", "Greenlandic",
+  "Guamanian", "Macanese", "Monégasque", "Montserratian", "New Caledonian",
+  "Niuean", "Norfolk Islander", "Northern Mariana Islander", "Polynesian",
+  "Réunionese", "Saint Helenian", "Tahitian", "Tokelauan", "Wallis and Futunan",
+  "Abkhazian", "Gibraltarian", "Transnistrian",
+  "Liberian", "Malian", "Mauritanian", "Nigerien", "Senegalese",
 ].filter((n) => !BLACKLISTED_NATIONALITIES.includes(n)).sort();
 
 function isBlacklisted(nationality: string) {
@@ -585,9 +595,7 @@ const DECLARATIONS = [
         "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses.",
         "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses. The entity specifically affirms that the management of its activities, including strategic and operational decision-making, is not conducted outside the United Arab Emirates.",
         "The entity hereby confirms that there is no intention, plan, or decision to liquidate the entity, dispose of its material assets, or sell the business. The entity further affirms its ability to continue as a going concern for the foreseeable future.",
-        "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data, undertaking to update it immediately upon any changes.",
-        "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE), the General Directorate of Residency and Foreigners Affairs (GDRFA), or the respective Free Zone Authority, as applicable to its business activities. In the absence of registered staff, the entity declares that its operations are either limited to the personal efforts of the Business Owner or are executed through formal contracts with authorized third parties, in full compliance with applicable regulations."
-    ];
+        "The entity confirms that the person completing this form is legally authorized to do so on its behalf. The entity certifies the accuracy of all information provided and assumes full legal responsibility for any false or misleading data, undertaking to update it immediately upon any changes."    ];
 
 
 
@@ -748,7 +756,7 @@ type PepDeclaration = {
 function KycForm({ entity, onSaved, t }: any) {
   const { user } = useAuth();
   const [busy, setBusy] = useState(false);
-  const [verifyingAll, setVerifyingAll] = useState(false);
+  //const [verifyingAll, setVerifyingAll] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   // § Section 1 — Entity Information
@@ -1080,7 +1088,7 @@ function KycForm({ entity, onSaved, t }: any) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={submit} className="space-y-2">
+        <form onSubmit={submit} className="space-y-6">
 
           {/* ── SECTION 1: Entity Information ── */}
           <SectionTitle number={1} title="Entity Information" />
@@ -1485,7 +1493,7 @@ function KycForm({ entity, onSaved, t }: any) {
                           className="size-4 mt-0.5"
                         />
                         <span className="text-xs text-muted-foreground leading-relaxed">
-                          I, the undersigned, hereby declare that the information provided above is true and accurate. I confirm that these funds are derived from legitimate sources and are not related to any illegal activities.
+                          As the Authorized Signatory of this entity, I hereby declare that the information provided above regarding Politically Exposed Persons (PEP) and their Source of Funds and Wealth is true and accurate. I confirm that these funds are derived from legitimate sources and are not related to any illegal activities, and I undertake to provide any supporting documentation upon request.
                         </span>
                       </label>
                     </div>
@@ -1525,59 +1533,7 @@ function KycForm({ entity, onSaved, t }: any) {
 
           {/* Submit */}
           <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 border-t border-border">
-            /*<Button
-              type="button"
-              variant="outline"
-              size="lg"
-              disabled={verifyingAll}
-              onClick={async () => {
-                setVerifyingAll(true);
-                try {
-                  // License
-                  if (licenseFiles.length > 0 && entityName.trim()) {
-                    setLicenseOcrStatus("checking");
-                    const r = await verifyWithOCR(licenseFiles[0], entityName, "license");
-                    setLicenseOcrStatus(r.match ? "match" : "mismatch");
-                    setLicenseOcrExtracted(r.extractedName);
-                    setLicenseOcrDates(r.dates);
-                  }
-                  const verifyPersons = async (
-                    persons: Person[],
-                    setter: (p: Person[]) => void,
-                  ) => {
-                    const updated = [...persons];
-                    for (let i = 0; i < updated.length; i++) {
-                      const p = updated[i];
-                      if (p.id_files.length === 0 || !p.name.trim()) continue;
-                      const r = await verifyWithOCR(p.id_files[0], p.name, "id");
-                      let idNumMatch = true;
-                      if (r.dates.id_number && p.emirates_id) {
-                        idNumMatch = p.emirates_id.replace(/\D/g, "") === r.dates.id_number.replace(/\D/g, "");
-                      }
-                      updated[i] = {
-                        ...p,
-                        ocr_status: (r.match && idNumMatch) ? "match" : "mismatch",
-                        ocr_extracted: r.extractedName,
-                        ocr_dates: r.dates,
-                      };
-                      setter([...updated]);
-                    }
-                  };
-                  await verifyPersons(shareholders, setShareholders);
-                  if (hasUbo === "yes") await verifyPersons(ubos, setUbos);
-                  if (managementSelect === "Other") await verifyPersons(managers, setManagers);
-                  toast.success("All documents verified");
-                } catch (e: any) {
-                  toast.error(e?.message ?? "Verification failed");
-                } finally {
-                  setVerifyingAll(false);
-                }
-              }}
-            >
-              {verifyingAll
-                ? <><Loader2 className="size-4 animate-spin mr-2" /> Verifying all documents...</>
-                : <><ShieldCheck className="size-4 mr-2" /> Verify All Documents</>}
-            </Button>*/
+            
             <Button type="submit" variant="premium" disabled={busy} size="lg">
               {busy ? <><Loader2 className="size-4 animate-spin" /> Saving...</> : "Save & Continue →"}
             </Button>
