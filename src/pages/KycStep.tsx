@@ -94,7 +94,9 @@ const ALL_NATIONALITIES = [
   "Réunionese", "Saint Helenian", "Tahitian", "Tokelauan", "Wallis and Futunan",
   "Abkhazian", "Gibraltarian", "Transnistrian",
   "Liberian", "Malian", "Mauritanian", "Nigerien", "Senegalese",
-].filter((n) => !BLACKLISTED_NATIONALITIES.includes(n)).sort();
+].filter((n) => !BLACKLISTED_NATIONALITIES.includes(n))
+.filter((n, i, arr) => arr.indexOf(n) === i) // ✅ إزالة التكرار
+.sort();
 
 function isBlacklisted(nationality: string) {
   return BLACKLISTED_NATIONALITIES.some((b) =>
