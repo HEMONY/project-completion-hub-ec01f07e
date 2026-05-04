@@ -877,26 +877,8 @@ function KycForm({ entity, onSaved, t }: any) {
     if (isLicensed && !licenseNumber.trim()) errs.push("License number is required");
     if (isLicensed && !licenseDate) errs.push("License issue date is required");
     if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "checking") errs.push("Trade License verification still in progress, please wait");
-    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "mismatch") errs.push(`Company name does not match Trade License. License shows: "${licenseOcrExtracted || "unreadable"}"`);
-    if (isLicensed && licenseOcrDates.license_number && licenseNumber.trim()) {
-      const normalize = (s: string) => s.toLowerCase().replace(/[\s\-_.\/]/g, "");
-      if (normalize(licenseNumber) !== normalize(licenseOcrDates.license_number)) {
-        errs.push(`License number entered (${licenseNumber}) does not match document (${licenseOcrDates.license_number})`);
-      }
-    }
-    if (isLicensed && licenseOcrDates.expiry_date) {
-      const [d, m, y] = licenseOcrDates.expiry_date.split("/");
-      const expiry = new Date(`${y}-${m}-${d}`);
-      if (expiry < new Date()) {
-        errs.push(`Trade License is expired (${licenseOcrDates.expiry_date}) — cannot proceed`);
-      }
-    }
-    if (isLicensed && licenseOcrDates.issue_date && licenseDate) {
-      const fromDoc = licenseOcrDates.issue_date.split("/").reverse().join("-");
-      if (fromDoc !== licenseDate) {
-        errs.push(`License issue date entered (${licenseDate}) does not match document (${licenseOcrDates.issue_date})`);
-      }
-    }
+    // OCR matching is informational only — does not block submission
+    // (License/ID/Passport mismatch is shown as a warning in the UI but is not enforced)
     if (!principalActivity.trim()) errs.push("Principal Activity is required");
     if (!economicSector) errs.push("Economic Sector is required");
     if (!emirate) errs.push("Emirate is required");
@@ -932,12 +914,7 @@ function KycForm({ entity, onSaved, t }: any) {
       if (sh.passport_files.length === 0) errs.push(`Shareholder ${i + 1}: Passport document required`);
       if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
       if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
-      if (sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Name does not match Emirates ID document`);
-      if (sh.ocr_dates?.id_number && sh.emirates_id) {
-        if (sh.emirates_id.replace(/\D/g, "") !== sh.ocr_dates.id_number.replace(/\D/g, "")) {
-          errs.push(`Shareholder ${i + 1}: Emirates ID number (${sh.emirates_id}) does not match document (${sh.ocr_dates.id_number})`);
-        }
-      }
+      // OCR mismatch / ID-number mismatch is informational only — not enforced
       totalCapital += parseFloat(sh.capital) || 0;
     });
     if (shareholders.length > 0 && Math.abs(totalCapital - 100) > 0.01) {
@@ -957,12 +934,7 @@ function KycForm({ entity, onSaved, t }: any) {
         if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
         if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
-        if (u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Name does not match Emirates ID document`);
-        if (u.ocr_dates?.id_number && u.emirates_id) {
-          if (u.emirates_id.replace(/\D/g, "") !== u.ocr_dates.id_number.replace(/\D/g, "")) {
-            errs.push(`UBO ${i + 1}: Emirates ID number (${u.emirates_id}) does not match document (${u.ocr_dates.id_number})`);
-          }
-        }
+        // OCR mismatch / ID-number mismatch is informational only — not enforced
       });
     }
 
@@ -971,7 +943,7 @@ function KycForm({ entity, onSaved, t }: any) {
     if (managementSelect === "Other") {
       managers.forEach((m, i) => {
         if (!m.name.trim()) errs.push(`Manager ${i + 1}: Name required`);
-        if (m.ocr_status === "mismatch") errs.push(`Manager ${i + 1}: Name does not match Emirates ID`);
+        // OCR mismatch is informational only — not enforced
       });
       if (poaFiles.length === 0) errs.push("Power of Attorney (POA) document is required");
     }
