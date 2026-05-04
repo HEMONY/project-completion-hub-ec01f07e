@@ -22,7 +22,7 @@ import { ChatWidget } from "@/components/ChatWidget";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, centered = false }: { children: ReactNode; centered?: boolean }) {
   const { t, lang, setLang, dir } = useI18n();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -124,9 +124,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex bg-background text-foreground" dir={dir}>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-64 flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground">
-        {Sidebar}
-      </aside>
+      {!centered && (
+        <aside className="hidden md:flex w-64 flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground">
+          {Sidebar}
+        </aside>
+      )}
 
       {/* Mobile sidebar */}
       {mobileOpen && (
