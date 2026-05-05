@@ -179,8 +179,7 @@ function SectionTitle({ number, title }: { number: number; title: string }) {
 // ── OCR Name Verification via VPS Flask service ─────────────────────────────
 // ضع هنا عنوان خادم VPS الخاص بك (مع البروتوكول والمنفذ)
 // مثال: "https://ocr.yourdomain.com"  أو  "http://1.2.3.4:5000"
-const OCR_BASE_URL = (import.meta.env.VITE_OCR_BASE_URL as string) || "http://YOUR_VPS_IP:5000";
-
+const OCR_BASE_URL = "https://ocr.muhasba.com";
 async function verifyWithOCR(
   imageFile: File,
   enteredName: string,
