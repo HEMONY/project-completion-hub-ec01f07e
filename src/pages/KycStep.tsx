@@ -176,99 +176,46 @@ function SectionTitle({ number, title }: { number: number; title: string }) {
   );
 }
 
-// ── OCR Name Verification ─────────────────────────────────────────────────
-// ── OCR Name Verification via Claude Vision API ────────────────────────────
+// ── OCR Name Verification via VPS Flask service ─────────────────────────────
+// ضع هنا عنوان خادم VPS الخاص بك (مع البروتوكول والمنفذ)
+// مثال: "https://ocr.yourdomain.com"  أو  "http://1.2.3.4:5000"
+const OCR_BASE_URL = (import.meta.env.VITE_OCR_BASE_URL as string) || "http://YOUR_VPS_IP:5000";
+
 async function verifyWithOCR(
   imageFile: File,
   enteredName: string,
   type: "id" | "license" = "id"
 ): Promise<{ match: boolean; extractedName: string; dates: Record<string, string>; confidence: string }> {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  // Convert file to base64
-  const b64 = await new Promise<string>((res, rej) => {
-    const reader = new FileReader();
-    reader.onload = () => res((reader.result as string).split(",")[1]);
-    reader.onerror = () => rej(new Error("File read failed"));
-    reader.readAsDataURL(imageFile);
-  });
-
-  // Claude Vision only supports image types — PDFs must be sent as image/jpeg
-  const mime: "image/jpeg" | "image/png" | "image/gif" | "image/webp" =
-    imageFile.type === "image/png"  ? "image/png"  :
-    imageFile.type === "image/gif"  ? "image/gif"  :
-    imageFile.type === "image/webp" ? "image/webp" :
-    "image/jpeg";
-  
-  const prompt = type === "license"
-    ? `This is a UAE Trade License / Professional License document.
-Extract ALL of the following fields and return ONLY a valid JSON object — no markdown, no extra text:
-{
-  "extractedName": "<Trade Name exactly as printed>",
-  "licenseNumber": "<License No value>",
-  "issueDate": "<Issue Date as DD/MM/YYYY>",
-  "expiryDate": "<Expiry Date as DD/MM/YYYY>",
-  "legalType": "<Legal Type e.g. Sole Establishment, LLC>",
-  "match": <true if extractedName matches "${enteredName}" ignoring case/spaces/punctuation, otherwise false>
-}`
-    : `This is a UAE Emirates ID (front and back) or passport.
-Extract ALL of the following fields and return ONLY a valid JSON object — no markdown, no extra text:
-{
-  "extractedName": "<Full Name in English exactly as printed>",
-  "idNumber": "<ID Number>",
-  "dateOfBirth": "<Date of Birth as DD/MM/YYYY>",
-  "expiryDate": "<Expiry Date as DD/MM/YYYY>",
-  "issuingDate": "<Issuing Date as DD/MM/YYYY>",
-  "nationality": "<Nationality>",
-  "match": <true if extractedName matches "${enteredName}" — consider a match if all words in the entered name appear in the extracted name ignoring case/spaces, otherwise false>
-}`;
+  const endpoint = type === "license" ? "/verify-license" : "/verify-id";
+  const fd = new FormData();
+  fd.append("image", imageFile, imageFile.name || "doc");
+  fd.append("name", enteredName);
+  fd.append("type", type);
 
   try {
-    const resp = await fetch(`${supabaseUrl}/functions/v1/verify-id-ocr`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": supabaseKey,
-        "Authorization": `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify({ imageB64: b64, imageMime: mime, enteredName, type }),
-    });
-
+    const resp = await fetch(`${OCR_BASE_URL}${endpoint}`, { method: "POST", body: fd });
     if (!resp.ok) {
       console.error("OCR error:", resp.status, await resp.text());
       return { match: false, extractedName: "", dates: {}, confidence: "api_error" };
     }
-
     const data = await resp.json();
-    const parsed = data;
+    const extractedName: string = data.extractedName ?? "";
+    const dates: Record<string, string> = data.dates ?? {};
 
-    const extractedName = parsed.extractedName ?? "";
-
-    // مقارنة محلية موثوقة بدل الاعتماد على Claude فقط
-    const localMatch = (() => {
+    const norm = (s: string) => s.toLowerCase().replace(/[\s\-_.,']/g, "");
+    const localNameMatch = (() => {
       if (!extractedName || !enteredName) return false;
-      const norm = (s: string) => s.toLowerCase().replace(/[\s\-_.,']/g, "");
-      const entered = norm(enteredName);
-      const extracted = norm(extractedName);
-      if (entered === extracted) return true;
-      if (extracted.includes(entered) || entered.includes(extracted)) return true;
+      const e = norm(enteredName), x = norm(extractedName);
+      if (e === x || x.includes(e) || e.includes(x)) return true;
       const words = enteredName.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-      return words.length > 0 && words.every(w => extractedName.toLowerCase().includes(w));
+      return words.length > 0 && words.filter(w => extractedName.toLowerCase().includes(w)).length >= Math.min(2, words.length);
     })();
 
     return {
-      match: parsed.match === true || localMatch,
+      match: data.match === true || localNameMatch,
       extractedName,
-      dates: {
-        ...(parsed.issueDate     && { issue_date:      parsed.issueDate }),
-        ...(parsed.issuingDate   && { issuing_date:    parsed.issuingDate }),
-        ...(parsed.expiryDate    && { expiry_date:     parsed.expiryDate }),
-        ...(parsed.dateOfBirth   && { dob:             parsed.dateOfBirth }),
-        ...(parsed.licenseNumber && { license_number:  parsed.licenseNumber }),
-        ...(parsed.idNumber      && { id_number:       parsed.idNumber }),
-        ...(parsed.legalType     && { legal_type:      parsed.legalType }),
-      },
-      confidence: parsed.match ? "high" : "low",
+      dates,
+      confidence: data.match ? "high" : "low",
     };
   } catch (err) {
     console.error("OCR error:", err);
