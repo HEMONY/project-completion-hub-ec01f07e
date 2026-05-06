@@ -355,14 +355,29 @@ function PersonCard({
       toast.error("Please enter the full name before verifying");
       return;
     }
+    if (!person.emirates_id || person.emirates_id.length !== 15) {
+      toast.error("Please enter the 15-digit Emirates ID number before verifying");
+      return;
+    }
     onChange({ ...person, id_files: filesToUse, ocr_status: "checking" });
     const result = await verifyWithOCR(filesToUse[0], person.name, "id");
 
-    let idNumMatch = true;
-    if (result.dates.id_number && person.emirates_id) {
-      idNumMatch = person.emirates_id.replace(/\D/g, "") === result.dates.id_number.replace(/\D/g, "");
+    const extractedId = (result.dates.id_number || "").replace(/\D/g, "");
+    const idNumMatch = !!extractedId && person.emirates_id.replace(/\D/g, "") === extractedId;
+
+    let expired = false;
+    if (result.dates.expiry_date) {
+      const [d, m, y] = result.dates.expiry_date.split("/");
+      const exp = new Date(`${y}-${m}-${d}`);
+      if (!isNaN(exp.getTime())) expired = exp < new Date();
     }
-    const finalMatch = result.match && idNumMatch;
+
+    const finalMatch = result.match && idNumMatch && !expired;
+    if (!finalMatch) {
+      if (!result.match) toast.error("Name does not match the Emirates ID");
+      else if (!idNumMatch) toast.error(`ID number does not match (extracted: ${extractedId || "unreadable"})`);
+      else if (expired) toast.error("Emirates ID is expired");
+    }
 
     onChange({
       ...person,
@@ -833,8 +848,8 @@ function KycForm({ entity, onSaved, t }: any) {
     if (isLicensed && !licenseNumber.trim()) errs.push("License number is required");
     if (isLicensed && !licenseDate) errs.push("License issue date is required");
     if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "checking") errs.push("Trade License verification still in progress, please wait");
-    // OCR matching is informational only — does not block submission
-    // (License/ID/Passport mismatch is shown as a warning in the UI but is not enforced)
+    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "idle") errs.push("Please click 'Verify Trade License' to validate the document");
+    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "mismatch") errs.push("Trade License verification failed — name, license number, issue date and expiry must all match");
     if (!principalActivity.trim()) errs.push("Principal Activity is required");
     if (!economicSector) errs.push("Economic Sector is required");
     if (!emirate) errs.push("Emirate is required");
@@ -870,7 +885,8 @@ function KycForm({ entity, onSaved, t }: any) {
       if (sh.passport_files.length === 0) errs.push(`Shareholder ${i + 1}: Passport document required`);
       if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
       if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
-      // OCR mismatch / ID-number mismatch is informational only — not enforced
+      if (sh.id_files.length > 0 && sh.ocr_status === "idle") errs.push(`Shareholder ${i + 1}: Please click 'Verify Emirates ID'`);
+      if (sh.id_files.length > 0 && sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Emirates ID verification failed (name, ID number and expiry must all match)`);
       totalCapital += parseFloat(sh.capital) || 0;
     });
     if (shareholders.length > 0 && Math.abs(totalCapital - 100) > 0.01) {
@@ -890,7 +906,8 @@ function KycForm({ entity, onSaved, t }: any) {
         if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
         if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
-        // OCR mismatch / ID-number mismatch is informational only — not enforced
+        if (u.id_files.length > 0 && u.ocr_status === "idle") errs.push(`UBO ${i + 1}: Please click 'Verify Emirates ID'`);
+        if (u.id_files.length > 0 && u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Emirates ID verification failed (name, ID number and expiry must all match)`);
       });
     }
 
@@ -1107,11 +1124,34 @@ function KycForm({ entity, onSaved, t }: any) {
                       disabled={licenseOcrStatus === "checking"}
                       onClick={async () => {
                         if (!entityName.trim()) { toast.error("Please enter company name first"); return; }
+                        if (!licenseNumber.trim()) { toast.error("Please enter license number first"); return; }
+                        if (!licenseDate) { toast.error("Please enter license issue date first"); return; }
                         setLicenseOcrStatus("checking");
                         const result = await verifyWithOCR(licenseFiles[0], entityName, "license");
-                        setLicenseOcrStatus(result.match ? "match" : "mismatch");
                         setLicenseOcrExtracted(result.extractedName);
                         setLicenseOcrDates(result.dates);
+
+                        const extLic = result.dates.license_number || "";
+                        const licNumMatch = !!extLic && normalize(licenseNumber) === normalize(extLic);
+                        let issueMatch = true;
+                        if (result.dates.issue_date) {
+                          const fromDoc = result.dates.issue_date.split("/").reverse().join("-");
+                          issueMatch = fromDoc === licenseDate;
+                        } else issueMatch = false;
+                        let expired = false;
+                        if (result.dates.expiry_date) {
+                          const [d, m, y] = result.dates.expiry_date.split("/");
+                          const exp = new Date(`${y}-${m}-${d}`);
+                          if (!isNaN(exp.getTime())) expired = exp < new Date();
+                        }
+                        const ok = result.match && licNumMatch && issueMatch && !expired;
+                        setLicenseOcrStatus(ok ? "match" : "mismatch");
+                        if (!ok) {
+                          if (!result.match) toast.error("Company name does not match the trade license");
+                          else if (!licNumMatch) toast.error(`License number does not match (extracted: ${extLic || "unreadable"})`);
+                          else if (!issueMatch) toast.error(`Issue date does not match (extracted: ${result.dates.issue_date || "unreadable"})`);
+                          else if (expired) toast.error("Trade license is expired");
+                        }
                       }}
                     >
                       {licenseOcrStatus === "checking"
