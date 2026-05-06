@@ -885,7 +885,8 @@ function KycForm({ entity, onSaved, t }: any) {
       if (sh.passport_files.length === 0) errs.push(`Shareholder ${i + 1}: Passport document required`);
       if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
       if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
-      // OCR mismatch / ID-number mismatch is informational only — not enforced
+      if (sh.id_files.length > 0 && sh.ocr_status === "idle") errs.push(`Shareholder ${i + 1}: Please click 'Verify Emirates ID'`);
+      if (sh.id_files.length > 0 && sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Emirates ID verification failed (name, ID number and expiry must all match)`);
       totalCapital += parseFloat(sh.capital) || 0;
     });
     if (shareholders.length > 0 && Math.abs(totalCapital - 100) > 0.01) {
