@@ -906,7 +906,8 @@ function KycForm({ entity, onSaved, t }: any) {
         if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
         if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
         if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
-        // OCR mismatch / ID-number mismatch is informational only — not enforced
+        if (u.id_files.length > 0 && u.ocr_status === "idle") errs.push(`UBO ${i + 1}: Please click 'Verify Emirates ID'`);
+        if (u.id_files.length > 0 && u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Emirates ID verification failed (name, ID number and expiry must all match)`);
       });
     }
 
