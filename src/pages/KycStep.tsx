@@ -1122,11 +1122,34 @@ function KycForm({ entity, onSaved, t }: any) {
                       disabled={licenseOcrStatus === "checking"}
                       onClick={async () => {
                         if (!entityName.trim()) { toast.error("Please enter company name first"); return; }
+                        if (!licenseNumber.trim()) { toast.error("Please enter license number first"); return; }
+                        if (!licenseDate) { toast.error("Please enter license issue date first"); return; }
                         setLicenseOcrStatus("checking");
                         const result = await verifyWithOCR(licenseFiles[0], entityName, "license");
-                        setLicenseOcrStatus(result.match ? "match" : "mismatch");
                         setLicenseOcrExtracted(result.extractedName);
                         setLicenseOcrDates(result.dates);
+
+                        const extLic = result.dates.license_number || "";
+                        const licNumMatch = !!extLic && normalize(licenseNumber) === normalize(extLic);
+                        let issueMatch = true;
+                        if (result.dates.issue_date) {
+                          const fromDoc = result.dates.issue_date.split("/").reverse().join("-");
+                          issueMatch = fromDoc === licenseDate;
+                        } else issueMatch = false;
+                        let expired = false;
+                        if (result.dates.expiry_date) {
+                          const [d, m, y] = result.dates.expiry_date.split("/");
+                          const exp = new Date(`${y}-${m}-${d}`);
+                          if (!isNaN(exp.getTime())) expired = exp < new Date();
+                        }
+                        const ok = result.match && licNumMatch && issueMatch && !expired;
+                        setLicenseOcrStatus(ok ? "match" : "mismatch");
+                        if (!ok) {
+                          if (!result.match) toast.error("Company name does not match the trade license");
+                          else if (!licNumMatch) toast.error(`License number does not match (extracted: ${extLic || "unreadable"})`);
+                          else if (!issueMatch) toast.error(`Issue date does not match (extracted: ${result.dates.issue_date || "unreadable"})`);
+                          else if (expired) toast.error("Trade license is expired");
+                        }
                       }}
                     >
                       {licenseOcrStatus === "checking"
