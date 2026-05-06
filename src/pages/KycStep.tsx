@@ -848,8 +848,8 @@ function KycForm({ entity, onSaved, t }: any) {
     if (isLicensed && !licenseNumber.trim()) errs.push("License number is required");
     if (isLicensed && !licenseDate) errs.push("License issue date is required");
     if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "checking") errs.push("Trade License verification still in progress, please wait");
-    // OCR matching is informational only — does not block submission
-    // (License/ID/Passport mismatch is shown as a warning in the UI but is not enforced)
+    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "idle") errs.push("Please click 'Verify Trade License' to validate the document");
+    if (isLicensed && licenseFiles.length > 0 && licenseOcrStatus === "mismatch") errs.push("Trade License verification failed — name, license number, issue date and expiry must all match");
     if (!principalActivity.trim()) errs.push("Principal Activity is required");
     if (!economicSector) errs.push("Economic Sector is required");
     if (!emirate) errs.push("Emirate is required");
