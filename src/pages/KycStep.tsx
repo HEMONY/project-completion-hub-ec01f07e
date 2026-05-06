@@ -501,10 +501,34 @@ function PersonCard({
             )}
             {person.ocr_status === "mismatch" && (
               <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
-                <div className="font-semibold">⚠️ Name Mismatch — Cannot Proceed</div>
-                <div>Name you entered: <span className="font-bold">{person.name}</span></div>
-                <div>Name on Emirates ID: <span className="font-bold">{person.ocr_extracted || "Could not be read"}</span></div>
-                <div className="text-xs text-muted-foreground mt-1">Please correct the name to match exactly what appears on the ID.</div>
+                <div className="font-semibold">⚠️ Emirates ID Verification Failed — Cannot Proceed</div>
+                <div className="grid grid-cols-[110px_1fr_1fr] gap-x-2 gap-y-1 text-xs mt-2">
+                  <div className="font-semibold">Field</div>
+                  <div className="font-semibold">Entered</div>
+                  <div className="font-semibold">Extracted</div>
+
+                  <div>Name:</div>
+                  <div className="font-bold">{person.name || "—"}</div>
+                  <div className="font-bold">{person.ocr_extracted || "Could not be read"}</div>
+
+                  <div>ID Number:</div>
+                  <div className="font-bold">{person.emirates_id || "—"}</div>
+                  <div className="font-bold">{person.ocr_dates?.id_number || "Could not be read"}</div>
+
+                  <div>Expiry Date:</div>
+                  <div className="font-bold">—</div>
+                  <div className="font-bold">
+                    {person.ocr_dates?.expiry_date || "Could not be read"}
+                    {person.ocr_dates?.expiry_date && (() => {
+                      const [d, m, y] = person.ocr_dates.expiry_date.split("/");
+                      const exp = new Date(`${y}-${m}-${d}`);
+                      return !isNaN(exp.getTime()) && exp < new Date()
+                        ? <span className="ml-1 text-destructive">(EXPIRED)</span>
+                        : null;
+                    })()}
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mt-2">Please correct the entered fields to match the Emirates ID.</div>
               </div>
             )}
           </div>
