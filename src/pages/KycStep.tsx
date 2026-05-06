@@ -355,14 +355,29 @@ function PersonCard({
       toast.error("Please enter the full name before verifying");
       return;
     }
+    if (!person.emirates_id || person.emirates_id.length !== 15) {
+      toast.error("Please enter the 15-digit Emirates ID number before verifying");
+      return;
+    }
     onChange({ ...person, id_files: filesToUse, ocr_status: "checking" });
     const result = await verifyWithOCR(filesToUse[0], person.name, "id");
 
-    let idNumMatch = true;
-    if (result.dates.id_number && person.emirates_id) {
-      idNumMatch = person.emirates_id.replace(/\D/g, "") === result.dates.id_number.replace(/\D/g, "");
+    const extractedId = (result.dates.id_number || "").replace(/\D/g, "");
+    const idNumMatch = !!extractedId && person.emirates_id.replace(/\D/g, "") === extractedId;
+
+    let expired = false;
+    if (result.dates.expiry_date) {
+      const [d, m, y] = result.dates.expiry_date.split("/");
+      const exp = new Date(`${y}-${m}-${d}`);
+      if (!isNaN(exp.getTime())) expired = exp < new Date();
     }
-    const finalMatch = result.match && idNumMatch;
+
+    const finalMatch = result.match && idNumMatch && !expired;
+    if (!finalMatch) {
+      if (!result.match) toast.error("Name does not match the Emirates ID");
+      else if (!idNumMatch) toast.error(`ID number does not match (extracted: ${extractedId || "unreadable"})`);
+      else if (expired) toast.error("Emirates ID is expired");
+    }
 
     onChange({
       ...person,
