@@ -356,7 +356,14 @@ function PersonCard({
   canRemove: boolean;
   label: string;
 }) {
-  const set = (k: keyof Person, v: any) => onChange({ ...person, [k]: v });
+  const set = (k: keyof Person, v: any) => {
+    const resetOcr = (k === "name" || k === "emirates_id") && person.ocr_status !== "idle";
+    onChange({
+      ...person,
+      [k]: v,
+      ...(resetOcr ? { ocr_status: "idle", ocr_extracted: "", ocr_dates: {} } : {}),
+    });
+  };
   const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   const runOCR = async (files?: File[]) => {
