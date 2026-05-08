@@ -204,25 +204,30 @@ async function verifyWithOCR(
     const norm = (s: string) => s.toLowerCase().replace(/[\s\-_.,']/g, "");
     const localNameMatch = (() => {
     if (!extractedName || !enteredName) return false;
-    const e = norm(enteredName), x = norm(extractedName);
-    if (e === x || x.includes(e) || e.includes(x)) return true;
-    
-    // Word-level matching — require 60% of words to match
-    const words = enteredName.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-    if (words.length === 0) return false;
-    const hits = words.filter(w => extractedName.toLowerCase().includes(w)).length;
-    const threshold = words.length <= 2 ? words.length : Math.ceil(words.length * 0.6);
-    if (hits >= threshold) return true;
-    
-    // Reverse check: extracted words in entered name
-    const xWords = extractedName.toLowerCase().split(/\s+/).filter(w => w.length > 1);
-    const reverseHits = xWords.filter(w => enteredName.toLowerCase().includes(w)).length;
-    const revThreshold = xWords.length <= 2 ? xWords.length : Math.ceil(xWords.length * 0.6);
-    return reverseHits >= revThreshold;
+
+    const normalizeWords = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[\-_.',]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean);
+
+    const enteredWords = normalizeWords(enteredName);
+    const extractedWords = normalizeWords(extractedName);
+
+    // لازم نفس عدد الكلمات
+    if (enteredWords.length !== extractedWords.length) {
+      return false;
+    }
+
+    // لازم كل كلمة تطابق بنفس الترتيب
+    return enteredWords.every(
+      (word, index) => word === extractedWords[index]
+    );
   })();
 
     return {
-      match: data.match === true || localNameMatch,
+      match: localNameMatch,//match: data.match === true || localNameMatch,
       extractedName,
       dates,
       confidence: data.match ? "high" : "low",
