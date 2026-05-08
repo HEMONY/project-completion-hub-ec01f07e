@@ -356,7 +356,14 @@ function PersonCard({
   canRemove: boolean;
   label: string;
 }) {
-  const set = (k: keyof Person, v: any) => onChange({ ...person, [k]: v });
+  const set = (k: keyof Person, v: any) => {
+    const resetOcr = (k === "name" || k === "emirates_id") && person.ocr_status !== "idle";
+    onChange({
+      ...person,
+      [k]: v,
+      ...(resetOcr ? { ocr_status: "idle", ocr_extracted: "", ocr_dates: {} } : {}),
+    });
+  };
   const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   const runOCR = async (files?: File[]) => {
@@ -1105,7 +1112,7 @@ function KycForm({ entity, onSaved, t }: any) {
             </Field>
 
             <Field label={isUnlicensed || isSole ? "Owner Name" : "Company Name"} required>
-              <Input required value={entityName} placeholder="Enter name" onChange={(e) => setEntityName(e.target.value)} />
+              <Input required value={entityName} placeholder="Enter name" onChange={(e) => { setEntityName(e.target.value); if (licenseOcrStatus !== "idle") { setLicenseOcrStatus("idle"); setLicenseOcrExtracted(""); setLicenseOcrDates({}); } }} />
             </Field>
 
             {(isUnlicensed || isSole) && (
@@ -1127,10 +1134,10 @@ function KycForm({ entity, onSaved, t }: any) {
             {isLicensed && (
               <div className="space-y-4 border border-border rounded-lg p-4 bg-muted/10">
                 <Field label="License Number" required>
-                  <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => setLicenseNumber(e.target.value)} />
+                  <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => { setLicenseNumber(e.target.value); if (licenseOcrStatus !== "idle") { setLicenseOcrStatus("idle"); setLicenseOcrExtracted(""); setLicenseOcrDates({}); } }} />
                 </Field>
                 <Field label="License Issue Date" required>
-                  <DateInput required value={licenseDate} onChange={(v) => setLicenseDate(v)} />
+                  <DateInput required value={licenseDate} onChange={(v) => { setLicenseDate(v); if (licenseOcrStatus !== "idle") { setLicenseOcrStatus("idle"); setLicenseOcrExtracted(""); setLicenseOcrDates({}); } }} />
                 </Field>
                 {legalTypeOptions[registrationStatus] && (
                   <Field label="Legal Structure">
