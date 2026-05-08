@@ -1134,10 +1134,10 @@ function KycForm({ entity, onSaved, t }: any) {
             {isLicensed && (
               <div className="space-y-4 border border-border rounded-lg p-4 bg-muted/10">
                 <Field label="License Number" required>
-                  <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => setLicenseNumber(e.target.value)} />
+                  <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => { setLicenseNumber(e.target.value); if (licenseOcrStatus !== "idle") { setLicenseOcrStatus("idle"); setLicenseOcrExtracted(""); setLicenseOcrDates({}); } }} />
                 </Field>
                 <Field label="License Issue Date" required>
-                  <DateInput required value={licenseDate} onChange={(v) => setLicenseDate(v)} />
+                  <DateInput required value={licenseDate} onChange={(v) => { setLicenseDate(v); if (licenseOcrStatus !== "idle") { setLicenseOcrStatus("idle"); setLicenseOcrExtracted(""); setLicenseOcrDates({}); } }} />
                 </Field>
                 {legalTypeOptions[registrationStatus] && (
                   <Field label="Legal Structure">
