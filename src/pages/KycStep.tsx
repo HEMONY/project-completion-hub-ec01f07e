@@ -208,28 +208,31 @@ async function verifyWithOCR(
 
     const norm = (s: string) => s.toLowerCase().replace(/[\s\-_.,']/g, "");
     const localNameMatch = (() => {
-    if (!extractedName || !enteredName) return false;
+      if (!extractedName || !enteredName) return false;
 
-    const normalizeWords = (s: string) =>
-      s
-        .toLowerCase()
-        .replace(/[\-_.',]/g, " ")
-        .split(/\s+/)
-        .filter(Boolean);
+      const normalizeWords = (s: string) =>
+        s.toLowerCase().replace(/[\-_.',]/g, " ").split(/\s+/).filter(Boolean);
 
-    const enteredWords = normalizeWords(enteredName);
-    const extractedWords = normalizeWords(extractedName);
+      const enteredWords = normalizeWords(enteredName);
+      const extractedWords = normalizeWords(extractedName);
 
-    // لازم نفس عدد الكلمات
-    if (enteredWords.length !== extractedWords.length) {
+      // مطابقة تامة
+      if (enteredWords.join(" ") === extractedWords.join(" ")) return true;
+
+      // إذا المستخرج أقصر (OCR فقد كلمات) → تحقق أن كل كلمات المستخرج موجودة في المُدخل
+      const allExtractedInEntered = extractedWords.every(w => enteredWords.includes(w));
+      const coverageRatio = extractedWords.filter(w => enteredWords.includes(w)).length / extractedWords.length;
+
+      if (allExtractedInEntered && coverageRatio >= 0.8) return true;
+
+      // إذا معظم كلمات المُدخل موجودة في المستخرج
+      const enteredHits = enteredWords.filter(w => extractedWords.includes(w)).length;
+      const enteredRatio = enteredHits / enteredWords.length;
+
+      if (enteredRatio >= 0.5) return true;
+
       return false;
-    }
-
-    // لازم كل كلمة تطابق بنفس الترتيب
-    return enteredWords.every(
-      (word, index) => word === extractedWords[index]
-    );
-  })();
+    })();
 
     return {
       match: localNameMatch,//match: data.match === true || localNameMatch,
