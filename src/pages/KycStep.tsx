@@ -194,7 +194,12 @@ async function verifyWithOCR(
   try {
     const resp = await fetch(`${OCR_BASE_URL}${endpoint}`, { method: "POST", body: fd });
     if (!resp.ok) {
-      console.error("OCR error:", resp.status, await resp.text());
+      const errData = await resp.json().catch(() => ({}));
+      if (resp.status === 422 && errData.quality_issue) {
+        toast.error(`📸 ${errData.error}`, { duration: 6000 });
+        return { match: false, extractedName: "", dates: {}, confidence: "quality_error" };
+      }
+      console.error("OCR error:", resp.status, errData);
       return { match: false, extractedName: "", dates: {}, confidence: "api_error" };
     }
     const data = await resp.json();
@@ -280,7 +285,13 @@ function FileUploadZone({
 }
 
 // ── OCR Badge ───────────────────────────────────────────────────────────────
-function OcrBadge({ status, extractedName }: { status: "idle"|"checking"|"match"|"mismatch"|"no_key"; extractedName?: string }) {
+function OcrBadge({ status, extractedName }: { status: "idle"|"checking"|"match"|"mismatch"|"no_key"|"quality_error"; extractedName?: string }) {
+  if (status === "quality_error") return (
+    <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-lg px-3 py-2">
+      <AlertTriangle className="size-3.5 shrink-0" />
+      <span>Image quality too low. Please upload a clearer photo in good lighting.</span>
+    </div>
+  );
   if (status === "idle") return null;
   if (status === "checking") return (
     <div className="flex items-center gap-1.5 text-xs text-primary">
@@ -313,7 +324,7 @@ type Person = {
   address: string;
   id_files: File[];
   passport_files: File[];
-  ocr_status: "idle"|"checking"|"match"|"mismatch"|"no_key";
+  ocr_status: "idle"|"checking"|"match"|"mismatch"|"no_key"|"quality_error";
   ocr_extracted: string;
   ocr_dates: Record<string, string>;
 };
@@ -405,7 +416,7 @@ function PersonCard({
     onChange({
       ...person,
       id_files: filesToUse,
-      ocr_status: finalMatch ? "match" : "mismatch",
+      ocr_status: result.confidence === "quality_error" ? "quality_error" : finalMatch ? "match" : "mismatch",
       ocr_extracted: result.extractedName,
       ocr_dates: result.dates,
     });
@@ -785,8 +796,7 @@ function KycForm({ entity, onSaved, t }: any) {
   const [principalActivity, setPrincipalActivity] = useState(entity.principal_activity ?? entity.main_activity ?? "");
   const [economicSector, setEconomicSector] = useState(entity.economic_sector ?? "");
   const [licenseFiles, setLicenseFiles] = useState<File[]>([]);
-  const [licenseOcrStatus, setLicenseOcrStatus] = useState<"idle"|"checking"|"match"|"mismatch"|"no_key">("idle");
-  const [licenseOcrExtracted, setLicenseOcrExtracted] = useState("");
+  const [licenseOcrStatus, setLicenseOcrStatus] = useState<"idle"|"checking"|"match"|"mismatch"|"no_key"|"quality_error">("idle");  const [licenseOcrExtracted, setLicenseOcrExtracted] = useState("");
   const [licenseOcrDates, setLicenseOcrDates] = useState<Record<string, string>>({});
 
   // § Section 2 — Contact Details
@@ -1192,6 +1202,10 @@ function KycForm({ entity, onSaved, t }: any) {
                           if (!isNaN(exp.getTime())) expired = exp < new Date();
                         }*/
                         const ok = result.match && licNumMatch && issueMatch;//const ok = result.match && licNumMatch && issueMatch && !expired;
+                        if (result.confidence === "quality_error") {
+                          setLicenseOcrStatus("mismatch");
+                          return;
+                        }
                         setLicenseOcrStatus(ok ? "match" : "mismatch");
                         if (!ok) {
                           if (!result.match) toast.error("Company name does not match the trade license");
