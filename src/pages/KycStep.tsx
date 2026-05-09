@@ -388,18 +388,18 @@ function PersonCard({
     const extractedId = (result.dates.id_number || "").replace(/\D/g, "");
     const idNumMatch = !!extractedId && person.emirates_id.replace(/\D/g, "") === extractedId;
 
-    let expired = false;
+    /*let expired = false;
     if (result.dates.expiry_date) {
       const [d, m, y] = result.dates.expiry_date.split("/");
       const exp = new Date(`${y}-${m}-${d}`);
       if (!isNaN(exp.getTime())) expired = exp < new Date();
-    }
+    }*/
 
-    const finalMatch = result.match && idNumMatch && !expired;
+    const finalMatch = result.match && idNumMatch;//const finalMatch = result.match && idNumMatch && !expired;
     if (!finalMatch) {
       if (!result.match) toast.error("Name does not match the Emirates ID");
       else if (!idNumMatch) toast.error(`ID number does not match (extracted: ${extractedId || "unreadable"})`);
-      else if (expired) toast.error("Emirates ID is expired");
+      //else if (expired) toast.error("Emirates ID is expired");
     }
 
     onChange({
@@ -511,13 +511,13 @@ function PersonCard({
                   <div className="flex items-center gap-2">
                     <span>⏳ Expiry:</span>
                     <span className="font-semibold">{person.ocr_dates.expiry_date}</span>
-                    {(() => {
+                    {/*{(() => {
                       const [d, m, y] = person.ocr_dates.expiry_date.split("/");
                       const expiry = new Date(`${y}-${m}-${d}`);
                       return expiry < new Date()
                         ? <span className="text-destructive font-semibold">⚠️ EXPIRED</span>
                         : <span className="text-green-600 font-semibold">✅ Valid</span>;
-                    })()}
+                    })()*/}
                   </div>
                 )}
               </div>
@@ -1185,19 +1185,19 @@ function KycForm({ entity, onSaved, t }: any) {
                           const fromDoc = result.dates.issue_date.split("/").reverse().join("-");
                           issueMatch = fromDoc === licenseDate;
                         } else issueMatch = false;
-                        let expired = false;
+                        /*let expired = false;
                         if (result.dates.expiry_date) {
                           const [d, m, y] = result.dates.expiry_date.split("/");
                           const exp = new Date(`${y}-${m}-${d}`);
                           if (!isNaN(exp.getTime())) expired = exp < new Date();
-                        }
-                        const ok = result.match && licNumMatch && issueMatch && !expired;
+                        }*/
+                        const ok = result.match && licNumMatch && issueMatch;//const ok = result.match && licNumMatch && issueMatch && !expired;
                         setLicenseOcrStatus(ok ? "match" : "mismatch");
                         if (!ok) {
                           if (!result.match) toast.error("Company name does not match the trade license");
                           else if (!licNumMatch) toast.error(`License number does not match (extracted: ${extLic || "unreadable"})`);
                           else if (!issueMatch) toast.error(`Issue date does not match (extracted: ${result.dates.issue_date || "unreadable"})`);
-                          else if (expired) toast.error("Trade license is expired");
+                          //else if (expired) toast.error("Trade license is expired");
                         }
                       }}
                     >
@@ -1252,14 +1252,14 @@ function KycForm({ entity, onSaved, t }: any) {
                       <div className="flex items-center gap-2">
                         <span>⏳ Expiry Date:</span>
                         <span className="font-semibold">{licenseOcrDates.expiry_date}</span>
-                        {(() => {
+                        {/*(() => {
                           const [d, m, y] = licenseOcrDates.expiry_date.split("/");
                           const expiry = new Date(`${y}-${m}-${d}`);
                           const isExpired = expiry < new Date();
                           return isExpired
                             ? <span className="text-destructive font-semibold">⚠️ EXPIRED</span>
                             : <span className="text-green-600 font-semibold">✅ Valid</span>;
-                        })()}
+                        })()*/}
                       </div>
                     )}
                     {licenseOcrDates.legal_type && <div>🏢 Legal Type: <span className="font-semibold">{licenseOcrDates.legal_type}</span></div>}
@@ -1289,13 +1289,13 @@ function KycForm({ entity, onSaved, t }: any) {
                         <div className="font-bold">—</div>
                         <div className="font-bold">
                           {licenseOcrDates.expiry_date || "Could not be read"}
-                          {licenseOcrDates.expiry_date && (() => {
+                          {/*licenseOcrDates.expiry_date && (() => {
                             const [d, m, y] = licenseOcrDates.expiry_date.split("/");
                             const exp = new Date(`${y}-${m}-${d}`);
                             return !isNaN(exp.getTime()) && exp < new Date()
                               ? <span className="ml-1 text-destructive">(EXPIRED)</span>
                               : null;
-                          })()}
+                          })()*/}
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground mt-2">Please correct the entered fields to match the license document.</div>
