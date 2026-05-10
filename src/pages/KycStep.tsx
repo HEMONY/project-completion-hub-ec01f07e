@@ -219,19 +219,22 @@ async function verifyWithOCR(
       // مطابقة تامة
       if (enteredWords.join(" ") === extractedWords.join(" ")) return true;
 
-      // إذا المستخرج أقصر (OCR فقد كلمات) → تحقق أن كل كلمات المستخرج موجودة في المُدخل
-      const allExtractedInEntered = extractedWords.every(w => enteredWords.includes(w));
-      const coverageRatio = extractedWords.filter(w => enteredWords.includes(w)).length / extractedWords.length;
-
-      if (allExtractedInEntered && coverageRatio >= 0.8) return true;
-
-      // إذا معظم كلمات المُدخل موجودة في المستخرج
+      // عدد الكلمات المتطابقة في كل اتجاه
       const enteredHits = enteredWords.filter(w => extractedWords.includes(w)).length;
+      const extractedHits = extractedWords.filter(w => enteredWords.includes(w)).length;
+
       const enteredRatio = enteredHits / enteredWords.length;
+      const extractedRatio = extractedHits / extractedWords.length;
 
-      if (enteredRatio >= 0.5) return true;
+      // عدد الكلمات المفقودة
+      const missingFromExtracted = enteredWords.length - enteredHits;
+      const missingFromEntered = extractedWords.length - extractedHits;
 
-      return false;
+      // إذا الفرق أكثر من كلمة واحدة في أي اتجاه → فشل
+      if (missingFromExtracted > 1 || missingFromEntered > 1) return false;
+
+      // يجب أن تكون النسبتان عاليتان معاً
+      return enteredRatio >= 0.85 && extractedRatio >= 0.85;
     })();
 
     return {
