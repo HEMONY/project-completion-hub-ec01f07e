@@ -376,7 +376,7 @@ function PersonCard({
   label: string;
 }) {
   const set = (k: keyof Person, v: any) => {
-    const resetOcr = (k === "name" || k === "emirates_id") && person.ocr_status !== "idle";
+    const resetOcr = (k === "name" || k === "emirates_id");
     onChange({
       ...person,
       [k]: v,
@@ -452,7 +452,7 @@ function PersonCard({
             <NationalitySelect value={person.nationality} onChange={(v) => set("nationality", v)} />
             {isBlacklisted(person.nationality) && (
               <div className="text-xs text-destructive mt-1 font-semibold">
-                ⚠️ This nationality is not permitted under our compliance framework
+                ⚠️ This profile does not align with our current compliance onboarding framework.
               </div>
             )}
           </Field>
@@ -943,9 +943,8 @@ function KycForm({ entity, onSaved, t }: any) {
       if (!sh.address.trim()) errs.push(`Shareholder ${i + 1}: Address required`);
       if (sh.id_files.length === 0) errs.push(`Shareholder ${i + 1}: Emirates ID document required`);
       if (sh.passport_files.length === 0) errs.push(`Shareholder ${i + 1}: Passport document required`);
-      if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} nationality does not align with our compliance framework`);
-      if (sh.ocr_status === "checking") errs.push(`Shareholder ${i + 1}: ID verification still in progress, please wait`);
-      if (sh.id_files.length > 0 && sh.ocr_status === "idle") errs.push(`Shareholder ${i + 1}: Please click 'Verify Emirates ID'`);
+      
+      if (isBlacklisted(sh.nationality)) errs.push(`⚠️ SUSPENDED: Shareholder ${i + 1} — This profile does not align with our current compliance onboarding framework.`);      if (sh.id_files.length > 0 && sh.ocr_status === "idle") errs.push(`Shareholder ${i + 1}: Please click 'Verify Emirates ID'`);
       if (sh.id_files.length > 0 && sh.ocr_status === "mismatch") errs.push(`Shareholder ${i + 1}: Emirates ID verification failed (name, ID number and expiry must all match)`);
       totalCapital += parseFloat(sh.capital) || 0;
     });
@@ -964,8 +963,7 @@ function KycForm({ entity, onSaved, t }: any) {
         if (!u.address.trim()) errs.push(`UBO ${i + 1}: Address required`);
         if (u.id_files.length === 0) errs.push(`UBO ${i + 1}: Emirates ID document required`);
         if (u.passport_files.length === 0) errs.push(`UBO ${i + 1}: Passport document required`);
-        if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} nationality does not align with our compliance framework`);
-        if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
+        if (isBlacklisted(u.nationality)) errs.push(`⚠️ SUSPENDED: UBO ${i + 1} — This profile does not align with our current compliance onboarding framework.`);        if (u.ocr_status === "checking") errs.push(`UBO ${i + 1}: ID verification still in progress, please wait`);
         if (u.id_files.length > 0 && u.ocr_status === "idle") errs.push(`UBO ${i + 1}: Please click 'Verify Emirates ID'`);
         if (u.id_files.length > 0 && u.ocr_status === "mismatch") errs.push(`UBO ${i + 1}: Emirates ID verification failed (name, ID number and expiry must all match)`);
       });
