@@ -208,41 +208,35 @@ async function verifyWithOCR(
 
     const norm = (s: string) => s.toLowerCase().replace(/[\s\-_.,']/g, "");
     const localNameMatch = (() => {
-      if (!extractedName || !enteredName) return false;
+    if (!extractedName || !enteredName) return false;
 
-      const normalizeWords = (s: string) =>
-        s.toLowerCase().replace(/[\-_.',]/g, " ").split(/\s+/).filter(Boolean);
+    const normalizeWords = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[\-_.',]/g, " ")
+        .split(/\s+/)
+        .filter(Boolean);
 
-      const enteredWords = normalizeWords(enteredName);
-      const extractedWords = normalizeWords(extractedName);
+    const enteredWords = normalizeWords(enteredName);
+    const extractedWords = normalizeWords(extractedName);
 
-      // مطابقة تامة
-      if (enteredWords.join(" ") === extractedWords.join(" ")) return true;
+    if (enteredWords.length !== extractedWords.length) return false;
 
-      // عدد الكلمات المتطابقة في كل اتجاه
-      const enteredHits = enteredWords.filter(w => extractedWords.includes(w)).length;
-      const extractedHits = extractedWords.filter(w => enteredWords.includes(w)).length;
+    for (let i = 0; i < enteredWords.length; i++) {
+      if (enteredWords[i] !== extractedWords[i]) return false;
+    }
 
-      const enteredRatio = enteredHits / enteredWords.length;
-      const extractedRatio = extractedHits / extractedWords.length;
+    return true;
+  })();
 
-      // عدد الكلمات المفقودة
-      const missingFromExtracted = enteredWords.length - enteredHits;
-      const missingFromEntered = extractedWords.length - extractedHits;
-
-      // إذا الفرق أكثر من كلمة واحدة في أي اتجاه → فشل
-      if (missingFromExtracted > 1 || missingFromEntered > 1) return false;
-
-      // يجب أن تكون النسبتان عاليتان معاً
-      return enteredRatio >= 0.85 && extractedRatio >= 0.85;
-    })();
-
-    return {
-      match: localNameMatch,//match: data.match === true || localNameMatch,
-      extractedName,
-      dates,
-      confidence: data.match ? "high" : "low",
-    };
+  // ✅ FIX: أرجع الـ extractedName الفعلي من السيرفر دائماً
+  // حتى يُقارَن مع الاسم المدخل الجديد في كل مرة
+  return {
+    match: localNameMatch,
+    extractedName,  // هذا يأتي دائماً من السيرفر (OCR جديد)
+    dates,
+    confidence: localNameMatch ? "high" : "low",  // ✅ بناءً على النتيجة المحلية لا data.match
+  };
   } catch (err) {
     console.error("OCR error:", err);
     return { match: false, extractedName: "", dates: {}, confidence: "error" };
@@ -325,7 +319,9 @@ type Person = {
   name: string;
   capital: string;
   nationality: string;
-  dob_place: string;
+  dob: string;        // تاريخ الميلاد DD/MM/YYYY
+  cob: string;        // بلد الميلاد
+  dob_place: string;  // للتوافق مع القديم (اختياري)
   emirates_id: string;
   address: string;
   id_files: File[];
@@ -379,13 +375,18 @@ function PersonCard({
   label: string;
 }) {
   const set = (k: keyof Person, v: any) => {
-    const resetOcr = (k === "name" || k === "emirates_id");
-    onChange({
-      ...person,
-      [k]: v,
-      ...(resetOcr ? { ocr_status: "idle", ocr_extracted: "", ocr_dates: {} } : {}),
-    });
-  };
+  const resetOcr = (k === "name" || k === "emirates_id");
+  onChange({
+    ...person,
+    [k]: v,
+    // ✅ FIX: عند تغيير الاسم أو الـ ID نمسح كل بيانات OCR بالكامل
+    ...(resetOcr ? { 
+      ocr_status: "idle", 
+      ocr_extracted: "",   // مسح الاسم المستخرج القديم
+      ocr_dates: {}        // مسح التواريخ القديمة
+    } : {}),
+  });
+};
   const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   const runOCR = async (files?: File[]) => {
@@ -459,8 +460,16 @@ function PersonCard({
               </div>
             )}
           </Field>
-          <Field label="Date & Place of Birth" required>
-            <Input required value={person.dob_place} placeholder="DD/MM/YYYY, City, Country" onChange={(e) => set("dob_place", e.target.value)} />
+          <Field label="Date of Birth *" required>
+            <Input 
+              required 
+              value={person.dob} 
+              placeholder="DD/MM/YYYY" 
+              onChange={(e) => set("dob", e.target.value)} 
+            />
+          </Field>
+          <Field label="Country of Birth *" required>
+            <NationalitySelect value={person.cob} onChange={(v) => set("cob", v)} />
           </Field>
           <Field label="Emirates ID Number (15 digits)" required>
             <Input
@@ -603,20 +612,26 @@ function PersonCard({
 }
 
 function emptyPerson(): Person {
-  return { name: "", capital: "", nationality: "", dob_place: "", emirates_id: "", address: "", id_files: [], passport_files: [], ocr_status: "idle", ocr_extracted: "", ocr_dates: {} };
+  return { 
+    name: "", capital: "", nationality: "", 
+    dob: "", cob: "", dob_place: "",       // ✅ إضافة الحقول الجديدة
+    emirates_id: "", address: "", 
+    id_files: [], passport_files: [], 
+    ocr_status: "idle", ocr_extracted: "", ocr_dates: {} 
+  };
 }
 
 // ── LEGAL DECLARATIONS (15 items from HTML) ─────────────────────────────────
 const DECLARATIONS = [
         "The entity hereby declares and confirms that it maintains proper accounting records and statutory books that accurately reflect its financial position and enable the traceability of all transactions in compliance with applicable laws.",
-        "The entity hereby confirms that its prior period financial statements (if any) were audited by a licensed auditor, and no material reservations or audit findings were issued that would necessitate an adjustment to the opening balances or a restatement of previous financial data.",
+        "The Entity confirms that its prior period financial statements were either audited by a licensed auditor or, if unaudited, are fully supported by reliable documentation and officially approved by management. In either case, the Entity ensures there are no material issues necessitating adjustments to the opening balances or a restatement of previous financial data.",
         "The entity hereby declares that, if it is not currently registered with the Federal Tax Authority (FTA), such non-registration is based on valid legal and commercial grounds in compliance with applicable tax laws. The entity remains responsible for monitoring its tax status and registering once the statutory requirements are met.",
         "The entity hereby confirms that all its employees are officially registered with the Ministry of Human Resources and Emiratisation (MOHRE), the General Directorate of Residency and Foreigners Affairs (GDRFA), or the respective Free Zone Authority, as applicable to its business activities. In the absence of registered staff, the entity declares that its operations are either limited to the personal efforts of the Business Owner or are executed through formal contracts with authorized third parties, in full compliance with applicable regulations.",
         "The entity hereby declares that all generated income is derived from genuine and legitimate economic activities, and confirms that it possesses the necessary infrastructure and resources to generate such income. Furthermore, the entity affirms that its registered business address is appropriate and adequate for the nature and scale of its operations.",
         "The entity hereby confirms that its total annual revenue (both operating and non-operating), for the current financial year and any prior years (if applicable), has not exceeded AED 50 million for any single financial period.",
         "The entity hereby confirms that any remarks, fines, or penalties issued by the Federal Tax Authority (FTA) against it (if any) are strictly related to outstanding tax liabilities or technical/procedural errors, and do not involve any matters related to integrity or intentional tax evasion.",
-        "The entity hereby confirms that it maintains no business or financial relationships with prohibited, suspicious, or shell entities. Furthermore, any transactions with parties located in high-risk jurisdictions (if any) are conducted on a strictly arms length basis with clear economic substance. The entity undertakes to provide all supporting documentation requested by the auditor for verification purposes.",
-        "The entity hereby confirms that any changes occurred during the current financial year whether regarding partners, Ultimate Beneficial Owners (UBOs), business activities, or the entitys legal name were implemented for legitimate commercial reasons and are fully justified. The entity affirms that such changes were not intended, under any circumstances, to conceal the identity of the beneficial owner or to divert the flow of funds for illicit purposes.",
+        "The entity hereby confirms that it maintains no business or financial relationships with prohibited, suspicious, or shell entities. Furthermore, any transactions with parties located in high-risk jurisdictions (if any) are conducted on a strictly arms-length basis with clear economic substance. The entity undertakes to provide all supporting documentation requested by the auditor for verification purposes.",
+        "The entity hereby confirms that any changes occurred during the current financial year — whether regarding partners, Ultimate Beneficial Owners (UBOs), business activities, or the entitys legal name were implemented for legitimate commercial reasons and are fully justified. The entity affirms that such changes were not intended, under any circumstances, to conceal the identity of the beneficial owner or to divert the flow of funds for illicit purposes.",
         "The entity hereby confirms that there are no ongoing legal disputes or pending litigations among its partners/owners. Furthermore, the entity affirms that its management and ownership structure are stable, with no existing conflicts that could impact business continuity or the decision-making process.",
         "The entity hereby confirms that there are no confirmed, suspected, or alleged instances of fraud or embezzlement during the current financial year. Furthermore, the entity declares that there are no internal reports or ongoing investigations regarding the integrity of financial data or professional conduct within the entity.",
         "The entity hereby confirms that it does not engage in activities related to financial derivatives, virtual assets, or controlled and non-proliferation goods. Furthermore, the entity declares that its financial statements do not include any assets or transactions arising from mergers or acquisitions, nor do they involve foreign assets, foreign bank accounts, or offshore operating expenses.",
@@ -801,6 +816,7 @@ function KycForm({ entity, onSaved, t }: any) {
   const [legalType, setLegalType] = useState(entity.legal_type ?? "");
   const [principalActivity, setPrincipalActivity] = useState(entity.principal_activity ?? entity.main_activity ?? "");
   const [economicSector, setEconomicSector] = useState(entity.economic_sector ?? "");
+  const PROHIBITED_ACTIVITIES = ['bank','banking','exchange house','money transfer','remittance','currency exchange','investment fund','fund management','hedge fund','asset management','private equity','insurance','reinsurance','takaful','crowdfunding','crowdfund','lawyer','law firm','solicitor','notary','accounting firm','audit firm','auditing firm','gold dealer','gold trade','precious metals','precious stones','diamond','gemstone','casino','gambling','gaming platform','lottery','betting','company formation','company service provider','trust company','trust service','crypto','cryptocurrency','virtual asset','digital asset','nft','token','bitcoin','blockchain service','charity','charitable','ngo','non-profit','not for profit','humanitarian','foundation'];
   const [licenseFiles, setLicenseFiles] = useState<File[]>([]);
   const [licenseOcrStatus, setLicenseOcrStatus] = useState<"idle"|"checking"|"match"|"mismatch"|"no_key"|"quality_error">("idle");  const [licenseOcrExtracted, setLicenseOcrExtracted] = useState("");
   const [licenseOcrDates, setLicenseOcrDates] = useState<Record<string, string>>({});
@@ -860,9 +876,10 @@ function KycForm({ entity, onSaved, t }: any) {
 
   // Dynamic options
   // بعد
-  const isUnlicensed = registrationStatus === "unlicensed";
-  const isSole = registrationStatus === "sole";
-  const isLicensed = ["multiple", "freezone", "branch"].includes(registrationStatus);
+  const isNatural = registrationStatus.startsWith("natural");
+  const isUnlicensed = registrationStatus === "natural_unlicensed";
+  const isSole = registrationStatus === "natural_sole";
+  const isLicensed = !isNatural && registrationStatus !== "";
   const managementOptions = [
     ...shareholders.map((s) => s.name).filter(Boolean),
     ...ubos.map((u) => u.name).filter(Boolean),
@@ -941,7 +958,8 @@ function KycForm({ entity, onSaved, t }: any) {
       if (!sh.name.trim()) errs.push(`Shareholder ${i + 1}: Full name required`);
       if (!sh.capital) errs.push(`Shareholder ${i + 1}: Capital % required`);
       if (!sh.nationality.trim()) errs.push(`Shareholder ${i + 1}: Nationality required`);
-      if (!sh.dob_place.trim()) errs.push(`Shareholder ${i + 1}: Date and place of birth required`);
+      if (!sh.dob.trim()) errs.push(`Shareholder ${i + 1}: Date of birth required`);
+      if (!sh.cob.trim()) errs.push(`Shareholder ${i + 1}: Country of birth required`);
       if (!sh.emirates_id || sh.emirates_id.length !== 15) errs.push(`Shareholder ${i + 1}: Emirates ID must be 15 digits`);
       if (!sh.address.trim()) errs.push(`Shareholder ${i + 1}: Address required`);
       if (sh.id_files.length === 0) errs.push(`Shareholder ${i + 1}: Emirates ID document required`);
@@ -999,7 +1017,9 @@ function KycForm({ entity, onSaved, t }: any) {
     DECLARATIONS.forEach((_, i) => {
       if (!declarations[i]) errs.push(`You must confirm declaration number ${i + 1}`);
     });
-
+    if (PROHIBITED_ACTIVITIES.some(p => principalActivity.toLowerCase().includes(p))) {
+      errs.push("Principal activity falls within a prohibited category — application cannot proceed");
+    }
     return errs;
   };
 
@@ -1121,17 +1141,40 @@ function KycForm({ entity, onSaved, t }: any) {
           <div className="space-y-4">
             <Field label="Entity Registration Status" required>
               <NativeSelect required value={registrationStatus} onChange={(e) => setRegistrationStatus(e.target.value)}>
-                <option value="">-- Select --</option>
-                <option value="unlicensed">Unlicensed Entity</option>
-                <option value="sole">Mainland Licensed Entity - Sole Owner</option>
-                <option value="multiple">Mainland Licensed Entity - Multiple Owners</option>
-                <option value="freezone">Free Zone Licensed Entity</option>
-                <option value="branch">Mainland Licensed Entity - Branch</option>
+                <option value="">— Select entity type —</option>
+                <optgroup label="Natural Person">
+                  <option value="natural_unlicensed">Natural Person — Unlicensed</option>
+                  <option value="natural_sole">Natural Person — Licensed Sole Establishment</option>
+                </optgroup>
+                <optgroup label="Mainland Licensed Entity">
+                  <option value="mainland_llc">Mainland — LLC</option>
+                  <option value="mainland_lp">Mainland — Limited Partnership</option>
+                  <option value="mainland_gp">Mainland — General Partnership</option>
+                  <option value="mainland_civil">Mainland — Civil Company</option>
+                  <option value="mainland_branch_local">Mainland Branch — Local Company</option>
+                  <option value="mainland_branch_foreign">Mainland Branch — Foreign Company</option>
+                </optgroup>
+                <optgroup label="Free Zone Licensed Entity">
+                  <option value="fz_company">Free Zone Company / FZ LLC</option>
+                  <option value="fz_establishment">Free Zone Establishment</option>
+                  <option value="fz_branch_local">Free Zone Branch — Local Company</option>
+                  <option value="fz_branch_foreign">Free Zone Branch — Foreign Company</option>
+                </optgroup>
               </NativeSelect>
             </Field>
 
-            <Field label={isUnlicensed || isSole ? "Owner Name" : "Company Name"} required>
-              <Input required value={entityName} placeholder="Enter name" onChange={(e) => { setEntityName(e.target.value); if (licenseOcrStatus !== "idle") { setLicenseOcrStatus("idle"); setLicenseOcrExtracted(""); setLicenseOcrDates({}); } }} />
+            <Field label={isNatural ? "Owner Name *" : "Entity Name (as per Trade License) *"} required>
+              <Input 
+                required 
+                value={entityName} 
+                placeholder={isNatural ? "Full legal name of owner" : "Exact name as per trade license"} 
+                onChange={(e) => { 
+                setEntityName(e.target.value); 
+                // ✅ FIX: مسح OCR دائماً عند تغيير الاسم، حتى لو كان مطابقاً سابقاً
+                setLicenseOcrStatus("idle"); 
+                setLicenseOcrExtracted(""); 
+                setLicenseOcrDates({}); 
+              }} />
             </Field>
 
             {(isUnlicensed || isSole) && (
@@ -1153,7 +1196,12 @@ function KycForm({ entity, onSaved, t }: any) {
             {isLicensed && (
               <div className="space-y-4 border border-border rounded-lg p-4 bg-muted/10">
                 <Field label="License Number" required>
-                  <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => { setLicenseNumber(e.target.value); if (licenseOcrStatus !== "idle") { setLicenseOcrStatus("idle"); setLicenseOcrExtracted(""); setLicenseOcrDates({}); } }} />
+                  <Input required value={licenseNumber} placeholder="Enter license number" onChange={(e) => { 
+                    setLicenseNumber(e.target.value); 
+                    setLicenseOcrStatus("idle"); 
+                    setLicenseOcrExtracted(""); 
+                    setLicenseOcrDates({}); 
+                  }} />
                 </Field>
                 <Field label="License Issue Date" required>
                   <DateInput required value={licenseDate} onChange={(v) => { setLicenseDate(v); if (licenseOcrStatus !== "idle") { setLicenseOcrStatus("idle"); setLicenseOcrExtracted(""); setLicenseOcrDates({}); } }} />
@@ -1326,11 +1374,28 @@ function KycForm({ entity, onSaved, t }: any) {
             <Field label="Principal Activity" required>
               <Input required value={principalActivity} placeholder="Enter principal activity" onChange={(e) => setPrincipalActivity(e.target.value)} />
             </Field>
+            {principalActivity && PROHIBITED_ACTIVITIES.some(p => principalActivity.toLowerCase().includes(p)) && (
+              <div className="text-xs text-destructive bg-destructive/10 border-l-4 border-destructive rounded p-3 mt-2">
+                The activity described appears to fall within a prohibited category. This application cannot proceed.
+              </div>
+            )}
 
             <Field label="Economic Sector" required>
               <NativeSelect required value={economicSector} onChange={(e) => setEconomicSector(e.target.value)}>
-                <option value="">-- Select --</option>
-                {["Agriculture, Forestry & Fishing","Mining & Quarrying","Manufacturing","Energy","Construction, Engineering & Machinery","Transportation & Logistics","Technology & Telecom","Real Estate & Facility Services","Education","Health Care","Hospitality","Professional Services","Personal & Community Services","Media","Support Services","General Trading","Tourism & Travel Services","Other"].map((s) => <option key={s} value={s}>{s}</option>)}
+                <option value="">— Select —</option>
+                <option>Trade & Commerce</option>
+                <option>Construction & Real Estate</option>
+                <option>Manufacturing & Industry</option>
+                <option>Professional Services</option>
+                <option>Technology & Digital</option>
+                <option>Transportation & Logistics</option>
+                <option>Hospitality & Tourism</option>
+                <option>Healthcare</option>
+                <option>Education & Training</option>
+                <option>Agriculture & Food</option>
+                <option>Media & Communications</option>
+                <option>Other</option>
+                {/*["Agriculture, Forestry & Fishing","Mining & Quarrying","Manufacturing","Energy","Construction, Engineering & Machinery","Transportation & Logistics","Technology & Telecom","Real Estate & Facility Services","Education","Health Care","Hospitality","Professional Services","Personal & Community Services","Media","Support Services","General Trading","Tourism & Travel Services","Other"].map((s) => <option key={s} value={s}>{s}</option>)*/}
               </NativeSelect>
             </Field>
           </div>
@@ -1387,7 +1452,7 @@ function KycForm({ entity, onSaved, t }: any) {
           {/* ── SECTION 4: Beneficial Owners ── */}
           <SectionTitle number={4} title="Beneficial Owners" />
           <div className="space-y-4">
-            <Field label="Is there any other individual who directly or indirectly owns 25% or more of the capital or has power to exercise significant influence?" required>
+            <Field label="Are there any persons who ultimately own or control 25% or more of the entity, other than those already listed as shareholders?" required>
 
               <div className="flex gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
