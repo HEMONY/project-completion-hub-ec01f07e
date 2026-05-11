@@ -800,7 +800,7 @@ function KycForm({ entity, onSaved, t }: any) {
   const [busy, setBusy] = useState(false);
   //const [verifyingAll, setVerifyingAll] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
-
+  const [manualPepNames, setManualPepNames] = useState<string[]>([]);
   // § Section 1 — Entity Information
   const [registrationStatus, setRegistrationStatus] = useState(entity.registration_status ?? "");
   const [entityName, setEntityName] = useState(entity.entity_name === "Untitled Entity" ? "" : entity.entity_name);
@@ -1593,7 +1593,25 @@ function KycForm({ entity, onSaved, t }: any) {
                       </div>
                     )}
                   </div>
-
+                  {/* إضافة PEP يدوي — كما في HTML */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const name = prompt("Enter PEP person full name:");
+                      if (!name?.trim()) return;
+                      if (selectedPepNames.includes(name.trim())) return;
+                      setManualPepNames(prev => [...prev, name.trim()]);
+                      setSelectedPepNames(prev => [...prev, name.trim()]);
+                      setPepDeclarations(prev => ({
+                        ...prev,
+                        [name.trim()]: { sourceOfFunds: [], otherSource: "", wealthSummary: "", confirmed: false },
+                      }));
+                    }}
+                  >
+                    <Plus className="size-3.5" /> Add PEP Declaration
+                  </Button>
                   {/* نموذج الإقرار لكل شخص مختار */}
                   {selectedPepNames.map((name) => (
                     <div key={name} className="border border-primary/30 rounded-xl p-5 space-y-4 bg-primary/5">
@@ -1672,6 +1690,19 @@ function KycForm({ entity, onSaved, t }: any) {
                 </label>
               </div>
             ))}
+            {/* Confirm All — كما في HTML */}
+            <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="declAll"
+                className="size-4 mt-0.5 accent-primary"
+                checked={declarations.every(Boolean)}
+                onChange={(e) => setDeclarations(Array(DECLARATIONS.length).fill(e.target.checked))}
+              />
+              <label htmlFor="declAll" className="text-sm text-foreground font-medium leading-relaxed cursor-pointer">
+                I have carefully read and understood all of the above declarations and hereby confirm that each of them is true, accurate, and applicable to the entity I represent.
+              </label>
+            </div>
             <div className="text-xs text-muted-foreground text-center pt-2">
               {declarations.filter(Boolean).length} / {DECLARATIONS.length} confirmed
             </div>
