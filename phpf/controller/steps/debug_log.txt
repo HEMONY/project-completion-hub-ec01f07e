@@ -1,3 +1,0 @@
-[2026-01-18 11:23:11] [INFO] === STARTING STEP 2 PROCESSING ===
-[2026-01-18 11:23:11] [INFO] Entity ID Sources: {"GET":null,"POST":null,"SESSION_entity":null,"SESSION_step1":null,"SESSION_form_entity":null}
-[2026-01-18 11:23:11] [INFO] ERROR: No valid entity_id found
