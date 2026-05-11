@@ -1503,8 +1503,8 @@ function KycForm({ entity, onSaved, t }: any) {
                     onRemove={() => {}}
                   />
                 ))}
-                <FileUploadZone label="Upload Power of Attorney (POA) *" files={poaFiles} onChange={setPoaFiles} accept="image/*,.pdf" single />
-                  {poaFiles.length > 0 && (
+                <!--FileUploadZone label="Upload Power of Attorney (POA) *" files={poaFiles} onChange={setPoaFiles} accept="image/*,.pdf" single /--!>
+                  {/*poaFiles.length > 0 && (
                     <Button
                       type="button" size="sm" variant="outline"
                       title="Preview POA Document"
@@ -1516,7 +1516,7 @@ function KycForm({ entity, onSaved, t }: any) {
                       </svg>
                       Preview POA
                     </Button>
-                  )}
+                  )*/}
               </>
             )}
           </div>
@@ -1594,24 +1594,7 @@ function KycForm({ entity, onSaved, t }: any) {
                     )}
                   </div>
                   {/* إضافة PEP يدوي — كما في HTML */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const name = prompt("Enter PEP person full name:");
-                      if (!name?.trim()) return;
-                      if (selectedPepNames.includes(name.trim())) return;
-                      setManualPepNames(prev => [...prev, name.trim()]);
-                      setSelectedPepNames(prev => [...prev, name.trim()]);
-                      setPepDeclarations(prev => ({
-                        ...prev,
-                        [name.trim()]: { sourceOfFunds: [], otherSource: "", wealthSummary: "", confirmed: false },
-                      }));
-                    }}
-                  >
-                    <Plus className="size-3.5" /> Add PEP Declaration
-                  </Button>
+                  
                   {/* نموذج الإقرار لكل شخص مختار */}
                   {selectedPepNames.map((name) => (
                     <div key={name} className="border border-primary/30 rounded-xl p-5 space-y-4 bg-primary/5">
@@ -1680,12 +1663,27 @@ function KycForm({ entity, onSaved, t }: any) {
                   {text}
                 </div>
                 <label className="flex items-center gap-2 shrink-0 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={declarations[i]}
-                    onChange={(e) => setDeclarations(declarations.map((d, idx) => idx === i ? e.target.checked : d))}
-                    className="size-4 rounded"
-                  />
+                  <div
+                    onClick={() =>
+                      setDeclarations(
+                        declarations.map((d, idx) =>
+                          idx === i ? !d : d
+                        )
+                      )
+                    }
+                    className={`
+                      size-6 flex items-center justify-center
+                      rounded-full cursor-pointer text-sm font-semibold
+                      border transition
+                      ${
+                        declarations[i]
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-black border-gray-400"
+                      }
+                    `}
+                  >
+                    {i + 1}
+                  </div>
                   <span className="text-sm font-medium">Confirm</span>
                 </label>
               </div>
